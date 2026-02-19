@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /*
+      The Roof — warm parchment palette
+      RGB channels for Tailwind `rgb(var(--token) / <alpha-value>)`.
+    */
+
+    /* Background & Foreground */
+    --background: 255 255 255; /* #ffffff */
+    --foreground: 26 22 18; /* #1a1612 */
+
+    /* Card */
+    --card: 255 255 255; /* #ffffff */
+    --card-foreground: 26 22 18; /* #1a1612 */
+
+    /* Popover */
+    --popover: 255 255 255; /* #ffffff */
+    --popover-foreground: 26 22 18; /* #1a1612 */
+
+    /* Primary Colors – Deep Gold */
+    --primary: 154 111 46; /* #9a6f2e */
+    --primary-foreground: 255 255 255; /* #ffffff */
+
+    /* Secondary Colors – Warm surface */
+    --secondary: 240 235 224; /* #f0ebe0 */
+    --secondary-foreground: 82 74 64; /* #524a40 — darkened for readability */
+
+    /* Muted */
+    --muted: 237 232 223; /* #ede8df */
+    --muted-foreground: 130 120 106; /* #82786a — darkened for readability */
+
+    /* Accent */
+    --accent: 232 224 210; /* #e8e0d2 */
+    --accent-foreground: 154 111 46; /* #9a6f2e */
+
+    /* Destructive */
+    --destructive: 184 50 50; /* #b83232 */
+    --destructive-foreground: 255 255 255; /* #ffffff */
+
+    /* Border & Input */
+    --border: 218 212 200; /* ~rgba(0,0,0,0.08) on beige */
+    --input: 218 212 200;
+    --ring: 154 111 46; /* #9a6f2e */
+
+    /* Semantic status colors */
+    --success: 46 122 82; /* #2e7a52 */
+    --warning: 160 104 32; /* #a06820 */
+    --error: 184 50 50; /* #b83232 */
+    --info: 44 95 158; /* #2c5f9e */
+
+    /* Content Calendar — additional tokens */
+    --pillar-brand: 124 92 191; /* #7c5cbf */
+    --pillar-events: 196 124 42; /* #c47c2a */
+    --pillar-social: 46 122 82; /* #2e7a52 */
+    --pillar-views: 44 111 158; /* #2c6f9e */
+
+    --ig: 193 53 132; /* #c13584 */
+    --tiktok: 42 122 110; /* #2a7a6e */
+    --fb: 24 119 242; /* #1877f2 */
+    --google: 234 67 53; /* #ea4335 */
+
+    /* Charts */
+    --chart-1: 154 111 46;
+    --chart-2: 201 169 110;
+    --chart-3: 160 104 32;
+    --chart-4: 82 74 64;
+    --chart-5: 46 122 82;
+
+    /* Radius */
+    --radius: 0.375rem;
+
+    /* Sidebar – white */
+    --sidebar-background: 255 255 255; /* #ffffff */
+    --sidebar-foreground: 26 22 18; /* #1a1612 */
+    --sidebar-primary: 154 111 46; /* #9a6f2e */
+    --sidebar-primary-foreground: 255 255 255;
+    --sidebar-accent: 237 232 223; /* #ede8df */
+    --sidebar-accent-foreground: 154 111 46; /* #9a6f2e */
+    --sidebar-border: 218 212 200;
+    --sidebar-ring: 154 111 46;
+  }
+
+  .dark {
+    --background: 18 16 14; /* warm dark */
+    --foreground: 245 240 232; /* #f5f0e8 */
+
+    --card: 30 27 23;
+    --card-foreground: 245 240 232;
+
+    --popover: 30 27 23;
+    --popover-foreground: 245 240 232;
+
+    --primary: 201 169 110; /* #c9a96e */
+    --primary-foreground: 18 16 14;
+
+    --secondary: 40 36 30;
+    --secondary-foreground: 190 182 170; /* lightened for dark-mode readability */
+
+    --muted: 40 36 30;
+    --muted-foreground: 160 152 138; /* lightened for dark-mode readability */
+
+    --accent: 50 44 35;
+    --accent-foreground: 201 169 110;
+
+    --destructive: 185 28 28;
+    --destructive-foreground: 245 240 232;
+
+    --border: 50 44 35;
+    --input: 50 44 35;
+    --ring: 201 169 110;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: 0px 4px 6px 1px rgba(0, 0, 0, 0.1), 0px 4px 2px 0px rgba(0, 0, 0, 0.04);
+  }
+  .shadow-card-hover {
+    box-shadow: 0px 4px 6px 1px rgba(0, 0, 0, 0.1), 0px 4px 2px 0px rgba(0, 0, 0, 0.04);
+  }
+}
+
+@layer components {
+  .form-input-base {
+    @apply w-full rounded-sm border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-ring/50;
+  }
+}
