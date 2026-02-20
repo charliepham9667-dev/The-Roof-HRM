@@ -83,9 +83,9 @@ import MarketingDashboard from '@/pages/marketing/MarketingDashboard';
 
 /**
  * Smart dashboard redirect based on role
- * Owners → Executive Dashboard
- * Managers → Manager Dashboard
- * Staff → Staff Dashboard
+ * Owners → /owner/dashboard
+ * Managers → /manager/dashboard
+ * Staff → /staff/dashboard
  */
 function DashboardRedirect() {
   const profile = useAuthStore((s) => s.profile);
@@ -94,12 +94,11 @@ function DashboardRedirect() {
   const effectiveRole = viewAs?.role || profile?.role;
   
   if (effectiveRole === 'staff') {
-    return <StaffDashboard />;
+    return <Navigate to="/staff/dashboard" replace />;
   }
   if (effectiveRole === 'manager') {
-    return <ManagerDashboard />;
+    return <Navigate to="/manager/dashboard" replace />;
   }
-  // Owners: land on Executive Dashboard
   return <Navigate to="/owner/dashboard" replace />;
 }
 
