@@ -100,25 +100,13 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const signOut = useAuthStore((s) => s.signOut);
-  const viewAs = useAuthStore((s) => s.viewAs);
-  const profile = useAuthStore((s) => s.profile);
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
-  const actualRole = profile?.role;
-
   // Collapse mobile search on route change
   useEffect(() => { setMobileSearchOpen(false) }, [location.pathname])
-
-  // Derive context role: explicit viewAs > path prefix (for owners) > actual role
-  const pathPrefix = location.pathname.startsWith('/manager') ? 'manager'
-    : location.pathname.startsWith('/staff') ? 'staff'
-    : location.pathname.startsWith('/owner') ? 'owner'
-    : null;
-  const _effectiveRole =
-    viewAs?.role ?? (actualRole === 'owner' && pathPrefix ? pathPrefix : actualRole);
 
   const [sectionLabel, pageLabel] = getBreadcrumb(location.pathname)
 

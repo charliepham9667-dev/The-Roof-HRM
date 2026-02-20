@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from "react"
 import { addDays, format, isSameDay, startOfWeek, differenceInDays } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { SectionTitle } from "@/components/ui/section-title"
 import { useContentCalendar } from "@/hooks/useContentCalendar"
 import { useGoogleSheetsSync } from "@/hooks/useGoogleSheetsSync"
@@ -170,7 +170,6 @@ const USPS = [
 
 export default function MarketingDashboard() {
   const navigate = useNavigate()
-  const location = useLocation()
 
   // ── Live events ─────────────────────────────────────────────────────────
   const { data: upcomingEvents = [] } = useUpcomingEvents(12)
@@ -281,8 +280,6 @@ export default function MarketingDashboard() {
     past:        { label: "Past",        cls: "border-border bg-secondary text-muted-foreground" },
   }
 
-
-  const _isActive = (path: string) => location.pathname.endsWith(path)
 
   return (
     <div className="space-y-6">

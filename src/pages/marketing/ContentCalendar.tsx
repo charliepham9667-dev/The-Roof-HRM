@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
 import { addDays, format, isSameDay, startOfMonth, startOfWeek } from "date-fns"
-import { useLocation, useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { cn } from "@/lib/utils"
@@ -155,8 +154,6 @@ function postThumb(post: ContentPost) {
 }
 
 export default function ContentCalendar() {
-  const _navigate = useNavigate()
-  const location = useLocation()
   const queryClient = useQueryClient()
   const { posts, isLoading, createPost, updatePost, deletePost } = useContentCalendar()
 
@@ -279,8 +276,6 @@ export default function ContentCalendar() {
     await deletePost.mutateAsync(editingPost.id)
     setModalOpen(false)
   }
-
-  const _isActive = (path: string) => location.pathname === path
 
   const monthStart = useMemo(() => startOfMonth(cursor), [cursor])
   const monthGridStart = useMemo(() => startOfWeek(monthStart, { weekStartsOn: 1 }), [monthStart])
