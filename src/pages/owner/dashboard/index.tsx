@@ -1382,6 +1382,7 @@ export default function OwnerDashboardPage() {
         {weekDates.map((d, dIdx) => {
             const row = weekByDate.get(d.iso)
             const isToday = d.iso === todayIso
+            const isPast = d.iso < todayIso
             const isClub = (row?.mode || "").toLowerCase().includes("club")
               || d.day === "THU" || d.day === "FRI" || d.day === "SAT"
 
@@ -1393,74 +1394,96 @@ export default function OwnerDashboardPage() {
 
             // DJ lines from aggregated data
             const djLines = row?.djLines || []
-
-            // Tasks / meetings due this day
-            const dayTasks = (allTasks || []).filter(
-              (t) => t.dueDate === d.iso && t.status !== "done" && t.status !== "cancelled",
-            )
-
             const isLast = dIdx === weekDates.length - 1
+            const firstEvent = dayEvents[0]
 
             return (
               <div
                 key={d.iso}
-                style={isLast ? { flex: 1 } : undefined}
-                className={cn(
-                  "rounded-card border border-border bg-card shadow-card relative overflow-hidden",
-                  isToday && "border-primary/30 bg-gradient-to-b from-primary/[0.04] to-card",
-                  isClub && !isToday && "border-t-2 border-t-primary/35",
-                )}
+                style={{
+                  ...(isLast ? { flex: 1 } : {}),
+                  opacity: isPast ? 0.55 : 1,
+                  border: isToday ? "1.5px solid #b5620a" : "1px solid #e2ddd7",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  background: "#faf8f5",
+                }}
               >
-                {/* Header row: day name left, date number right */}
-                <div className="flex items-center justify-between px-3 pt-3 pb-2 border-b border-border">
-                  <div className="text-xs tracking-widest font-semibold text-foreground uppercase leading-none">{d.day}</div>
-                  <div className={cn(
-                    "font-display text-[18px] leading-none tracking-[1px]",
-                    isToday ? "text-primary" : "text-foreground",
-                  )}>
-                    {d.dateNum}
-                  </div>
+                {/* Header */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "7px 10px",
+                  borderBottom: "1px solid #e2ddd7",
+                  background: isToday ? "#b5620a" : "#f0ece6",
+                }}>
+                  <span style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    textTransform: "uppercase" as const,
+                    letterSpacing: "0.08em",
+                    color: isToday ? "rgba(255,255,255,0.75)" : "#9c9590",
+                    minWidth: 26,
+                  }}>{d.day}</span>
+                  <span style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: 16,
+                    fontWeight: 500,
+                    color: isToday ? "#fff" : "#1a1714",
+                    marginRight: "auto",
+                    lineHeight: 1,
+                  }}>{d.dateNum}</span>
+                  {/* Night type badge */}
+                  {isClub ? (
+                    <span style={{
+                      fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3,
+                      textTransform: "uppercase" as const, letterSpacing: "0.04em",
+                      background: isToday ? "rgba(255,255,255,0.2)" : "rgba(107,63,160,0.15)",
+                      color: isToday ? "#fff" : "#7a4abf",
+                      border: isToday ? "1px solid rgba(255,255,255,0.3)" : "1px solid rgba(107,63,160,0.2)",
+                    }}>Club</span>
+                  ) : (
+                    <span style={{
+                      fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3,
+                      textTransform: "uppercase" as const, letterSpacing: "0.04em",
+                      background: "#f5edd8", color: "#7a5a10", border: "1px solid #e8d9b0",
+                    }}>Lounge</span>
+                  )}
                 </div>
 
-                {/* Content rows */}
-                <div className="px-3 py-2 space-y-1.5 min-h-[60px]">
+                {/* Body */}
+                <div style={{ padding: "8px 10px" }}>
                   {weekCsvLoading ? (
-                    <div className="text-xs text-muted-foreground">Loading…</div>
+                    <div style={{ fontSize: 10, color: "#9c9590" }}>Loading…</div>
                   ) : weekCsvError ? (
-                    <div className="text-xs text-warning">Unable to load.</div>
+                    <div style={{ fontSize: 10, color: "#b5620a" }}>Unable to load.</div>
                   ) : (
                     <>
-                      {/* Event names — primary/gold */}
-                      {dayEvents.map((e) => (
-                        <div
-                          key={`${e.eventName}-${e.startTime}`}
-                          className={cn(
-                            "text-xs leading-snug truncate",
-                            isToday ? "text-primary" : "text-primary/80",
+                      {firstEvent ? (
+                        <>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? "#b5620a" : "#1a1714", lineHeight: 1.3 }}>
+                            {firstEvent.eventName}
+                          </div>
+                          {(firstEvent.startTime || firstEvent.endTime) && (
+                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#9c9590", marginTop: 2 }}>
+                              {firstEvent.startTime}{firstEvent.startTime && firstEvent.endTime ? " – " : ""}{firstEvent.endTime}
+                            </div>
                           )}
-                        >
-                          {e.eventName}
-                          {e.startTime ? ` ${e.startTime}` : ""}
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 10, color: "#9c9590", fontStyle: "italic" }}>TBD</div>
+                      )}
+                      {djLines.length > 0 && (
+                        <div style={{ fontSize: 10, color: "#6b6560", marginTop: 3 }}>
+                          {djLines.join(" · ")}
                         </div>
-                      ))}
-
-                      {/* DJ lines — secondary foreground */}
-                      {djLines.map((line) => (
-                        <div key={line} className="text-xs leading-snug truncate text-secondary-foreground">
-                          {line}
+                      )}
+                      {isToday && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#b5620a", display: "inline-block" }} />
+                          <span style={{ fontSize: 9, fontWeight: 700, color: "#b5620a", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Tonight</span>
                         </div>
-                      ))}
-
-                      {/* Tasks / meetings — muted */}
-                      {dayTasks.map((t) => (
-                        <div key={t.id} className="text-xs leading-snug truncate text-muted-foreground">
-                          {t.dueTime ? `${t.dueTime} ` : ""}{t.title}
-                        </div>
-                      ))}
-
-                      {/* Empty state */}
-                      {dayEvents.length === 0 && djLines.length === 0 && dayTasks.length === 0 && (
-                        <div className="text-xs text-muted-foreground/50 italic">—</div>
                       )}
                     </>
                   )}
@@ -1470,76 +1493,112 @@ export default function OwnerDashboardPage() {
           })}
         </div>{/* end glance-col */}
 
-        {/* RIGHT — Pipeline table */}
-        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden flex flex-col">
+        {/* RIGHT — Pipeline card */}
+        <div style={{
+          background: "#faf8f5",
+          border: "1px solid #e2ddd7",
+          borderRadius: 8,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column" as const,
+        }}>
 
         {/* Card header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="text-base font-medium text-foreground">This Week's Pipeline</div>
+        <div style={{ padding: "12px 18px", borderBottom: "1px solid #e2ddd7", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1714" }}>This Week's Pipeline</div>
         </div>
 
         {/* Column headers */}
-        <div className="hidden lg:grid lg:grid-cols-[1.6fr_1fr_1fr_1.2fr_1.6fr] gap-4 px-5 py-2.5 border-b border-border">
-          <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Event</div>
-          <div className="text-xs tracking-widest font-semibold text-foreground uppercase">DJ 1</div>
-          <div className="text-xs tracking-widest font-semibold text-foreground uppercase">DJ 2</div>
-          <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Genre</div>
-          <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Promotion</div>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1.6fr 1fr 1fr 1.2fr 1.6fr",
+          gap: 16,
+          padding: "7px 18px",
+          borderBottom: "1px solid #e2ddd7",
+          background: "#f0ece6",
+        }}>
+          {["Event", "DJ 1", "DJ 2", "Genre", "Promotion"].map((h) => (
+            <div key={h} style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#9c9590" }}>{h}</div>
+          ))}
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-border flex-1">
-          {pipelineRows.map((row, idx) => (
-            <div
-              key={`${row.iso}-${idx}`}
-              className={cn(
-                "relative grid grid-cols-1 gap-y-1 gap-x-4 px-5 py-3.5 lg:grid-cols-[1.6fr_1fr_1fr_1.2fr_1.6fr] lg:items-center",
-                row.isToday && "bg-gradient-to-r from-primary/[0.04] to-transparent",
-              )}
-            >
-              {/* Event + date */}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "text-sm leading-snug truncate",
-                    row.event === "TBD" ? "text-muted-foreground italic" : "text-foreground font-medium",
-                  )}>
-                    {row.event}
+        <div style={{ flex: 1 }}>
+          {pipelineRows.map((row, idx) => {
+            const isPipelinePast = row.iso < todayIso
+            const genres = row.genre !== "—" ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : []
+            const promos = row.promo !== "—" ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : []
+
+            return (
+              <div
+                key={`${row.iso}-${idx}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.6fr 1fr 1fr 1.2fr 1.6fr",
+                  gap: 16,
+                  padding: "10px 18px",
+                  borderBottom: idx < pipelineRows.length - 1 ? "1px solid #e2ddd7" : "none",
+                  alignItems: "start",
+                  background: row.isToday ? "#fdf3e7" : "transparent",
+                  opacity: isPipelinePast ? 0.55 : 1,
+                }}
+              >
+                {/* Event + date */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+                    <span style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: row.isToday ? "#b5620a" : row.event === "TBD" ? "#9c9590" : "#1a1714",
+                      fontStyle: row.event === "TBD" ? "italic" : "normal",
+                    }}>{row.event}</span>
+                    {row.isToday && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 3,
+                        background: "#b5620a", color: "#fff",
+                        textTransform: "uppercase" as const, letterSpacing: "0.05em",
+                      }}>Today</span>
+                    )}
                   </div>
-                  {row.isToday && (
-                    <span className="shrink-0 rounded-sm border border-primary/25 bg-primary/8 px-1.5 py-0.5 text-[10px] tracking-[1.5px] text-primary uppercase">
-                      Today
-                    </span>
+                  <div style={{ fontSize: 10, color: "#9c9590", marginTop: 2 }}>{row.when}</div>
+                </div>
+
+                {/* DJ 1 */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: row.dj1 === "—" ? "#c8c0b5" : "#1a1714" }}>{row.dj1}</div>
+                </div>
+
+                {/* DJ 2 */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: row.dj2 === "—" ? "#c8c0b5" : "#1a1714" }}>{row.dj2}</div>
+                </div>
+
+                {/* Genre chips */}
+                <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap" as const, gap: 3 }}>
+                  {genres.length > 0 ? genres.map((g) => (
+                    <span key={g} style={{
+                      padding: "2px 7px", borderRadius: 3, fontSize: 10, fontWeight: 500,
+                      background: "#f0ece6", border: "1px solid #e2ddd7", color: "#6b6560",
+                    }}>{g}</span>
+                  )) : (
+                    <span style={{ color: "#c8c0b5", fontSize: 11 }}>—</span>
                   )}
                 </div>
-                <div className="mt-0.5 text-xs text-muted-foreground truncate">{row.when}</div>
-              </div>
 
-              {/* DJ 1 */}
-              <div className="min-w-0">
-                <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">DJ 1</div>
-                <div className={cn("text-xs truncate", row.dj1 === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.dj1}</div>
+                {/* Promo pills */}
+                <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap" as const, gap: 3 }}>
+                  {promos.length > 0 ? promos.map((p) => (
+                    <span key={p} style={{
+                      padding: "2px 7px", borderRadius: 3, fontSize: 10, fontWeight: 500,
+                      background: "#edf5f0", border: "1px solid #b8e0c8", color: "#2d7a4f",
+                    }}>{p}</span>
+                  )) : (
+                    <span style={{ color: "#c8c0b5", fontSize: 11 }}>—</span>
+                  )}
+                </div>
               </div>
-
-              {/* DJ 2 */}
-              <div className="min-w-0">
-                <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">DJ 2</div>
-                <div className={cn("text-xs truncate", row.dj2 === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.dj2}</div>
-              </div>
-
-              {/* Genre */}
-              <div className="min-w-0">
-                <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">Genre</div>
-                <div className={cn("text-xs truncate", row.genre === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.genre}</div>
-              </div>
-
-              {/* Promotion */}
-              <div className="min-w-0">
-                <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">Promotion</div>
-                <div className={cn("text-xs", row.promo === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.promo}</div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         </div>{/* end pipeline-card */}
 
