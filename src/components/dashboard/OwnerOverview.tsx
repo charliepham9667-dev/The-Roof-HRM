@@ -29,7 +29,7 @@ function formatVND(value: number): string {
 
 export function OwnerOverview() {
   const profile = useAuthStore((s) => s.profile);
-  const firstName = profile?.fullName?.split(' ')[0] || 'Charlie';
+  const _firstName = profile?.fullName?.split(' ')[0] || 'Charlie';
   const [showTargetManager, setShowTargetManager] = useState(false);
   
   const { data: kpi, isLoading, error } = useKPISummary();

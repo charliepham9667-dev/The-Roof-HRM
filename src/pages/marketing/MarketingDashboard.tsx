@@ -282,7 +282,7 @@ export default function MarketingDashboard() {
   }
 
 
-  const isActive = (path: string) => location.pathname.endsWith(path)
+  const _isActive = (path: string) => location.pathname.endsWith(path)
 
   return (
     <div className="space-y-6">

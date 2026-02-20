@@ -155,7 +155,7 @@ function postThumb(post: ContentPost) {
 }
 
 export default function ContentCalendar() {
-  const navigate = useNavigate()
+  const _navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
   const { posts, isLoading, createPost, updatePost, deletePost } = useContentCalendar()
@@ -280,7 +280,7 @@ export default function ContentCalendar() {
     setModalOpen(false)
   }
 
-  const isActive = (path: string) => location.pathname === path
+  const _isActive = (path: string) => location.pathname === path
 
   const monthStart = useMemo(() => startOfMonth(cursor), [cursor])
   const monthGridStart = useMemo(() => startOfWeek(monthStart, { weekStartsOn: 1 }), [monthStart])

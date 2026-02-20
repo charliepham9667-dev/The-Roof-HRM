@@ -62,25 +62,6 @@ function Legend() {
   )
 }
 
-// ─── Tab button ────────────────────────────────────────────────────────────────
-
-function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-medium transition-colors",
-        active
-          ? "bg-card border border-border text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground hover:bg-secondary",
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
 // ─── VenueManager page ─────────────────────────────────────────────────────────
 
 export function VenueManager() {

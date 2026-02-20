@@ -117,7 +117,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     : location.pathname.startsWith('/staff') ? 'staff'
     : location.pathname.startsWith('/owner') ? 'owner'
     : null;
-  const effectiveRole =
+  const _effectiveRole =
     viewAs?.role ?? (actualRole === 'owner' && pathPrefix ? pathPrefix : actualRole);
 
   const [sectionLabel, pageLabel] = getBreadcrumb(location.pathname)
