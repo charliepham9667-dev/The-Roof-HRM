@@ -1371,11 +1371,15 @@ export default function OwnerDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Week at a glance */}
+      {/* Week at a glance + Pipeline — side-by-side two-column layout */}
       <div className="space-y-3">
-        <SectionTitle label="WEEK AT A GLANCE" />
-        <div className="grid gap-3 lg:grid-cols-7">
-          {weekDates.map((d) => {
+        <SectionTitle label="THIS WEEK" />
+        {/* Two-column: vertical glance left, pipeline table right */}
+        <div className="grid gap-3 lg:grid-cols-[220px_1fr]" style={{ alignItems: "stretch" }}>
+
+        {/* LEFT — vertical day cards */}
+        <div className="flex flex-col gap-1.5" style={{ height: "100%" }}>
+        {weekDates.map((d, dIdx) => {
             const row = weekByDate.get(d.iso)
             const isToday = d.iso === todayIso
             const isClub = (row?.mode || "").toLowerCase().includes("club")
@@ -1395,9 +1399,12 @@ export default function OwnerDashboardPage() {
               (t) => t.dueDate === d.iso && t.status !== "done" && t.status !== "cancelled",
             )
 
+            const isLast = dIdx === weekDates.length - 1
+
             return (
               <div
                 key={d.iso}
+                style={isLast ? { flex: 1 } : undefined}
                 className={cn(
                   "rounded-card border border-border bg-card shadow-card relative overflow-hidden",
                   isToday && "border-primary/30 bg-gradient-to-b from-primary/[0.04] to-card",
@@ -1461,15 +1468,11 @@ export default function OwnerDashboardPage() {
               </div>
             )
           })}
-        </div>
-      </div>
+        </div>{/* end glance-col */}
 
-      {/* Pipeline + Promotions section */}
-      <div className="space-y-4">
-        <SectionTitle label="THIS WEEK" />
+        {/* RIGHT — Pipeline table */}
+        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden flex flex-col">
 
-        {/* This week's pipeline — full width */}
-        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
         {/* Card header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="text-base font-medium text-foreground">This Week's Pipeline</div>
@@ -1485,7 +1488,7 @@ export default function OwnerDashboardPage() {
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-border flex-1">
           {pipelineRows.map((row, idx) => (
             <div
               key={`${row.iso}-${idx}`}
@@ -1538,7 +1541,10 @@ export default function OwnerDashboardPage() {
             </div>
           ))}
         </div>
-      </div>
+        </div>{/* end pipeline-card */}
+
+        </div>{/* end two-column grid */}
+      </div>{/* end THIS WEEK section */}
 
       {/* Promotions — two-row bento layout */}
       {(() => {
@@ -1825,7 +1831,6 @@ export default function OwnerDashboardPage() {
             ))}
           </div>
         </div>
-      </div>
       </div>
 
 
