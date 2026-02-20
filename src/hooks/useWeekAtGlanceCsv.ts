@@ -324,15 +324,25 @@ function parseRoofCalendarEvents(csvText: string): RoofCalendarEvent[] {
   return out
 }
 
+function buildFetchUrl(csvUrl: string): string {
+  // In development, fetch directly (dev server has no CORS issues with same-origin proxy)
+  // In production (Vercel), route through our /api/csv-proxy to avoid CORS
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+    return `/api/csv-proxy?url=${encodeURIComponent(csvUrl)}`
+  }
+  return csvUrl
+}
+
 export function useRoofCalendarWeekData() {
-  const url = (import.meta as any).env?.VITE_HQ_WEEK_AT_A_GLANCE_CSV_URL as string | undefined
+  const rawUrl = (import.meta as any).env?.VITE_HQ_WEEK_AT_A_GLANCE_CSV_URL as string | undefined
 
   return useQuery({
-    queryKey: ["roof-calendar-week-data", url],
+    queryKey: ["roof-calendar-week-data", rawUrl],
     queryFn: async (): Promise<RoofCalendarWeekData> => {
-      if (!url) return { byDate: [], events: [] }
+      if (!rawUrl) return { byDate: [], events: [] }
+      const url = buildFetchUrl(rawUrl)
       try {
-        const res = await fetch(url, { mode: "cors", cache: "no-store" })
+        const res = await fetch(url, { cache: "no-store" })
         if (!res.ok) return { byDate: [], events: [] }
         const text = await res.text()
         // If we got an HTML error page instead of CSV, return empty
@@ -342,7 +352,7 @@ export function useRoofCalendarWeekData() {
         return { byDate: [], events: [] }
       }
     },
-    enabled: Boolean(url),
+    enabled: Boolean(rawUrl),
     staleTime: 1000 * 60 * 5,
   })
 }
