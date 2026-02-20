@@ -289,36 +289,56 @@ export function VenueManager() {
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
       {/* ── Page header ── */}
-      <div className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="shrink-0">
+        {/* Row 1: title + view toggle */}
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Venue Manager</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">The Roof · 3F</p>
+            <h1 className="text-[28px] font-bold leading-tight text-foreground">Venue Manager</h1>
+            <p className="mt-1 text-sm text-muted-foreground">The Roof · 3F</p>
           </div>
 
-          {/* Tab switcher */}
-          <div className="flex items-center gap-1 ml-3 p-0.5 rounded-md bg-secondary/60">
-            <TabBtn active={activeTab === "floor"} onClick={() => { setActiveTab("floor"); setEditMode(false) }}>
-              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          {/* View toggle — moved here from underline tabs */}
+          <div className="flex items-center gap-1 mt-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => { setActiveTab("floor"); setEditMode(false) }}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors border",
+                activeTab === "floor"
+                  ? "border-[#78350F]/30 bg-[#78350F]/10 text-[#78350F]"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary",
+              )}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="1" y="1" width="6" height="6" rx="1"/>
                 <rect x="9" y="1" width="6" height="6" rx="1"/>
                 <rect x="1" y="9" width="6" height="6" rx="1"/>
                 <rect x="9" y="9" width="6" height="6" rx="1"/>
               </svg>
-              2D Floor Plan
-            </TabBtn>
-            <TabBtn active={activeTab === "calendar"} onClick={() => { setActiveTab("calendar"); setEditMode(false) }}>
-              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <span className="hidden sm:inline">2D Floor Plan</span>
+              <span className="sm:hidden">2D</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab("calendar"); setEditMode(false) }}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors border",
+                activeTab === "calendar"
+                  ? "border-[#78350F]/30 bg-[#78350F]/10 text-[#78350F]"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary",
+              )}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="1" y="3" width="14" height="12" rx="1.5"/>
                 <path d="M5 1v4M11 1v4M1 7h14"/>
               </svg>
               Calendar
-            </TabBtn>
+            </button>
           </div>
         </div>
 
-        {/* Right controls */}
-        <div className="flex items-center gap-3">
+        {/* Row 2: controls toolbar — wraps on mobile */}
+        <div className="flex flex-wrap items-center gap-2 mt-2">
           {activeTab === "floor" && !editMode && <Legend />}
 
           {savedNotice && (
@@ -363,7 +383,7 @@ export function VenueManager() {
 
           {activeTab === "floor" && editMode && (
             <>
-              <span className="text-[11px] text-blue-600 font-medium">
+              <span className="hidden sm:inline text-[11px] text-blue-600 font-medium">
                 Drag to reposition · Double-click to rename · × to delete
               </span>
               <button
@@ -391,26 +411,43 @@ export function VenueManager() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
+        {/* Mobile banner — floor plan only visible on md+ */}
+        {activeTab === "floor" && (
+          <div className="md:hidden flex items-center gap-2 rounded-lg border border-info/20 bg-info/8 px-4 py-2.5 text-sm text-info shrink-0">
+            <span>🖥</span>
+            <span>Floor plan available on tablet and desktop</span>
+          </div>
+        )}
+
         <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
 
-          {/* Left panel — always visible (hidden in layout edit mode) */}
+          {/* Left panel — full width on mobile when floor tab is active */}
           {!editMode && (
-            <ReservationPanel
-              totalFree={Math.max(0, totalFree)}
-              totalTaken={totalTaken}
-              totalReserved={totalReserved}
-              totalCapacity={totalCapacity}
-              confirmedPax={confirmedPax}
-              todayReservations={allReservations}
-              allocatedIds={allocatedIds}
-              canEdit={canEdit}
-              onAddManual={handleAddManual}
-              onImportCsv={handleImportCsv}
-            />
+            <div className={cn(
+              activeTab === "floor" ? "w-full md:w-auto" : "hidden",
+              activeTab === "calendar" && "hidden",
+              "md:block"
+            )}>
+              <ReservationPanel
+                totalFree={Math.max(0, totalFree)}
+                totalTaken={totalTaken}
+                totalReserved={totalReserved}
+                totalCapacity={totalCapacity}
+                confirmedPax={confirmedPax}
+                todayReservations={allReservations}
+                allocatedIds={allocatedIds}
+                canEdit={canEdit}
+                onAddManual={handleAddManual}
+                onImportCsv={handleImportCsv}
+              />
+            </div>
           )}
 
-          {/* Main view */}
-          <div className="flex-1 min-w-0 flex flex-col">
+          {/* Main view — canvas hidden on mobile for floor tab */}
+          <div className={cn(
+            "flex-1 min-w-0 flex flex-col",
+            activeTab === "floor" && "hidden md:flex",
+          )}>
             {activeTab === "floor" && (
               <FloorPlan
                 tables={tables}

@@ -193,11 +193,6 @@ export default function App() {
               <ManageChecklists />
             </RoleGuard>
           } />
-          <Route path="owner/venue-calendar" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <ManagerCalendar />
-            </RoleGuard>
-          } />
           <Route path="owner/venue" element={
             <RoleGuard allowedRoles={['owner', 'manager', 'staff']}>
               <VenueManager />

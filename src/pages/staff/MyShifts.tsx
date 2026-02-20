@@ -274,7 +274,7 @@ export function MyShifts() {
     <div className="flex flex-col gap-5">
 
       {/* ── WEEK SUMMARY STATS ───────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         {[
           {
             label: 'This Week',
@@ -366,7 +366,8 @@ export function MyShifts() {
         </div>
 
         {/* 7-day grid */}
-        <div className="grid grid-cols-7 gap-2.5">
+        <div className="overflow-x-auto pb-1">
+        <div className="grid grid-cols-7 gap-2.5 min-w-[560px]">
           {weekDays.map((day) => {
             const iso = toISO(day);
             const isToday = iso === todayIso;
@@ -435,6 +436,7 @@ export function MyShifts() {
             );
           })}
         </div>
+        </div>
       </div>
 
       {/* ── UPCOMING SHIFTS TABLE ────────────────────────────────────── */}
@@ -444,9 +446,9 @@ export function MyShifts() {
           <div className="h-px flex-1 bg-border" />
         </div>
 
-        <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
+        <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card">
           {/* Table header */}
-          <div className="grid grid-cols-[180px_140px_80px_1fr_auto] border-b border-border bg-secondary/60 px-4 py-2.5">
+          <div className="grid grid-cols-[180px_140px_80px_1fr_auto] border-b border-border bg-secondary/60 px-4 py-2.5 min-w-[560px]">
             {['Date', 'Hours', 'Duration', 'Team & Manager', ''].map((h) => (
               <div key={h} className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {h}
@@ -472,7 +474,7 @@ export function MyShifts() {
               return (
                 <div
                   key={shift.id}
-                  className="grid grid-cols-[180px_140px_80px_1fr_auto] items-center border-b border-border px-4 py-3 last:border-b-0 transition-colors hover:bg-secondary/40"
+                  className="grid grid-cols-[180px_140px_80px_1fr_auto] items-center border-b border-border px-4 py-3 last:border-b-0 transition-colors hover:bg-secondary/40 min-w-[560px]"
                 >
                   {/* Date */}
                   <div>

@@ -74,11 +74,11 @@ export function OwnerOverview() {
 
   return (
     <div className="flex-1 space-y-4">
-      {/* dashboard-01 style header */}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-bold tracking-tight">Hello, {firstName}</h2>
-          <p className="text-sm text-muted-foreground">{getGreetingMessage()}</p>
+      {/* Page header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-[28px] font-bold leading-tight text-foreground">Finance Summary</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{getGreetingMessage()}</p>
         </div>
         {syncBadge && (
           <div className="flex items-center gap-2">
@@ -90,7 +90,7 @@ export function OwnerOverview() {
       </div>
 
       {/* KPI row (dashboard-01) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {isLoading ? (
           <div className="col-span-full flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

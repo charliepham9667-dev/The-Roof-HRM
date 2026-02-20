@@ -126,7 +126,7 @@
 
 @layer utilities {
   .shadow-card {
-    box-shadow: 0px 4px 6px 1px rgba(0, 0, 0, 0.1), 0px 4px 2px 0px rgba(0, 0, 0, 0.04);
+    box-shadow: 0px 4px 6px 1px rgba(0, 0, 0, 0.1);
   }
   .shadow-card-hover {
     box-shadow: 0px 4px 6px 1px rgba(0, 0, 0, 0.1), 0px 4px 2px 0px rgba(0, 0, 0, 0.04);

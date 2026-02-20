@@ -441,8 +441,12 @@ export function KanbanBoard({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="relative">
+        {/* Gradient scroll hint on the right for mobile */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background/80 to-transparent z-10 md:hidden" />
+        <div className="flex gap-2.5 overflow-x-auto pb-2 md:grid md:grid-cols-4 md:overflow-visible md:pb-0">
         {COLUMNS.map((col) => (
+          <div key={col.key} className="min-w-[240px] md:min-w-0">
           <KanbanColumn
             key={col.key}
             col={col}
@@ -456,7 +460,9 @@ export function KanbanBoard({
             onOpenTask={onOpenTask}
             onNewTask={() => onNewTask(col.key)}
           />
+          </div>
         ))}
+        </div>
       </div>
 
       {/* Ghost card following the cursor */}

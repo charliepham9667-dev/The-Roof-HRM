@@ -288,46 +288,23 @@ export default function MarketingDashboard() {
     <div className="space-y-6">
 
       {/* ── PAGE HEADER ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <div className="font-display text-xl tracking-[4px] text-primary uppercase">The Roof</div>
-          <div className="text-xs tracking-widest text-muted-foreground">Da Nang · Club &amp; Lounge</div>
-        </div>
-        <div className="text-center">
-          <div className="text-xs tracking-widest text-muted-foreground uppercase mb-1">
+          <h1 className="text-[28px] font-bold leading-tight text-foreground">Marketing Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-          </div>
-          <div className="font-subheading text-lg font-normal italic text-foreground">Marketing Overview — Brand Command Center</div>
+            {" · "}Brand Command Center
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/owner/dashboard")}
-            className={cn(
-              "px-3.5 py-[5px] text-xs tracking-wider uppercase rounded-sm border",
-              isActive("/owner/dashboard")
-                ? "border-primary/25 bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-border hover:text-secondary-foreground",
-            )}
-          >
-            ← Executive
-          </button>
-          <button type="button" className="px-3.5 py-[5px] text-xs tracking-wider uppercase rounded-sm border border-primary/25 bg-primary/10 text-primary">
-            Marketing
-          </button>
-          <button type="button" className="px-3.5 py-[5px] text-xs tracking-wider uppercase rounded-sm border border-border text-muted-foreground hover:text-secondary-foreground">
-            Operations
-          </button>
-          <div className="ml-2 flex items-center gap-1.5 px-3 py-1 rounded-sm border border-border text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-            Club Night
-          </div>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-sm border border-border text-xs text-muted-foreground uppercase tracking-wider font-semibold self-start mt-1">
+          Club Night
         </div>
       </div>
 
       {/* ── 1. BRAND IDENTITY HERO ── */}
-      <div className="grid grid-cols-[1fr_1px_1fr_1px_1fr] rounded-card overflow-hidden border border-border shadow-card" style={{ background: "#1a1714" }}>
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1px_1fr_1px_1fr] rounded-card overflow-hidden border border-border shadow-card" style={{ background: "#1a1714" }}>
         {/* Mission */}
-        <div className="p-7">
+        <div className="p-7 border-b border-white/10 sm:border-b-0">
           <div className="text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Mission</div>
           <div className="font-subheading text-[15px] font-medium text-white/90 leading-snug mb-2">
             The Roof brings <em className="not-italic" style={{ color: "#c9a84c" }}>like-minded souls</em> together
@@ -338,10 +315,10 @@ export default function MarketingDashboard() {
         </div>
 
         {/* divider */}
-        <div style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="hidden sm:block" style={{ background: "rgba(255,255,255,0.1)" }} />
 
         {/* Big Idea */}
-        <div className="p-7">
+        <div className="p-7 border-b border-white/10 sm:border-b-0">
           <div className="text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Big Idea</div>
           <div className="font-subheading text-[20px] font-medium leading-snug mb-2" style={{ color: "#c9a84c", fontStyle: "italic" }}>
             Nốt nhịp tắng không
@@ -359,7 +336,7 @@ export default function MarketingDashboard() {
         </div>
 
         {/* divider */}
-        <div style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="hidden sm:block" style={{ background: "rgba(255,255,255,0.1)" }} />
 
         {/* Niche */}
         <div className="p-7">
@@ -378,7 +355,7 @@ export default function MarketingDashboard() {
       {/* ── 2. SOCIAL PERFORMANCE ── */}
       <div className="space-y-3">
         <SectionTitle label="Social Media Performance — Week of Feb 11–17" />
-        <div className="grid grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {CHANNELS.map((ch) => (
             <div
               key={ch.key}
@@ -420,7 +397,12 @@ export default function MarketingDashboard() {
               {ch.key === "google" && (
                 <div className="mt-2.5 flex items-center justify-between rounded-sm border border-error/15 bg-error/[0.07] px-2.5 py-[7px]">
                   <span className="text-xs text-error">⚠ Respond to 2 reviews now</span>
-                  <span className="text-xs text-error cursor-pointer">→ Open</span>
+                  <a
+                    href="https://business.google.com/reviews"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-error hover:underline"
+                  >→ Open Google Business</a>
                 </div>
               )}
               <div className="mt-2.5 flex items-center justify-between border-t border-border pt-2.5">
@@ -447,9 +429,9 @@ export default function MarketingDashboard() {
       <div className="rounded-card border border-border overflow-hidden shadow-card" style={{ background: "#f5edd8", borderColor: "#e8d9b0" }}>
         <div className="px-6 pt-5 pb-1">
           <div className="text-[10px] font-bold uppercase tracking-[0.1em] mb-4" style={{ color: "#b5620a" }}>Our 5 Unique Selling Points</div>
-          <div className="grid grid-cols-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-0">
             {USPS.map((u, i) => (
-              <div key={u.name} className={cn("pb-5 px-4", i === 0 ? "pl-0" : "", i === USPS.length - 1 ? "pr-0" : "", i < USPS.length - 1 ? "border-r" : "")} style={{ borderColor: "#e8d9b0" }}>
+              <div key={u.name} className={cn("pb-5 sm:px-4", i === 0 ? "sm:pl-0" : "", i === USPS.length - 1 ? "sm:pr-0" : "", i < USPS.length - 1 ? "sm:border-r" : "")} style={{ borderColor: "#e8d9b0" }}>
                 <div className="text-xl mb-2">{u.icon}</div>
                 <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "#b5620a" }}>{u.name}</div>
                 <div className="text-[11px] leading-relaxed" style={{ color: "#6b6560" }}>{u.desc}</div>
@@ -497,7 +479,8 @@ export default function MarketingDashboard() {
             </div>
 
             {/* grid */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className="overflow-x-auto">
+            <div className="grid grid-cols-7 gap-2 min-w-[480px]">
               {weekDays.map((day) => {
                 const iso = format(day, "yyyy-MM-dd")
                 const dayPosts = postsByDate.get(iso) ?? []
@@ -540,6 +523,7 @@ export default function MarketingDashboard() {
                 )
               })}
             </div>
+            </div>
           </div>
 
         </div>
@@ -551,7 +535,7 @@ export default function MarketingDashboard() {
 
         {/* Pipeline cards (from DJ schedule CSV) */}
         {pipelineCards.length > 0 && (
-          <div className="grid grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {pipelineCards.map(({ iso, first, extra }) => {
               const dt = new Date(iso + 'T00:00:00')
               const daysUntil = differenceInDays(dt, new Date())
@@ -623,7 +607,7 @@ export default function MarketingDashboard() {
 
         {/* Supabase events (if any) */}
         {upcomingEvents.length > 0 && (
-          <div className="grid grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {upcomingEvents.map((ev) => {
               const status = ev.marketingStatus ?? 'not_started'
               const isPast = status === 'past'
@@ -799,7 +783,7 @@ export default function MarketingDashboard() {
       {/* ── 4. PARTNERSHIPS & INFLUENCERS ── */}
       <div className="space-y-3">
         <SectionTitle label="Partnerships & Influencers" />
-        <div className="grid grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
 
           {/* ── Partnership Tracker ── */}
           <div className="rounded-card border border-border bg-card shadow-card flex flex-col" style={{ height: 380 }}>
@@ -986,7 +970,7 @@ export default function MarketingDashboard() {
       {/* ── 5. TARGET AUDIENCE ── */}
       <div className="space-y-3">
         <SectionTitle label="Target Audience" />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {TARGET_AUDIENCE.map((a) => (
             <div key={a.type} className="rounded-card border border-border bg-secondary/30 shadow-card px-4 py-3.5">
               <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#b5620a" }}>{a.type}</div>
@@ -1005,7 +989,7 @@ export default function MarketingDashboard() {
       {/* ── 5. CONTENT PILLARS + BRAND VOICE ── */}
       <div className="space-y-3">
         <SectionTitle label="Content Pillars & Brand Voice" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Content Pillars */}
           <div className="rounded-card border border-border bg-card shadow-card p-5">
             <div className="text-xs font-semibold tracking-widest text-foreground uppercase flex items-center gap-2 mb-4">
@@ -1036,7 +1020,7 @@ export default function MarketingDashboard() {
               </div>
               <div className="mb-3">
                 <div className="text-[11px] font-semibold text-foreground mb-2">Brand Personalities</div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     { name: "The Soulful Friend", desc: "Friendly, warm, emotional, calm, rich imagery" },
                     { name: "The Sophisticated Minimalist", desc: "Free, professional, quality-focused, no hard sell" },
@@ -1055,7 +1039,7 @@ export default function MarketingDashboard() {
                   { ctx: "Vietnamese Holidays", tone: "Respectful, warm, not performative. Culturally real." },
                   { ctx: "Language", tone: "Primary: English. Short, story-driven, soft CTA. Max 3 posts/week feed." },
                 ].map((row, i, arr) => (
-                  <div key={row.ctx} className={cn("grid grid-cols-[100px_1fr] gap-3 py-2", i < arr.length - 1 ? "border-b border-border" : "")}>
+                  <div key={row.ctx} className={cn("grid grid-cols-[auto_1fr] gap-3 py-2", i < arr.length - 1 ? "border-b border-border" : "")}>
                     <div className="text-[11px] font-semibold text-foreground">{row.ctx}</div>
                     <div className="text-[11px] text-muted-foreground">{row.tone}</div>
                   </div>
@@ -1091,8 +1075,8 @@ export default function MarketingDashboard() {
       {/* ── 9. PAID ADS ── */}
       <div className="space-y-3">
         <SectionTitle label="Paid Ads — This Week" />
-        <div className="grid grid-cols-4 gap-3.5">
-          <div className="col-span-2 relative overflow-hidden rounded-card border border-border bg-card p-[18px_20px] shadow-card">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="sm:col-span-2 relative overflow-hidden rounded-card border border-border bg-card p-[18px_20px] shadow-card">
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#1877f2] to-transparent" />
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
@@ -1104,7 +1088,7 @@ export default function MarketingDashboard() {
               <div className="h-full rounded-sm bg-gradient-to-r from-[#1877f2] to-[#4285f4]" style={{ width: "68%" }} />
             </div>
             <div className="text-xs text-muted-foreground mb-4">1,360,000 VND spent · 640,000 remaining · 68%</div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { val: "18,400", label: "Reach", delta: "↑ +22%", dc: "text-success" },
                 { val: "420", label: "Link Clicks", delta: "↑ +15%", dc: "text-success" },

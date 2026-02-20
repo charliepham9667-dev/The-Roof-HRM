@@ -538,10 +538,10 @@ export function ScheduleBuilder() {
   return (
     <div className="space-y-3">
       {/* ── Schedule header bar ── */}
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-3">
-        {/* Left: title + week nav + stats */}
-        <div className="flex items-center gap-4 min-w-0 flex-wrap">
-          <h1 className="text-xl font-semibold tracking-tight whitespace-nowrap">Schedule</h1>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between rounded-xl border border-border bg-card px-4 md:px-5 py-3">
+        {/* Row 1: title + week nav + stats */}
+        <div className="flex flex-wrap items-center gap-3 min-w-0">
+          <h1 className="text-[28px] font-bold leading-tight text-foreground whitespace-nowrap">Schedule</h1>
 
           {/* Week nav */}
           <div className="flex items-center gap-1.5">
@@ -554,7 +554,7 @@ export function ScheduleBuilder() {
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-sm font-semibold whitespace-nowrap min-w-[160px] text-center">{weekRangeShort}</span>
+            <span className="text-sm font-semibold whitespace-nowrap text-center">{weekRangeShort}</span>
             <Button
               variant="outline"
               size="icon"
@@ -573,8 +573,8 @@ export function ScheduleBuilder() {
             </Button>
           </div>
 
-          {/* Stats pills */}
-          <div className="flex items-center gap-2">
+          {/* Stats pills — wrap naturally */}
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11.5px] font-medium text-emerald-700">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               {onShiftNowCount} on shift now
@@ -585,8 +585,8 @@ export function ScheduleBuilder() {
           </div>
         </div>
 
-        {/* Right: actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Row 2 (mobile) / Right side (desktop): actions */}
+        <div className="flex flex-wrap items-center gap-2">
           {isDesktop && (
             <Input
               value={teamQuery}
@@ -595,6 +595,7 @@ export function ScheduleBuilder() {
               className="h-8 w-[180px] text-xs"
             />
           )}
+          {/* On mobile, hide "Duplicate week" text — show icon only */}
           <Button
             variant="outline"
             size="sm"
@@ -602,7 +603,7 @@ export function ScheduleBuilder() {
             onClick={() => setDuplicateOpen(true)}
             className="text-xs"
           >
-            {duplicating ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Duplicating…</> : "Duplicate week"}
+            {duplicating ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Duplicating…</> : <><span className="hidden sm:inline">Duplicate week</span><span className="sm:hidden">Duplicate</span></>}
           </Button>
           <Button
             size="sm"
@@ -623,7 +624,8 @@ export function ScheduleBuilder() {
             onClick={() => openNewShift({ employeeId: "open", date: toYmd(weekStart) })}
           >
             <Plus className="h-3.5 w-3.5" />
-            Add Shift
+            <span className="hidden sm:inline">Add Shift</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>

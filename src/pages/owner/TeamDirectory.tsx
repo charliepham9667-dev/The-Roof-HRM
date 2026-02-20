@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { useStaffList, useTodayShifts, usePendingProfiles } from "../../hooks/useShifts"
+import { useStaffList, useTodayShifts, usePendingProfiles, useShifts } from "../../hooks/useShifts"
 import type { UserRole, JobRole, EmploymentType } from "../../types"
 import { supabase } from "@/lib/supabase"
 import { useQueryClient } from "@tanstack/react-query"
@@ -139,7 +139,25 @@ export function TeamDirectory() {
   const { data: staffList, isLoading } = useStaffList()
   const { data: todayShifts } = useTodayShifts(todayIso)
   const { data: pendingProfiles, isLoading: pendingLoading } = usePendingProfiles()
+  const { data: weekShifts = [] } = useShifts(new Date())
   const queryClient = useQueryClient()
+
+  // Build staffId → total scheduled hours this week
+  const weekHoursMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const s of weekShifts) {
+      if (!s.staffId) continue
+      const start = s.startTime ?? ""
+      const end = s.endTime ?? ""
+      if (!start || !end) continue
+      const startMins = parseTimeMins(start)
+      let endMins = parseTimeMins(end)
+      if (endMins <= startMins) endMins += 24 * 60 // overnight shift
+      const hrs = Math.max(0, endMins - startMins) / 60
+      map.set(s.staffId, (map.get(s.staffId) ?? 0) + hrs)
+    }
+    return map
+  }, [weekShifts])
 
   const allStaff = (staffList ?? []) as DirectoryProfile[]
 
@@ -223,13 +241,13 @@ export function TeamDirectory() {
   const nowTime = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
 
   return (
-    <div style={{ paddingLeft: "20px", paddingRight: "20px" }}>
+    <div>
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      <div style={{ background: "rgba(255, 255, 255, 1)", borderBottom: "0px solid var(--border, #E0D8C8)", padding: "14px 21px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
           <div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, margin: 0, color: "#1A1814" }}>Team Overview</h1>
-            <p style={{ fontSize: 12, color: "#7A7260", margin: "2px 0 0" }}>View your organisation and manage employee profiles</p>
+            <h1 className="text-[28px] font-bold leading-tight text-foreground">Team Overview</h1>
+            <p className="mt-1 text-sm text-muted-foreground">View your organisation and manage employee profiles</p>
           </div>
           {/* View toggle */}
           <div style={{ display: "flex", background: "#EDE8DD", border: "1px solid #E0D8C8", borderRadius: 6, overflow: "hidden" }}>
@@ -282,15 +300,15 @@ export function TeamDirectory() {
         <button
           type="button"
           onClick={() => setAddOpen(true)}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "#B8922A", color: "white", border: "none", borderRadius: 6, padding: "7px 14px", fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+          className="flex items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors"
         >
-          <Plus size={13} />
-          Add employee
+          <Plus size={14} />
+          + Add Employee
         </button>
       </div>
 
       {/* ── Stats strip ─────────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", padding: "7px 13px" }}>
+      <div className="grid grid-cols-2 md:grid-cols-4" style={{ padding: "7px 13px" }}>
         <StatCard
           label="Total"
           value={stats.total}
@@ -397,17 +415,17 @@ export function TeamDirectory() {
                     <section key={department}>
                       {/* Department header */}
                       <div style={{
-                        display: "flex", alignItems: "center", gap: 10,
+                        display: "flex", alignItems: "center", gap: 8,
                         marginBottom: 12, paddingBottom: 8,
-                        borderBottom: `2px solid ${t.accent}`,
+                        borderBottom: `1px solid #E5E7EB`,
                       }}>
-                        <span style={{ width: 9, height: 9, borderRadius: "50%", background: t.accent, flexShrink: 0, display: "inline-block" }} />
-                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: t.accent }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.accent, flexShrink: 0, display: "inline-block" }} />
+                        <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B7280" }}>
                           {department}
                         </span>
                         <span style={{
-                          fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
-                          background: t.badgeBg, color: t.badgeText, border: `1px solid ${t.badgeBorder}`,
+                          fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 9999,
+                          background: "#F3F4F6", color: "#6B7280",
                         }}>
                           {people.length}
                         </span>
@@ -421,6 +439,7 @@ export function TeamDirectory() {
                             person={person}
                             isOnNow={onShiftNowIds.has(person.id)}
                             deptTheme={t}
+                            weekHrs={Math.round((weekHoursMap.get(person.id) ?? 0) * 10) / 10}
                           />
                         ))}
                       </div>
@@ -750,18 +769,17 @@ function StatCard({
 // ── Employee card ──────────────────────────────────────────────────────────────
 
 function TeamMemberCard({
-  person, isOnNow, deptTheme,
+  person, isOnNow, deptTheme, weekHrs,
 }: {
   person: DirectoryProfile
   isOnNow: boolean
   deptTheme: DeptTheme
+  weekHrs: number
 }) {
   const displayName = person.full_name ?? "Unnamed"
   const displayEmail = person.email ?? ""
   const [removeOpen, setRemoveOpen] = useState(false)
   const updateProfile = useUpdateEmployeeProfile(person.id)
-
-  const weekHrs = 0
   const maxHrs = person.role === "owner" ? 50 : 40
   const hrsPct = Math.min(100, Math.round((weekHrs / maxHrs) * 100))
   const hrsColor = hrsPct > 90 ? "#8B3030" : hrsPct > 60 ? "#3D6B4A" : "#B8922A"
@@ -780,12 +798,13 @@ function TeamMemberCard({
       style={{
         background: "#FDFAF5",
         border: "1px solid #E0D8C8",
-        borderRadius: 8,
-        borderLeft: `3px solid ${deptTheme.accent}`,
+        borderRadius: 12,
+        borderTop: `3px solid ${deptTheme.accent}`,
         cursor: "pointer",
         transition: "all .15s",
         position: "relative",
         overflow: "hidden",
+        boxShadow: "0 4px 2px 0 rgba(0,0,0,0.04)",
       }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 3px 12px rgba(0,0,0,.07)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)" }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; (e.currentTarget as HTMLDivElement).style.transform = "none" }}

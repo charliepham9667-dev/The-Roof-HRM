@@ -409,14 +409,15 @@ export function VenueCalendar({ isManager = false }: VenueCalendarProps) {
       </div>
 
       {/* ── Main area: grid + side panel ─────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row min-h-0 flex-1 overflow-hidden">
 
         {/* Grid */}
         <div className="flex-1 overflow-y-auto p-4">
 
           {viewMode === 'week' ? (
             /* ── WEEK VIEW ─────────────────────────────────────────── */
-            <div className="grid grid-cols-7 gap-2">
+            <div className="overflow-x-auto pb-1">
+            <div className="grid grid-cols-7 gap-2 min-w-[500px]">
               {weekDays.map((day, i) => {
                 const iso = toISO(day);
                 const isToday = iso === todayIso;
@@ -474,6 +475,7 @@ export function VenueCalendar({ isManager = false }: VenueCalendarProps) {
                   </div>
                 );
               })}
+            </div>
             </div>
           ) : (
             /* ── MONTH VIEW ────────────────────────────────────────── */
@@ -542,7 +544,7 @@ export function VenueCalendar({ isManager = false }: VenueCalendarProps) {
         </div>
 
         {/* ── Side panel ─────────────────────────────────────────────── */}
-        <div className="w-72 flex-shrink-0 border-l border-border bg-card overflow-hidden">
+        <div className="w-full md:w-72 md:flex-shrink-0 border-t md:border-t-0 md:border-l border-border bg-card overflow-hidden">
           <SidePanel
             dateStr={selectedDate}
             events={selectedEvents}

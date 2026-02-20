@@ -303,115 +303,48 @@ export default function ContentCalendar() {
 
   return (
     <div className="w-full rounded-card overflow-hidden border border-border bg-background shadow-card">
-      {/* HEADER (inside page, like reference) */}
+      {/* HEADER */}
       <div className="sticky top-0 z-30 border-b border-border bg-background/97 backdrop-blur-[12px] shadow-card">
-        <div className="px-4 md:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <div className="leading-none">
-              <div className="font-display text-[18px] tracking-[4px] text-primary uppercase">The Roof</div>
-              <div className="text-sm tracking-wider text-secondary-foreground mt-[1px]">
-                Da Nang · Club &amp; Lounge
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-sm text-secondary-foreground tracking-[1px]">
-              <button
-                type="button"
-                className="hover:text-primary transition-colors"
-                onClick={() => navigate("/owner/dashboard")}
-              >
-                ← Executive
-              </button>
-              <span className="text-border/80">/</span>
-              <button
-                type="button"
-                className="hover:text-primary transition-colors"
-                onClick={() => navigate("/marketing/dashboard")}
-              >
-                Marketing
-              </button>
-              <span className="text-border/80">/</span>
-              <span className="text-foreground">Content Calendar</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => navigate("/owner/dashboard")}
-              className={cn(
-                "text-xs tracking-wider uppercase px-3.5 py-[5px] rounded-sm border border-border text-secondary-foreground transition-colors",
-                "hover:border-border/80 hover:text-foreground",
-                isActive("/owner/dashboard") && "bg-primary/10 border-primary/25 text-primary",
-              )}
-            >
-              Executive
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/marketing/dashboard")}
-              className={cn(
-                "text-xs tracking-wider uppercase px-3.5 py-[5px] rounded-sm border border-border text-secondary-foreground transition-colors",
-                "hover:border-border/80 hover:text-foreground",
-              )}
-            >
-              Marketing
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "text-xs tracking-wider uppercase px-3.5 py-[5px] rounded-sm border transition-colors",
-                "bg-primary/10 border-primary/25 text-primary",
-              )}
-            >
-              Content
-            </button>
-            <button
-              type="button"
-              className="text-xs tracking-wider uppercase px-3.5 py-[5px] rounded-sm border border-border text-secondary-foreground hover:text-foreground hover:border-border/80 transition-colors"
-            >
-              Operations
-            </button>
-          </div>
+        <div className="px-4 md:px-6 py-3.5">
+          <h1 className="text-[28px] font-bold leading-tight text-foreground">Content Calendar</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Schedule and manage social media content</p>
         </div>
 
         {/* TOOLBAR */}
         <div className="border-t border-border bg-card">
-          <div className="px-4 md:px-6 py-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* period nav */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCursor((d) => (view === "monthly" ? addDays(d, -30) : addDays(d, -7)))}
-                  className="w-7 h-7 rounded-sm border border-border bg-transparent text-secondary-foreground text-sm hover:text-primary hover:border-border/80 transition-colors"
-                >
-                  ←
-                </button>
-                <div className="font-subheading text-[20px] font-light italic text-foreground min-w-[180px]">
-                  {view === "monthly"
-                    ? format(cursor, "MMMM yyyy")
-                    : `${format(weekStart, "MMMM d")} – ${format(addDays(weekStart, 6), "d, yyyy")}`}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCursor((d) => (view === "monthly" ? addDays(d, 30) : addDays(d, 7)))}
-                  className="w-7 h-7 rounded-sm border border-border bg-transparent text-secondary-foreground text-sm hover:text-primary hover:border-border/80 transition-colors"
-                >
-                  →
-                </button>
-              </div>
-
+          <div className="px-4 md:px-6 py-3.5 flex flex-wrap items-center gap-2.5">
+            {/* period nav */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setCursor(new Date())}
-                className="text-xs tracking-wider uppercase px-3 py-[5px] rounded-sm border border-border bg-transparent text-secondary-foreground hover:text-foreground hover:border-border/80 transition-colors"
+                onClick={() => setCursor((d) => (view === "monthly" ? addDays(d, -30) : addDays(d, -7)))}
+                className="w-7 h-7 rounded-sm border border-border bg-transparent text-secondary-foreground text-sm hover:text-primary hover:border-border/80 transition-colors"
               >
-                Today
+                ←
               </button>
-
+              <div className="font-subheading text-[18px] sm:text-[20px] font-light italic text-foreground min-w-0">
+                {view === "monthly"
+                  ? format(cursor, "MMMM yyyy")
+                  : `${format(weekStart, "MMM d")} – ${format(addDays(weekStart, 6), "d, yyyy")}`}
+              </div>
+              <button
+                type="button"
+                onClick={() => setCursor((d) => (view === "monthly" ? addDays(d, 30) : addDays(d, 7)))}
+                className="w-7 h-7 rounded-sm border border-border bg-transparent text-secondary-foreground text-sm hover:text-primary hover:border-border/80 transition-colors"
+              >
+                →
+              </button>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setCursor(new Date())}
+              className="text-xs tracking-wider uppercase px-3 py-[5px] rounded-sm border border-border bg-transparent text-secondary-foreground hover:text-foreground hover:border-border/80 transition-colors"
+            >
+              Today
+            </button>
+
+            <div className="flex items-center gap-2.5 ml-auto flex-wrap">
               {/* Sync status badge */}
               {lastSynced && !isSyncing && (
                 <div className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-sm border border-success/25 bg-success/8 text-[10px] text-success tracking-wider">
@@ -444,7 +377,8 @@ export default function ContentCalendar() {
                   <path d="M13.5 2.5A6.5 6.5 0 1 1 8 1.5" strokeLinecap="round"/>
                   <path d="M13.5 2.5V6h-3.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                Sync Sheets
+                <span className="hidden sm:inline">Sync Sheets</span>
+                <span className="sm:hidden">Sync</span>
               </button>
 
               {/* view toggle */}
@@ -608,7 +542,7 @@ export default function ContentCalendar() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col min-w-[700px]">
+            <div className="flex flex-col min-w-[840px]">
               {/* Week header row */}
               <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary">
                 <div className="border-r border-border" />
@@ -762,7 +696,8 @@ export default function ContentCalendar() {
           </div>
 
           {overviewTab === "kanban" ? (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="overflow-x-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 min-w-[480px] sm:min-w-0">
               {[
                 { key: "toBeApproved", label: "TO BE APPROVED", dot: "#a06820", items: postOverview.toBeApproved },
                 { key: "approved", label: "APPROVED", dot: "#2e7a52", items: postOverview.approved },
@@ -808,6 +743,7 @@ export default function ContentCalendar() {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
           ) : (
             /* LIST VIEW */

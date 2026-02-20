@@ -96,19 +96,19 @@ export function Resources() {
     <div className="space-y-6">
 
       {/* ── Page header ── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl tracking-[3px] text-foreground">Resource Library</h1>
-          <p className="mt-1 text-xs text-muted-foreground tracking-wide">
+          <h1 className="text-[28px] font-bold leading-tight text-foreground">Resource Library</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             SOPs, training materials, and important documents — all linked to Google Drive
           </p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 rounded-sm bg-primary px-4 py-2 text-xs tracking-widest text-primary-foreground uppercase hover:bg-primary/90 transition-colors"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" />
-          Add Resource
+          <Plus className="h-4 w-4" />
+          + Add Resource
         </button>
       </div>
 
@@ -149,7 +149,7 @@ export function Resources() {
       </div>
 
       {/* ── Filter row ── */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] tracking-[2px] text-muted-foreground uppercase">File Type</span>
           {(['all', 'pdf', 'doc', 'sheet', 'slide', 'video', 'link'] as const).map((t) => (
@@ -167,15 +167,15 @@ export function Resources() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="relative">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search resources..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="rounded-sm border border-border bg-card pl-7 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-border/80 w-52"
+              className="rounded-sm border border-border bg-card pl-7 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-border/80 w-full sm:w-52"
             />
           </div>
           <span className="text-[10px] tracking-wide text-muted-foreground whitespace-nowrap">

@@ -159,7 +159,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
 
             {/* Value */}
             <div className="mt-2">
-              <span className="text-3xl font-bold text-foreground">{value}</span>
+              <span className="text-xl sm:text-3xl font-bold text-foreground">{value}</span>
             </div>
 
             {/* Trend direction text */}
@@ -205,7 +205,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
 
             {/* Value */}
             <div className="mt-2">
-              <span className="text-3xl font-bold text-foreground">{value}</span>
+              <span className="text-xl sm:text-3xl font-bold text-foreground">{value}</span>
             </div>
 
             {/* Trend + Subtitle inline */}

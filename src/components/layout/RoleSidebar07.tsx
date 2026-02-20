@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { RoleSwitcher } from '@/components/dev/RoleSwitcher';
 import {
@@ -157,12 +157,6 @@ const navigationGroups: NavGroup[] = [
         icon: Calendar,
         roles: ['owner'],
       },
-      {
-        title: 'Venue Calendar',
-        url: '/owner/venue-calendar',
-        icon: Calendar,
-        roles: ['owner'],
-      },
     ],
   },
   {
@@ -240,7 +234,7 @@ const navigationGroups: NavGroup[] = [
         roles: ['manager'],
       },
       {
-        title: 'Calendar',
+        title: 'Venue Briefing',
         url: '/manager/calendar',
         icon: Calendar,
         roles: ['manager'],
@@ -386,7 +380,7 @@ const navigationGroups: NavGroup[] = [
         roles: ['staff'],
       },
       {
-        title: 'Calendar',
+        title: 'Venue Briefing',
         url: '/staff/calendar',
         icon: Calendar,
         roles: ['staff'],
@@ -505,7 +499,7 @@ export function RoleSidebar07() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/" className="flex items-center gap-3">
+              <Link to="/" className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Building2 className="h-5 w-5" />
                 </div>
@@ -513,7 +507,7 @@ export function RoleSidebar07() {
                   <span className="font-semibold">The Roof</span>
                   <span className="text-xs text-muted-foreground">Workspace</span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -535,7 +529,7 @@ export function RoleSidebar07() {
                       isActive={isActive(item.url)}
                       tooltip={item.title}
                     >
-                      <a href={item.url} className="flex items-center justify-between">
+                      <Link to={item.url} className="flex items-center justify-between">
                         <div className="flex items-center gap-[5px]">
                           <item.icon className="h-4 w-4" />
                           <span className="font-serif text-xs font-medium">{item.title}</span>
@@ -545,7 +539,7 @@ export function RoleSidebar07() {
                             {item.badge}
                           </Badge>
                         )}
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

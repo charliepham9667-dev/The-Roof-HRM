@@ -650,6 +650,7 @@ export function ManagerDashboard() {
 
   return (
     <div className="space-y-6">
+      <h1 className="sr-only">Manager Dashboard</h1>
 
       {/* ── Section 1: Header (Image 1) ─────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card px-6 py-4 shadow-card">
@@ -801,8 +802,8 @@ export function ManagerDashboard() {
       </div>
 
       {/* HQ + Weather row */}
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />}>
+      <div className="grid gap-4 lg:grid-cols-[320px_1fr] min-w-0">
+        <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />} className="min-w-0">
           <div className="grid gap-4">
             <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
             <div className="text-center">
@@ -812,9 +813,9 @@ export function ManagerDashboard() {
           </div>
         </CardShell>
 
-        <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />}>
-          <div className="flex items-stretch gap-0">
-            <div className="min-w-[200px] border-r border-border pr-6">
+        <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />} className="min-w-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-stretch gap-0">
+            <div className="min-w-0 sm:min-w-[200px] sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
               <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Da Nang · Weather</div>
               <div className="mt-2 flex items-center gap-3">
                 <div className="text-[32px]">🌤</div>
@@ -825,7 +826,7 @@ export function ManagerDashboard() {
                 <span>⚡</span> Rain expected Saturday — prep covers & heaters by 13:00
               </div>
             </div>
-            <div className="flex flex-1 items-center pl-5">
+            <div className="flex flex-1 items-center sm:pl-5 pt-4 sm:pt-0 overflow-x-auto">
               {[
                 { d: "TUE", hi: 27, lo: 22, emoji: "🌤" },
                 { d: "WED", hi: 25, lo: 22, emoji: "🌥" },

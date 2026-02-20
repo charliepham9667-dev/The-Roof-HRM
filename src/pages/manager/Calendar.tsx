@@ -1,5 +1,5 @@
-import { VenueCalendar } from '@/pages/common/VenueCalendar';
+import { VenueBriefing } from '@/pages/common/VenueBriefing';
 
 export function ManagerCalendar() {
-  return <VenueCalendar isManager={true} />;
+  return <VenueBriefing isManager={true} />;
 }

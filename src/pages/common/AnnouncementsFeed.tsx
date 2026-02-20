@@ -966,10 +966,10 @@ export function AnnouncementsFeed() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-3.5 text-[12.5px] font-medium border-b-2 -mb-px transition-colors",
+              "flex items-center gap-1.5 px-4 py-3.5 text-[14px] font-medium border-b-2 -mb-px transition-colors",
               activeTab === tab.id
-                ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "border-[#78350F] text-[#1F2937]"
+                : "border-transparent text-[#6B7280] hover:text-[#1F2937]",
             )}
           >
             {tab.icon}
@@ -989,14 +989,14 @@ export function AnnouncementsFeed() {
           <div className="px-6 py-6 space-y-4">
             {/* Page header */}
             <div>
-              <h1 className="text-[22px] font-bold text-foreground tracking-tight">Announcements</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">Stay updated with team news and updates</p>
+              <h1 className="text-[28px] font-bold leading-tight text-foreground">Announcements</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Stay updated with team news and updates</p>
             </div>
 
             {/* Compose strip */}
             <div
               onClick={openCreate}
-              className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 cursor-pointer hover:shadow-sm transition-all"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 cursor-pointer hover:shadow-sm transition-all"
             >
               <div
                 className="h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
@@ -1004,14 +1004,15 @@ export function AnnouncementsFeed() {
               >
                 {userInitials}
               </div>
-              <span className="flex-1 text-sm text-muted-foreground">Share something with the team…</span>
+              <span className="flex-1 min-w-[120px] text-sm text-muted-foreground">Share something with the team…</span>
               {canManage && (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); openCreate() }}
-                  className="rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
+                  className="rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap shrink-0"
                 >
-                  + Post Announcement
+                  <span className="hidden sm:inline">+ Post Announcement</span>
+                  <span className="sm:hidden">+ Post</span>
                 </button>
               )}
             </div>
@@ -1019,16 +1020,16 @@ export function AnnouncementsFeed() {
             {/* Toolbar */}
             <div className="flex items-center gap-3 flex-wrap">
               {/* Filter pills */}
-              <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {(["all", "ops", "event", "team", "urgent"] as const).map((f) => (
                   <button
                     key={f}
                     onClick={() => setFilterTag(f)}
                     className={cn(
-                      "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+                      "rounded-full px-[14px] py-[6px] text-[13px] font-medium transition-all",
                       filterTag === f
-                        ? "bg-foreground text-background border-foreground"
-                        : "bg-transparent border-border text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                        ? "bg-[#78350F] text-white"
+                        : "bg-white border border-[#D1D5DB] text-[#6B7280] hover:border-[#9CA3AF]",
                     )}
                   >
                     {f === "all" ? "All"

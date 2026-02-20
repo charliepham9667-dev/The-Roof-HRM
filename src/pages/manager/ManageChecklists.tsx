@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, GripVertical, X, Check, Loader2, ClipboardList } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   useTaskTemplates,
   useCreateTaskTemplate,
@@ -34,6 +35,14 @@ const TYPE_COLORS: Record<TaskTemplateType, string> = {
   midshift: 'border-green-200 bg-green-50 text-green-700',
   event: 'border-purple-200 bg-purple-50 text-purple-700',
   special: 'border-pink-200 bg-pink-50 text-pink-700',
+};
+
+const TYPE_DOT: Record<TaskTemplateType, string> = {
+  opening: 'bg-amber-500',
+  closing: 'bg-blue-500',
+  midshift: 'bg-green-500',
+  event: 'bg-purple-500',
+  special: 'bg-pink-500',
 };
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -604,31 +613,34 @@ export function ManageChecklists() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Manage Checklists</h1>
+          <h1 className="text-[28px] font-bold leading-tight text-foreground">Manage Checklists</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Create and edit task templates assigned to staff by role and shift type
           </p>
         </div>
         <button
           onClick={() => setFormState(emptyForm())}
-          className="flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-80"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors"
         >
           <Plus className="h-4 w-4" />
-          New Checklist
+          + New Checklist
         </button>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filter pills */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         <button
           onClick={() => setFilterType('all')}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+          className={cn(
+            "shrink-0 rounded-full px-[14px] py-[6px] text-[13px] font-medium transition-all whitespace-nowrap",
             filterType === 'all'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
-          }`}
+              ? 'bg-[#78350F] text-white'
+              : 'bg-white border border-[#D1D5DB] text-[#6B7280] hover:border-[#9CA3AF]'
+          )}
         >
           All ({templates.length})
         </button>
@@ -638,11 +650,12 @@ export function ManageChecklists() {
             <button
               key={t.value}
               onClick={() => setFilterType(t.value)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={cn(
+                "shrink-0 rounded-full px-[14px] py-[6px] text-[13px] font-medium transition-all whitespace-nowrap",
                 filterType === t.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}
+                  ? 'bg-[#78350F] text-white'
+                  : 'bg-white border border-[#D1D5DB] text-[#6B7280] hover:border-[#9CA3AF]'
+              )}
             >
               {t.label} ({count})
             </button>
@@ -676,12 +689,11 @@ export function ManageChecklists() {
         <div className="space-y-6">
           {typesWithItems.map((type) => (
             <div key={type.value} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TYPE_COLORS[type.value]}`}>
-                  {type.label}
-                </span>
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">{grouped[type.value].length} template{grouped[type.value].length !== 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full shrink-0 ${TYPE_DOT[type.value]}`} />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">{type.label}</span>
+                <span className="rounded-full px-[7px] py-[1px] text-[11px] font-semibold bg-[#F3F4F6] text-[#6B7280]">{grouped[type.value].length}</span>
+                <div className="h-px flex-1 bg-border ml-1" />
               </div>
               <div className="space-y-3">
                 {grouped[type.value].map((template) => (

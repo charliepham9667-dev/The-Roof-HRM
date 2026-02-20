@@ -203,6 +203,8 @@ export function CheckIn() {
   return (
     <div className="flex flex-col gap-5">
 
+      <h1 className="text-[28px] font-bold text-foreground">Check In / Out</h1>
+
       {/* ── ACTIVE SHIFT PANEL ─────────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
 
@@ -216,9 +218,9 @@ export function CheckIn() {
         </div>
 
         {/* 4-stat row */}
-        <div className="grid grid-cols-4 divide-x divide-border px-6 py-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border px-3 md:px-6 py-5">
           {/* Check In */}
-          <div className="pr-6">
+          <div className="px-3 md:px-0 md:pr-6 border-b md:border-b-0 pb-4 md:pb-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Check In</div>
             <div className="font-mono text-[22px] font-medium leading-none text-foreground">
               {checkInTime ? fmtHHMM(checkInTime) : '—'}
@@ -231,9 +233,9 @@ export function CheckIn() {
           </div>
 
           {/* Time on Shift */}
-          <div className="px-6">
+          <div className="px-3 md:px-6 border-b md:border-b-0 pb-4 md:pb-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Time on Shift</div>
-            <div className={`font-mono text-[28px] font-medium leading-none ${checkedIn ? 'text-green-600' : 'text-foreground'}`}>
+            <div className={`font-mono text-[22px] md:text-[28px] font-medium leading-none ${checkedIn ? 'text-green-600' : 'text-foreground'}`}>
               {fmtHHMMSS(shiftDone ? elapsedMs : elapsedMs)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -242,9 +244,9 @@ export function CheckIn() {
           </div>
 
           {/* Break Time */}
-          <div className="px-6">
+          <div className="px-3 md:px-6 pt-4 md:pt-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Break Time</div>
-            <div className={`font-mono text-[28px] font-medium leading-none ${totalBreakMsLive > 0 ? 'text-amber-600' : 'text-foreground'}`}>
+            <div className={`font-mono text-[22px] md:text-[28px] font-medium leading-none ${totalBreakMsLive > 0 ? 'text-amber-600' : 'text-foreground'}`}>
               {fmtBreakMs(totalBreakMsLive)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -253,9 +255,9 @@ export function CheckIn() {
           </div>
 
           {/* Net Hours */}
-          <div className="pl-6">
+          <div className="px-3 md:px-0 md:pl-6 pt-4 md:pt-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Net Hours</div>
-            <div className={`font-mono text-[28px] font-medium leading-none ${isOvertime ? 'text-red-600' : 'text-foreground'}`}>
+            <div className={`font-mono text-[22px] md:text-[28px] font-medium leading-none ${isOvertime ? 'text-red-600' : 'text-foreground'}`}>
               {fmtNetHours(netMs)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -352,7 +354,7 @@ export function CheckIn() {
           </span>
           <div className="h-px flex-1 bg-border" />
         </div>
-        <div className="grid grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           {[
             { label: 'Shifts Worked', value: String(monthlySummary.shifts), sub: 'This month', color: 'text-green-600' },
             { label: 'Total Hours', value: fmtMinutes(monthlySummary.totalMins), sub: 'Excl. break time', color: 'text-foreground' },
@@ -411,7 +413,7 @@ export function CheckIn() {
         </div>
 
         {/* Table */}
-        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+        <div className="rounded-card border border-border bg-card shadow-card overflow-x-auto">
           {histLoading ? (
             <div className="space-y-3 px-6 py-6">
               {Array.from({ length: 6 }).map((_, i) => (

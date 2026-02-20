@@ -362,7 +362,7 @@ export function AddEmployeeModal({
                   Creating account…
                 </>
               ) : (
-                "Add employee"
+                "+ Add Employee"
               )}
             </Button>
           </div>

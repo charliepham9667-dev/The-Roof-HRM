@@ -34,6 +34,7 @@ import {
 import { useTodayPaxConfirmed, useReservationsCsv } from "@/hooks/useReservationsCsv"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
+import { useCreateMaintenanceTask } from "@/hooks/useMaintenanceTasks"
 
 const ICT_TZ = "Asia/Ho_Chi_Minh"
 
@@ -303,6 +304,9 @@ export default function OwnerDashboardPage() {
   useEffect(() => {
     if (paxTargetEditOpen) setPaxTargetDraft(paxTarget ? String(Math.round(Number(paxTarget))) : "")
   }, [paxTargetEditOpen, paxTarget])
+
+  const createMaintenanceTask = useCreateMaintenanceTask()
+  const [rainTaskState, setRainTaskState] = useState<'idle' | 'saving' | 'done'>('idle')
 
   const { data: roofCalendar, isLoading: weekCsvLoading, error: weekCsvError } = useRoofCalendarWeekData()
   const weekCsv = roofCalendar?.byDate ?? []
@@ -623,11 +627,11 @@ export default function OwnerDashboardPage() {
       {/* HQ row */}
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />}>
-          <div className="grid gap-4">
+          <div className="grid gap-4 overflow-hidden">
             <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
-            <div className="text-center">
-              <div className="font-display text-[26px] tracking-[4px] text-foreground">{timeString}</div>
-              <div className="mt-1 text-xs tracking-wider text-muted-foreground uppercase">
+            <div className="text-center overflow-hidden">
+              <div className="font-display text-[22px] sm:text-[26px] tracking-[2px] sm:tracking-[4px] text-foreground truncate">{timeString}</div>
+              <div className="mt-1 text-xs tracking-wider text-muted-foreground uppercase truncate">
                 ICT · UTC+7
               </div>
             </div>
@@ -645,8 +649,37 @@ export default function OwnerDashboardPage() {
               </div>
               <div className="mt-2 text-xs text-secondary-foreground tracking-wide">Broken Clouds · Humidity 78%</div>
 
-              <div className="mt-3 flex items-center gap-1.5 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
-                <span>⚡</span> Rain expected Saturday — prep covers & heaters by 13:00
+              <div className="mt-3 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
+                <div className="flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>Rain expected Saturday — prep covers & heaters by 13:00</span>
+                </div>
+                <button
+                  disabled={rainTaskState !== 'idle'}
+                  onClick={async () => {
+                    setRainTaskState('saving')
+                    try {
+                      await createMaintenanceTask.mutateAsync({
+                        title: 'Prep covers & heaters for rain — Saturday',
+                        category: 'equipment',
+                        priority: 'high',
+                        status: 'open',
+                      })
+                      setRainTaskState('done')
+                    } catch {
+                      setRainTaskState('idle')
+                    }
+                  }}
+                  className="mt-1.5 flex items-center gap-1 rounded bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info hover:bg-info/20 disabled:opacity-60 transition-colors"
+                >
+                  {rainTaskState === 'saving' ? (
+                    <><span className="animate-spin">⟳</span> Creating…</>
+                  ) : rainTaskState === 'done' ? (
+                    <>✓ Task Created</>
+                  ) : (
+                    <>+ Create Task</>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -680,7 +713,7 @@ export default function OwnerDashboardPage() {
 
       {/* Revenue pulse */}
       <div className="space-y-3">
-        <SectionTitle label="TODAYS PULSE" />
+        <SectionTitle label="TODAY'S PULSE" />
 
         {/* Team on Shift (left, spans 2 rows) + right column (3 cards + revenue bar) */}
         <div className="grid gap-4 lg:grid-cols-[1fr_1.6fr] lg:items-stretch">

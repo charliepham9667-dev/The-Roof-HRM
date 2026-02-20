@@ -546,7 +546,7 @@ export function StaffDashboard() {
       {/* ── CONTENT ─────────────────────────────────────────────────────────── */}
 
       {/* Clock + Weather row */}
-      <div className="grid grid-cols-[180px_1fr] gap-3.5">
+      <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-3.5">
 
         {/* Clock card */}
         <Panel className="flex flex-col items-center gap-2 px-3.5 py-4">
@@ -572,7 +572,7 @@ export function StaffDashboard() {
             </div>
           </div>
           {/* forecast */}
-          <div className="flex shrink-0">
+          <div className="flex shrink-0 overflow-x-auto">
             {[
               { d: 'TUE', i: '⛅', h: '27°', l: '22°' },
               { d: 'WED', i: '🌥', h: '25°', l: '22°' },
@@ -600,7 +600,7 @@ export function StaffDashboard() {
       <SectionLabel>Today's Pulse</SectionLabel>
 
       {/* Pulse row: Shift · Tasks · Promos */}
-      <div className="grid grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
 
         {/* My Shift */}
         <Panel>
@@ -694,7 +694,7 @@ export function StaffDashboard() {
       {/* My Checklist & Announcements */}
       <SectionLabel>My Checklist &amp; Announcements</SectionLabel>
 
-      <div className="grid grid-cols-[1.1fr_1fr] gap-3.5 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
 
         {/* Checklist */}
         <ChecklistPanel role={userRole} />

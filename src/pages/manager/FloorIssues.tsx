@@ -312,7 +312,7 @@ export function FloorIssues() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Floor Issues</h1>
+          <h1 className="text-[28px] font-bold leading-tight text-foreground">Floor Issues</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Log anything that happens on the floor. Open issues escalate to Charlie automatically after 30 min.
           </p>
@@ -322,7 +322,7 @@ export function FloorIssues() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div key={s.label} className="rounded-card border border-border bg-card p-4 shadow-card">
             <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase mb-1">{s.label}</p>
             <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
             <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
@@ -331,7 +331,7 @@ export function FloorIssues() {
       </div>
 
       {/* Quick log */}
-      <div className="rounded-xl border border-border bg-card shadow-sm">
+      <div className="rounded-card border border-border bg-card shadow-card">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Quick Log</span>
           <span className="text-xs text-muted-foreground">Tap to log an issue</span>
@@ -346,9 +346,9 @@ export function FloorIssues() {
                 className="flex items-center gap-3 bg-card px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
               >
                 <Icon className={`h-5 w-5 shrink-0 ${cat.escalate ? 'text-red-500' : 'text-muted-foreground'}`} />
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground leading-tight">{cat.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{cat.sub}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1">{cat.sub}</p>
                 </div>
               </button>
             );
@@ -357,14 +357,15 @@ export function FloorIssues() {
       </div>
 
       {/* Tonight's log */}
-      <div className="rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tonight's Log</span>
-          <div className="flex items-center gap-3">
+      <div className="rounded-card border border-border bg-card shadow-card">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex-1">Tonight's Log</span>
+          <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs text-muted-foreground">{tonightLog.length} entries</span>
             <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => { setPresetCategory(undefined); setLogOpen(true); }}>
               <Plus className="h-3 w-3" />
-              Log Issue
+              <span className="hidden sm:inline">Log Issue</span>
+              <span className="sm:hidden">Log</span>
             </Button>
           </div>
         </div>

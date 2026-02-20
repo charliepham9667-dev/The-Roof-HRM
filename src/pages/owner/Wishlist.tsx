@@ -513,19 +513,17 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
       <div className="flex items-center justify-between gap-3 shrink-0 flex-wrap">
         {/* Priority pills */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] tracking-widest text-muted-foreground uppercase font-semibold mr-1">Priority</span>
+          <span className="text-[11px] tracking-widest text-muted-foreground uppercase font-semibold mr-1">Priority</span>
           {PRIORITIES.map((p) => (
             <button
               key={p.value}
               type="button"
               onClick={() => setPriorityFilter(p.value as any)}
               className={cn(
-                "rounded-full border px-3 py-0.5 text-[10px] tracking-wide font-medium transition-all",
+                "rounded-full px-[14px] py-[6px] text-[13px] font-medium transition-all",
                 priorityFilter === p.value
-                  ? p.value === "all"
-                    ? "border-foreground/30 bg-foreground/10 text-foreground"
-                    : PRIORITY_BADGE[p.value as WishlistPriority]?.cls ?? "border-border bg-secondary text-foreground"
-                  : "border-border bg-transparent text-muted-foreground hover:bg-secondary"
+                  ? "bg-[#78350F] text-white"
+                  : "bg-white border border-[#D1D5DB] text-[#6B7280] hover:border-[#9CA3AF]"
               )}
             >
               {p.label}
@@ -536,10 +534,10 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
           <button
             type="button"
             onClick={openAdd}
-            className="flex items-center gap-1.5 rounded-sm bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
+            className="flex items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors shrink-0"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add Item
+            <Plus className="h-4 w-4" />
+            + Add Item
           </button>
         )}
       </div>
@@ -597,8 +595,8 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                 >
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: cfg.accent }}>{cfg.label}</span>
-                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: cfg.badgeBg, color: cfg.accent }}>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">{cfg.label}</span>
+                    <span className="rounded-full px-1.5 py-0.5 text-[11px] font-semibold bg-[#F3F4F6] text-[#6B7280]">
                       {sectionItems.length}
                     </span>
                     {sectionSpend > 0 && (
@@ -614,11 +612,11 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                     {sectionItems.length === 0 ? (
                       <div className="px-4 py-4 text-center text-[11px] text-muted-foreground">No items in this stage</div>
                     ) : (
-                      <>
+                      <div className="overflow-x-auto">
                         {/* Column headers */}
-                        <div className="grid grid-cols-[1fr_50px_130px_100px_1fr_36px] items-center px-4 py-2 bg-secondary/20">
-                          {["ITEM", "QTY", "EST. COST", "PRIORITY", "NOTES", ""].map((h) => (
-                            <div key={h} className="text-[9.5px] tracking-widest font-semibold text-muted-foreground uppercase">{h}</div>
+                        <div className="grid grid-cols-[minmax(100px,1fr)_50px_120px_90px_36px] sm:grid-cols-[minmax(100px,1fr)_50px_130px_100px_1fr_36px] items-center px-4 py-2 bg-secondary/20 min-w-0">
+                          {["ITEM", "QTY", "EST. COST", "PRIORITY", "NOTES", ""].map((h, i) => (
+                            <div key={h || i} className={cn("text-[9.5px] tracking-widest font-semibold text-muted-foreground uppercase", h === "NOTES" && "hidden sm:block")}>{h}</div>
                           ))}
                         </div>
                         {sectionItems.map((item) => {
@@ -627,13 +625,13 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                           return (
                             <div
                               key={item.id}
-                              className="grid grid-cols-[1fr_50px_130px_100px_1fr_36px] items-center px-4 py-2.5 border-t border-border/50 hover:bg-secondary/20 transition-colors group"
+                              className="grid grid-cols-[minmax(100px,1fr)_50px_120px_90px_36px] sm:grid-cols-[minmax(100px,1fr)_50px_130px_100px_1fr_36px] items-center px-4 py-2.5 border-t border-border/50 hover:bg-secondary/20 transition-colors group"
                               style={{ borderLeft: `3px solid ${cfg.accent}33` }}
                             >
                               <button
                                 type="button"
                                 onClick={() => canManage && openEdit(item)}
-                                className={cn("text-sm text-left font-medium text-foreground truncate", canManage && "hover:text-primary transition-colors")}
+                                className={cn("text-sm text-left font-medium text-foreground truncate min-w-[100px]", canManage && "hover:text-primary transition-colors")}
                               >
                                 {item.title}
                               </button>
@@ -644,7 +642,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                                   {pri.label}
                                 </span>
                               </div>
-                              <div className="text-xs text-muted-foreground truncate pr-2">{item.notes || "—"}</div>
+                              <div className="hidden sm:block text-xs text-muted-foreground truncate pr-2">{item.notes || "—"}</div>
                               <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                 {canManage && (
                                   <>
@@ -660,7 +658,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                             </div>
                           )
                         })}
-                      </>
+                      </div>
                     )}
                   </>
                 )}
@@ -1564,10 +1562,10 @@ export function Wishlist() {
   const [activeTab, setActiveTab] = useState<Tab>("procurement")
 
   const tabCls = (t: Tab) => cn(
-    "flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
+    "flex items-center gap-1.5 px-4 py-3 text-[14px] font-medium border-b-2 transition-colors -mb-px",
     activeTab === t
-      ? "border-primary text-foreground"
-      : "border-transparent text-muted-foreground hover:text-foreground"
+      ? "border-[#78350F] text-[#1F2937]"
+      : "border-transparent text-[#6B7280] hover:text-[#1F2937]"
   )
 
   return (
@@ -1575,25 +1573,27 @@ export function Wishlist() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Operations</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Procurement wishlist, maintenance tracker & DJ payment management</p>
+          <h1 className="text-[28px] font-bold leading-tight text-foreground">Operations</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Procurement wishlist, maintenance tracker & DJ payment management</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-0 border-b border-border shrink-0">
-        <button type="button" onClick={() => setActiveTab("procurement")} className={tabCls("procurement")}>
-          <ShoppingCart className="h-3.5 w-3.5" />
-          Procurement Wishlist
-        </button>
-        <button type="button" onClick={() => setActiveTab("maintenance")} className={tabCls("maintenance")}>
-          <Wrench className="h-3.5 w-3.5" />
-          Maintenance & Fixes
-        </button>
-        <button type="button" onClick={() => setActiveTab("dj_payments")} className={tabCls("dj_payments")}>
-          <Music2 className="h-3.5 w-3.5" />
-          DJ Payments
-        </button>
+      {/* Tabs — overflow-x-auto so all 3 are reachable on mobile */}
+      <div className="overflow-x-auto shrink-0 border-b border-border">
+        <div className="flex items-center gap-0 min-w-max">
+          <button type="button" onClick={() => setActiveTab("procurement")} className={tabCls("procurement")}>
+            <ShoppingCart className="h-3.5 w-3.5" />
+            Procurement Wishlist
+          </button>
+          <button type="button" onClick={() => setActiveTab("maintenance")} className={tabCls("maintenance")}>
+            <Wrench className="h-3.5 w-3.5" />
+            Maintenance & Fixes
+          </button>
+          <button type="button" onClick={() => setActiveTab("dj_payments")} className={tabCls("dj_payments")}>
+            <Music2 className="h-3.5 w-3.5" />
+            DJ Payments
+          </button>
+        </div>
       </div>
 
       {/* Tab content */}
