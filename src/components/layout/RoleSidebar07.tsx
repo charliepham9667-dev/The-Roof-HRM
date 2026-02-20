@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { RoleSwitcher } from '@/components/dev/RoleSwitcher';
 import {
   Sidebar,
   SidebarContent,
@@ -556,6 +557,10 @@ export function RoleSidebar07() {
 
       {/* Footer - User Menu */}
       <SidebarFooter>
+        {/* View as — role switcher for owner */}
+        <div className="px-2 pb-1">
+          <RoleSwitcher />
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

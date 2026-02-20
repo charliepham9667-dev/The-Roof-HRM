@@ -75,17 +75,17 @@ export function RoleSwitcher() {
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
           isViewingAs
             ? 'bg-warning/20 text-warning border border-warning/30'
             : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
         }`}
       >
-        <Eye className="h-4 w-4" />
-        <span className="hidden sm:inline">View as:</span>
-        <Icon className="h-4 w-4" />
-        <span>{currentOption.label}</span>
-        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <Eye className="h-4 w-4 shrink-0" />
+        <span>View as:</span>
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1 text-left">{currentOption.label}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && createPortal(

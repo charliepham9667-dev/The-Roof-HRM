@@ -1,10 +1,8 @@
 import { Settings, Search, LogOut, ChevronRight, Home } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { NotificationBell } from '../common/NotificationBell';
-import { RoleSwitcher } from '../dev/RoleSwitcher';
 import { SidebarTrigger } from '@/components/ui';
 import { ModeToggle } from '@/components/mode-toggle';
-import { PaletteSwitcher } from '@/components/palette-switcher';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
@@ -70,12 +68,6 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Right side */}
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Role Switcher - Owner only */}
-        <RoleSwitcher />
-
-        {/* Palette theme */}
-        <PaletteSwitcher />
-
         {/* Theme toggle */}
         <ModeToggle />
 
