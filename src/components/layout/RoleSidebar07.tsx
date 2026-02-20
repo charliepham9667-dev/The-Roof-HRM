@@ -556,9 +556,9 @@ export function RoleSidebar07() {
       </SidebarContent>
 
       {/* Footer - User Menu */}
-      <SidebarFooter>
+      <SidebarFooter className="overflow-visible">
         {/* View as — role switcher for owner */}
-        <div className="px-2 pb-1">
+        <div className="px-2 pb-1 overflow-visible">
           <RoleSwitcher />
         </div>
         <SidebarMenu>
