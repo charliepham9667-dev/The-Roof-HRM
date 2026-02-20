@@ -1752,7 +1752,7 @@ export default function OwnerDashboardPage() {
                     { label: "DJs Booked", value: String(djBookedCount) },
                     { label: "Club Nights", value: String(clubNightCount) },
                     { label: "Unplanned", value: String(unplannedCount), amber: unplannedCount > 0 },
-                  ].map((stat, i, arr) => (
+                  ].map((stat, i) => (
                     <div key={stat.label} style={{
                       display: "flex", flexDirection: "column" as const, alignItems: "center",
                       padding: "0 16px",

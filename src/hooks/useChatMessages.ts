@@ -38,7 +38,7 @@ export function useChatMessages(channelId: string) {
         .limit(200)
 
       if (error) throw error
-      return (data ?? []) as ChatMessage[]
+      return (data ?? []) as unknown as ChatMessage[]
     },
     enabled: !!channelId,
   })
@@ -66,11 +66,12 @@ export function useChatMessages(channelId: string) {
             .single()
 
           if (data) {
+            const msg = data as unknown as ChatMessage
             queryClient.setQueryData<ChatMessage[]>(queryKey(channelId), (prev) => {
-              if (!prev) return [data as ChatMessage]
+              if (!prev) return [msg]
               // Avoid duplicates (optimistic insert may already be there)
-              if (prev.some((m) => m.id === (data as ChatMessage).id)) return prev
-              return [...prev, data as ChatMessage]
+              if (prev.some((m) => m.id === msg.id)) return prev
+              return [...prev, msg]
             })
           }
         },
@@ -101,7 +102,7 @@ export function useSendChatMessage() {
         .single()
 
       if (error) throw error
-      return data as ChatMessage
+      return data as unknown as ChatMessage
     },
     onSuccess: (newMsg) => {
       // Optimistically add to cache so the message appears instantly

@@ -51,6 +51,7 @@ export interface CreateDJPaymentInput {
   payment_status?: "paid" | "unpaid" | "na"
   receipt_uploaded?: boolean
   notes?: string
+  amount_override?: boolean
 }
 
 // ── Payer classification ───────────────────────────────────────────────────────
@@ -235,7 +236,6 @@ export function parseDJPaymentsFromCsv(csvText: string, todayIso: string): SyncP
       if (!parsed) continue
 
       const durationH = Math.round(((parsed.endMins - parsed.startMins) / 60) * 100) / 100
-      const amountVnd = Math.round(durationH * BASE_RATE_VND * multiplier)
       const syncKey = `${dateIso}:${eventName.toLowerCase().slice(0, 30)}:${parsed.name.toLowerCase()}:${minutesToTimeStr(parsed.startMins)}`
 
       out.push({
