@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Loader2, Settings, BarChart3 } from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
 import { useKPISummary, useSyncStatus } from '../../hooks/useDashboardData';
 import { WeeklySalesTrend } from './WeeklySalesTrend';
 import { MonthlyPerformance } from './MonthlyPerformance';
@@ -28,7 +27,6 @@ function formatVND(value: number): string {
 }
 
 export function OwnerOverview() {
-  const profile = useAuthStore((s) => s.profile);
   const [showTargetManager, setShowTargetManager] = useState(false);
   
   const { data: kpi, isLoading, error } = useKPISummary();
