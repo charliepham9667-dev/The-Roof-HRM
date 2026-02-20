@@ -5,6 +5,7 @@
 export type UserRole = 'owner' | 'manager' | 'staff';
 export type ManagerType = 'bar' | 'floor' | 'marketing' | null;
 export type EmploymentType = 'full_time' | 'part_time' | 'casual';
+export type ProfileStatus = 'pending' | 'active' | 'rejected';
 
 // Job roles at The Roof
 export type JobRole = 
@@ -34,6 +35,7 @@ export interface Profile {
   phone?: string;
   hireDate?: string;
   isActive: boolean;
+  status: ProfileStatus;
   // Leave tracking
   annualLeaveDays: number;
   leaveDaysUsed: number;

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import {
   Briefcase,
   Calendar,
+  CheckCircle,
   Clock,
   Loader2,
   Mail,
@@ -11,13 +12,16 @@ import {
   Plus,
   Search,
   Users,
+  XCircle,
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { useStaffList, useTodayShifts } from "../../hooks/useShifts"
-import type { UserRole } from "../../types"
+import { useStaffList, useTodayShifts, usePendingProfiles } from "../../hooks/useShifts"
+import type { UserRole, JobRole, EmploymentType } from "../../types"
+import { supabase } from "@/lib/supabase"
+import { useQueryClient } from "@tanstack/react-query"
 import { OrgChartNode, ProfileDetailPanel } from "@/components/org-chart"
 import { AddEmployeeModal } from "@/components/team/AddEmployeeModal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -128,11 +132,14 @@ export function TeamDirectory() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [shiftFilter, setShiftFilter] = useState<string>("all")
-  const [view, setView] = useState<"list" | "org">("list")
+  const [view, setView] = useState<"list" | "org" | "pending">("list")
   const [addOpen, setAddOpen] = useState(false)
+  const [approveTarget, setApproveTarget] = useState<{ id: string; name: string; email: string } | null>(null)
 
   const { data: staffList, isLoading } = useStaffList()
   const { data: todayShifts } = useTodayShifts(todayIso)
+  const { data: pendingProfiles, isLoading: pendingLoading } = usePendingProfiles()
+  const queryClient = useQueryClient()
 
   const allStaff = (staffList ?? []) as DirectoryProfile[]
 
@@ -251,6 +258,24 @@ export function TeamDirectory() {
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="14" width="6" height="4" rx="1"/><rect x="16" y="14" width="6" height="4" rx="1"/><line x1="12" y1="6" x2="12" y2="10"/><line x1="5" y1="14" x2="5" y2="10"/><line x1="19" y1="14" x2="19" y2="10"/><line x1="5" y1="10" x2="19" y2="10"/></svg>
               Organisation chart
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("pending")}
+              style={{
+                padding: "5px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif",
+                background: view === "pending" ? "#FBF5E6" : "transparent",
+                color: view === "pending" ? "#B8922A" : "#7A7260",
+                boxShadow: view === "pending" ? "0 1px 3px rgba(0,0,0,.07)" : "none",
+              }}
+            >
+              <Clock size={12} />
+              Pending
+              {(pendingProfiles?.length ?? 0) > 0 && (
+                <span style={{ background: "#B8922A", color: "#fff", borderRadius: 10, fontSize: 10, fontWeight: 700, padding: "1px 6px", lineHeight: 1.4 }}>
+                  {pendingProfiles!.length}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -414,7 +439,287 @@ export function TeamDirectory() {
         </div>
       )}
 
+      {view === "pending" && (
+        <div style={{ padding: "20px 24px" }}>
+          {pendingLoading ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
+              <Loader2 className="animate-spin" size={24} color="#A89E8C" />
+            </div>
+          ) : !pendingProfiles || pendingProfiles.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 60, color: "#A89E8C" }}>
+              <CheckCircle size={32} style={{ margin: "0 auto 12px", opacity: 0.4 }} />
+              <p style={{ fontSize: 14, margin: 0 }}>No pending approvals</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>All sign-up requests have been reviewed.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 720 }}>
+              <p style={{ fontSize: 12, color: "#7A7260", marginBottom: 4 }}>
+                {pendingProfiles.length} staff member{pendingProfiles.length !== 1 ? "s" : ""} awaiting your approval
+              </p>
+              {pendingProfiles.map((p) => {
+                const name = p.full_name ?? "Unknown"
+                const email = p.email ?? ""
+                const signedUp = p.created_at
+                  ? new Date(p.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                  : "—"
+                return (
+                  <div key={p.id} style={{
+                    display: "flex", alignItems: "center", gap: 14, background: "#FDFAF5", border: "1px solid #E0D8C8",
+                    borderRadius: 8, padding: "12px 16px",
+                  }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: "50%", background: "#EDE8DD", display: "flex",
+                      alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700,
+                      color: "#B8922A", flexShrink: 0,
+                    }}>
+                      {initials(name)}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1814" }}>{name}</div>
+                      <div style={{ fontSize: 12, color: "#7A7260" }}>{email}</div>
+                      <div style={{ fontSize: 11, color: "#A89E8C", marginTop: 2 }}>Signed up {signedUp}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setApproveTarget({ id: p.id, name, email })}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
+                          background: "#3D6B4A", color: "#fff", border: "none", borderRadius: 6,
+                          fontSize: 12, fontWeight: 500, cursor: "pointer",
+                        }}
+                      >
+                        <CheckCircle size={13} /> Approve
+                      </button>
+                      <RejectButton profileId={p.id} onDone={() => queryClient.invalidateQueries({ queryKey: ['pending-profiles'] })} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <AddEmployeeModal isOpen={addOpen} onClose={() => setAddOpen(false)} />
+
+      {approveTarget && (
+        <ApproveModal
+          profile={approveTarget}
+          onClose={() => setApproveTarget(null)}
+          onApproved={() => {
+            setApproveTarget(null)
+            queryClient.invalidateQueries({ queryKey: ['pending-profiles'] })
+            queryClient.invalidateQueries({ queryKey: ['staff-list'] })
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Reject button ──────────────────────────────────────────────────────────────
+
+function RejectButton({ profileId, onDone }: { profileId: string; onDone: () => void }) {
+  const [loading, setLoading] = useState(false)
+  const handleReject = async () => {
+    if (!confirm("Reject this sign-up request? The user will be informed they were not approved.")) return
+    setLoading(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ status: 'rejected' })
+      .eq('id', profileId)
+    setLoading(false)
+    if (error) {
+      toast.error("Failed to reject: " + error.message)
+    } else {
+      toast.success("Request rejected.")
+      onDone()
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={handleReject}
+      disabled={loading}
+      style={{
+        display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
+        background: "#FAE8E8", color: "#8B3030", border: "1px solid #D8A0A0", borderRadius: 6,
+        fontSize: 12, fontWeight: 500, cursor: "pointer",
+      }}
+    >
+      {loading ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={13} />}
+      Reject
+    </button>
+  )
+}
+
+// ── Approve modal ──────────────────────────────────────────────────────────────
+
+const JOB_ROLES: JobRole[] = [
+  'bartender', 'head_bartender', 'service', 'waiter', 'supervisor',
+  'floor_manager', 'general_manager', 'receptionist', 'host',
+  'videographer', 'marketing_manager', 'bar_manager', 'accountant',
+]
+
+const EMPLOYMENT_TYPES: { value: EmploymentType; label: string }[] = [
+  { value: 'full_time', label: 'Full-time' },
+  { value: 'part_time', label: 'Part-time' },
+  { value: 'casual', label: 'Casual' },
+]
+
+const ROLES: { value: UserRole; label: string }[] = [
+  { value: 'staff', label: 'Staff' },
+  { value: 'manager', label: 'Manager' },
+]
+
+function ApproveModal({
+  profile,
+  onClose,
+  onApproved,
+}: {
+  profile: { id: string; name: string; email: string }
+  onClose: () => void
+  onApproved: () => void
+}) {
+  const [role, setRole] = useState<UserRole>('staff')
+  const [jobRole, setJobRole] = useState<JobRole | ''>('')
+  const [employmentType, setEmploymentType] = useState<EmploymentType>('full_time')
+  const [department, setDepartment] = useState('')
+  const [hireDate, setHireDate] = useState(new Date().toISOString().slice(0, 10))
+  const [loading, setLoading] = useState(false)
+
+  const handleApprove = async () => {
+    setLoading(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        status: 'active',
+        is_active: true,
+        role,
+        job_role: jobRole || null,
+        employment_type: employmentType,
+        department: department || null,
+        hire_date: hireDate || null,
+      })
+      .eq('id', profile.id)
+    setLoading(false)
+    if (error) {
+      toast.error("Failed to approve: " + error.message)
+    } else {
+      toast.success(`${profile.name} has been approved and can now access their dashboard.`)
+      onApproved()
+    }
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    padding: "7px 10px", border: "1px solid #E0D8C8", borderRadius: 6,
+    fontSize: 12.5, fontFamily: "'DM Sans', sans-serif",
+    background: "#FDFAF5", color: "#1A1814", outline: "none", width: "100%",
+  }
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 600, color: "#7A7260",
+    textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4, display: "block",
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 9999,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        background: "#FDFAF5", borderRadius: 12, width: "100%", maxWidth: 480,
+        border: "1px solid #E0D8C8", boxShadow: "0 20px 60px rgba(0,0,0,.18)", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{ padding: "18px 24px", borderBottom: "1px solid #E0D8C8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 600, margin: 0, color: "#1A1814" }}>
+              Approve Staff Member
+            </h2>
+            <p style={{ fontSize: 12, color: "#7A7260", margin: "2px 0 0" }}>Assign role and details before granting access</p>
+          </div>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#A89E8C", fontSize: 18, lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Employee info */}
+        <div style={{ padding: "16px 24px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#EDE8DD", borderRadius: 8 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#B8922A22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#B8922A" }}>
+              {initials(profile.name)}
+            </div>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1814" }}>{profile.name}</div>
+              <div style={{ fontSize: 12, color: "#7A7260" }}>{profile.email}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Form */}
+        <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={labelStyle}>System Role</label>
+              <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} style={fieldStyle}>
+                {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Employment Type</label>
+              <select value={employmentType} onChange={(e) => setEmploymentType(e.target.value as EmploymentType)} style={fieldStyle}>
+                {EMPLOYMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Job Role</label>
+            <select value={jobRole} onChange={(e) => setJobRole(e.target.value as JobRole | '')} style={fieldStyle}>
+              <option value="">— Select job role —</option>
+              {JOB_ROLES.map((jr) => (
+                <option key={jr} value={jr}>{jr.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Department</label>
+              <input
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                placeholder="e.g. Bar, Service…"
+                style={fieldStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Hire Date</label>
+              <input
+                type="date"
+                value={hireDate}
+                onChange={(e) => setHireDate(e.target.value)}
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "14px 24px 20px", display: "flex", gap: 10, justifyContent: "flex-end", borderTop: "1px solid #E0D8C8" }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 18px", border: "1px solid #E0D8C8", borderRadius: 6, background: "none", fontSize: 12.5, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", color: "#4A4538" }}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleApprove}
+            disabled={loading}
+            style={{ padding: "8px 18px", background: "#3D6B4A", color: "#fff", border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 6 }}
+          >
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+            Approve & Grant Access
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

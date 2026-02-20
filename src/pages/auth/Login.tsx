@@ -16,11 +16,17 @@ export function Login() {
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
 
+  // Redirect already-authenticated active users away from login
+  const profile = useAuthStore((s) => s.profile);
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (user && profile) {
+      if (profile.status === 'pending' || profile.status === 'rejected') {
+        navigate('/pending-approval', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -29,10 +35,11 @@ export function Login() {
     try {
       if (mode === 'signup') {
         await signUp(email, password, fullName, 'staff');
+        navigate('/pending-approval');
       } else {
         await signIn(email, password);
+        navigate('/');
       }
-      navigate('/');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Authentication failed';
       setError(message);

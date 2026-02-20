@@ -7,6 +7,7 @@ import { useAuthStore } from './stores/authStore';
 
 // Auth pages
 import { Login } from './pages/auth/Login';
+import { PendingApproval } from './pages/auth/PendingApproval';
 
 // Owner pages
 import { Dashboard } from './pages/owner/Dashboard';
@@ -111,6 +112,7 @@ export default function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
+        <Route path="/pending-approval" element={<PendingApproval />} />
         
         {/* Protected routes - wrapped in ProtectedRoute + DashboardLayout */}
         <Route

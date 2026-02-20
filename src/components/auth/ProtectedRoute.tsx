@@ -30,6 +30,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
+  // Block pending/rejected users from accessing the app
+  if (profile && (profile.status === 'pending' || profile.status === 'rejected')) {
+    return <Navigate to="/pending-approval" replace />;
+  }
+
   return <>{children}</>;
 }
 

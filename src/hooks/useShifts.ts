@@ -260,7 +260,7 @@ export function useTodayShifts(todayIso: string) {
   });
 }
 
-// Get all staff for dropdown
+// Get all staff for dropdown (only active)
 export function useStaffList() {
   return useQuery({
     queryKey: ['staff-list'],
@@ -271,8 +271,25 @@ export function useStaffList() {
           'id, full_name, email, role, phone, hire_date, avatar_url, job_role, employment_type, manager_type, department, reports_to'
         )
         .eq('is_active', true)
+        .eq('status', 'active')
         .order('full_name');
 
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+// Fetch profiles awaiting owner approval
+export function usePendingProfiles() {
+  return useQuery({
+    queryKey: ['pending-profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, created_at, role')
+        .eq('status', 'pending')
+        .order('created_at');
       if (error) throw error;
       return data || [];
     },
