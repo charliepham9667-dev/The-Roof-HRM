@@ -182,7 +182,6 @@ export function CheckIn() {
   const shiftTimeLabel = todayShift
     ? `${todayShift.startTime.slice(0, 5)} – ${todayShift.endTime.slice(0, 5)}`
     : null;
-  const firstName = profile?.fullName?.split(' ')[0] || 'Staff';
 
   const statusLabel = !checkedIn && !shiftDone ? 'Not Checked In'
     : onBreak ? 'On Break'

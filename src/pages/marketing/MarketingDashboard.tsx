@@ -84,63 +84,6 @@ const CHANNELS = [
   },
 ]
 
-const CALENDAR_DAYS = [
-  {
-    name: "Mon", date: "16",
-    posts: [
-      { type: "events", text: "🎧 Tết DJ Lineup", platforms: "IG · FB", pub: true },
-      { type: "promos", text: "📣 Tết Combo Remind", platforms: "IG · FB", pub: true },
-    ],
-    gap: null, today: false,
-  },
-  {
-    name: "Tue", date: "17",
-    posts: [{ type: "atmosphere", text: "🌅 Girl Night Out", platforms: "IG · FB", pub: true }],
-    gap: null, today: false,
-  },
-  {
-    name: "Wed", date: "18",
-    posts: [{ type: "atmosphere", text: "📸 Moments & Atmosphere", platforms: "IG · FB", pub: true }],
-    gap: null, today: false,
-  },
-  {
-    name: "Thu", date: "19",
-    posts: [{ type: "events", text: "🎭 Tết Night Recap", platforms: "IG · TT", pub: false }],
-    gap: "⚠ No reel scheduled", today: true,
-  },
-  {
-    name: "Fri", date: "20",
-    posts: [],
-    gap: "⚠ High traffic night", today: false,
-  },
-  {
-    name: "Sat", date: "21",
-    posts: [],
-    gap: "⚠ Private event night", today: false,
-  },
-  {
-    name: "Sun", date: "22",
-    posts: [{ type: "atmosphere", text: "🌅 Sunday Sunset Reel", platforms: "IG · TT", pub: false }],
-    gap: null, today: false,
-  },
-]
-
-const POST_STYLE: Record<string, { bg: string; border: string; text: string }> = {
-  events:     { bg: "bg-[#f5edd8]", border: "border-l-[#c9a84c]", text: "text-[#7a5a10]" },
-  atmosphere: { bg: "bg-[#f0ece6]", border: "border-l-[#8a7a6a]", text: "text-[#5a4a3a]" },
-  drinks:     { bg: "bg-[#fdf3e7]", border: "border-l-[#b5620a]", text: "text-[#b5620a]" },
-  community:  { bg: "bg-success/8",  border: "border-l-success",   text: "text-success" },
-  promos:     { bg: "bg-info/8",     border: "border-l-info",      text: "text-info" },
-  vn:         { bg: "bg-error/8",    border: "border-l-error",     text: "text-error" },
-}
-
-const GAPS = [
-  { severity: "red" as const,   text: "No content Thu–Sat — your 3 highest-traffic nights", action: "→ Brief marketing team today" },
-  { severity: "red" as const,   text: "2 unanswered Google reviews — rating risk after 48h", action: "→ Assign to Thuy now" },
-  { severity: "amber" as const, text: "TikTok only 3 posts this week — algorithm favors 5+", action: "→ Add 2 behind-the-scenes clips" },
-  { severity: "amber" as const, text: "Facebook engagement declining — consider boosting Saturday", action: "→ Set 200K VND boost" },
-  { severity: "green" as const, text: "Instagram performing well — maintain 1 reel + 2 stories daily", action: null },
-]
 
 type PartnerStatus = "Active" | "Negotiating" | "Follow Up" | "Inactive"
 type InfluencerStatusType = "visited" | "scheduled" | "prospect"
@@ -338,9 +281,6 @@ export default function MarketingDashboard() {
     past:        { label: "Past",        cls: "border-border bg-secondary text-muted-foreground" },
   }
 
-  const sevColor: Record<string, string> = {
-    red: "bg-error", amber: "bg-warning", green: "bg-success",
-  }
 
   const isActive = (path: string) => location.pathname.endsWith(path)
 

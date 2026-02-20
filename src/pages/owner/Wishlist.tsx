@@ -80,13 +80,6 @@ const PRIORITIES: Array<{ value: WishlistPriority | "all"; label: string }> = [
   { value: "low",    label: "Low" },
 ]
 
-const STATUSES: Array<{ value: WishlistStatus | "all"; label: string }> = [
-  { value: "all",       label: "All Statuses" },
-  { value: "request",   label: "Request" },
-  { value: "approved",  label: "Approved" },
-  { value: "ordered",   label: "Ordered" },
-  { value: "delivered", label: "Delivered" },
-]
 
 function formatVnd(amount: number | null): string {
   if (amount == null) return "—"

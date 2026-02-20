@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   Activity,
   CalendarClock,
-  Pencil,
   Trash2,
   Plus,
   ShieldAlert,
@@ -81,15 +80,6 @@ function pad2(n: number) {
   return String(n).padStart(2, "0")
 }
 
-function formatCompactVnd(value: number) {
-  const v = Number(value || 0)
-  if (!Number.isFinite(v)) return "—"
-  const abs = Math.abs(v)
-  if (abs >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}B`
-  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
-  if (abs >= 1_000) return `${Math.round(v / 1_000)}K`
-  return `${Math.round(v)}`
-}
 
 function greetingFromHour(h: number) {
   if (h < 12) return "Good morning"
@@ -161,20 +151,6 @@ function AnalogClock({ hour, minute, second }: { hour: number; minute: number; s
       <line x1="100" y1="104" x2="100" y2="30" stroke="rgb(var(--primary))" strokeWidth="1" strokeLinecap="round"
         style={{ transform: `rotate(${secDeg}deg)`, transformOrigin: "100px 100px" }} />
     </svg>
-  )
-}
-
-function MetricCard({
-  title, children, footer, className,
-}: {
-  title: string; children: React.ReactNode; footer?: React.ReactNode; className?: string
-}) {
-  return (
-    <div className={cn("rounded-card border border-border bg-card p-5 shadow-card", className)}>
-      <div className="text-xs tracking-widest font-semibold text-foreground uppercase">{title}</div>
-      <div className="mt-2">{children}</div>
-      {footer ? <div className="mt-3">{footer}</div> : null}
-    </div>
   )
 }
 
@@ -339,12 +315,12 @@ export function ManagerDashboard() {
 
   // ── Data hooks ───────────────────────────────────────────────────────────────
   const { data: kpi, isLoading: kpiLoading } = useKPISummary()
-  const { data: velocity, isLoading: velocityLoading } = useRevenueVelocity()
+  const { data: velocity, isLoading: _velocityLoading } = useRevenueVelocity()
   const { data: googleReviews } = useGoogleReviews()
   const periodStartIso = `${todayIso.slice(0, 7)}-01`
-  const { data: dailyInput, isLoading: dailyInputLoading } = useExecutiveDashboardDailyInput(todayIso)
+  const { data: dailyInput, isLoading: _dailyInputLoading } = useExecutiveDashboardDailyInput(todayIso)
   const { data: paxTarget } = useMonthlyTarget("pax", periodStartIso)
-  const { pax: csvPaxConfirmed, isLoading: csvPaxLoading } = useTodayPaxConfirmed()
+  const { pax: _csvPaxConfirmed, isLoading: csvPaxLoading } = useTodayPaxConfirmed()
   const { data: allCsvReservations = [] } = useReservationsCsv()
   const { data: todayShifts = [] } = useTodayShifts(todayIso)
 
@@ -425,14 +401,6 @@ export function ManagerDashboard() {
 
   // Revenue
   const tonightsRevenue = dailyInput?.tonightsRevenue ?? 0
-  const daysInMonth = velocity?.daysInMonth ?? 0
-  const monthlyTarget = velocity?.monthlyTarget ?? 0
-  const projectedMonthEnd = velocity?.projectedMonthEnd ?? 0
-  const tonightTarget =
-    daysInMonth > 0 ? (projectedMonthEnd >= monthlyTarget ? projectedMonthEnd : monthlyTarget) / daysInMonth : 0
-  const tonightPercentToGoal = tonightTarget > 0 ? Math.round((tonightsRevenue / tonightTarget) * 100) : 0
-  const tonightTrackingLow = tonightTarget > 0 ? tonightsRevenue < tonightTarget : false
-  const mtdRevenue = kpi?.revenue.value ?? 0
   const mtdPax = kpi?.pax.value ?? 0
   const monthlyPaxPercent = paxTarget && paxTarget > 0 ? Math.round((mtdPax / paxTarget) * 100) : null
 
@@ -1142,7 +1110,7 @@ export function ManagerDashboard() {
                 return (
                   <div className="mt-2 flex items-center gap-2 rounded-md border border-info/25 bg-info/8 px-2.5 py-2">
                     <span className="flex-1 text-[11px] text-info">
-                      🕐 Next: {next.name} {next.pax ? `(${next.pax} pax)` : ""}
+                      🕐 Next: {next.name} {next.numberOfGuests ? `(${next.numberOfGuests} pax)` : ""}
                       {next.notes ? ` — ${next.notes}` : ""}
                     </span>
                   </div>
@@ -1159,7 +1127,7 @@ export function ManagerDashboard() {
                         <div className="text-[11px] font-medium text-foreground truncate">{r.name}</div>
                         {r.notes && <div className="text-[10px] text-muted-foreground truncate">{r.notes}</div>}
                       </div>
-                      {r.pax && <span className="font-mono text-[10px] text-muted-foreground shrink-0">{r.pax} pax</span>}
+                      {r.numberOfGuests > 0 && <span className="font-mono text-[10px] text-muted-foreground shrink-0">{r.numberOfGuests} pax</span>}
                     </div>
                   ))}
               </div>

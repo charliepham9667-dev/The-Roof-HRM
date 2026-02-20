@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Circle, Loader2, ListChecks, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, ListChecks, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useShifts } from '../../hooks/useShifts';
 import { useAnnouncements } from '../../hooks/useAnnouncements';
@@ -21,11 +21,6 @@ function getGreeting() {
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
-function fmtHHMM(iso: string | null | undefined) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 function fmtShift(t: string) { return t.slice(0, 5); }
 
@@ -125,9 +120,6 @@ function SRow({ icon, label, children }: { icon: string; label: string; children
 
 // ─── task row ────────────────────────────────────────────────────────────────
 
-function TaskRow({ children }: { children: React.ReactNode }) {
-  return <div className="flex items-start gap-2.5 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-muted/20 transition-colors cursor-pointer">{children}</div>;
-}
 
 // ─── checklist panel ─────────────────────────────────────────────────────────
 
@@ -140,7 +132,6 @@ function ChecklistPanel({ role }: { role: string }) {
   const roleLabel = capitalize(role) || 'Your Role';
 
   // aggregate progress across all templates
-  const totalItems = templates?.reduce((a, t) => a + t.tasks.length, 0) ?? 0;
 
   return (
     <Panel>

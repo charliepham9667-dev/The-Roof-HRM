@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { ChevronLeft, ChevronRight, Plus, Loader2, ChevronDown, Pencil } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Loader2, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import {
   DndContext,
@@ -28,10 +28,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
   Input,
   Label,
 } from "@/components/ui"
@@ -178,14 +174,6 @@ export function ScheduleBuilder() {
   const nextWeekRangeShort = useMemo(() => formatRangeShort(nextWeekStart), [nextWeekStart])
   const isWeekPublished = useMemo(() => !shifts.some((s) => s.status === "scheduled"), [shifts])
 
-  const weekSelectorLabel = useMemo(() => {
-    const nowStart = startOfWeekSunday(new Date())
-    const nextStart = addDays(nowStart, 7)
-    const ymd = toYmd(weekStart)
-    if (ymd === toYmd(nowStart)) return "This week"
-    if (ymd === toYmd(nextStart)) return "Next week"
-    return "Custom week"
-  }, [weekStart])
 
   const filteredEmployees = useMemo(() => {
     const q = teamQuery.trim().toLowerCase()
@@ -232,19 +220,6 @@ export function ScheduleBuilder() {
     return entries
   }, [filteredEmployees])
 
-  const orderedEmployees = useMemo(() => {
-    const out: Employee[] = []
-    for (const [, list] of employeesByDepartment) out.push(...list)
-    return out
-  }, [employeesByDepartment])
-
-  function departmentDotClass(department: string) {
-    const d = department.trim().toLowerCase()
-    if (d === "bar") return "bg-sky-400"
-    if (d === "service") return "bg-emerald-400"
-    if (d === "marketing") return "bg-rose-400"
-    return "bg-muted-foreground/40"
-  }
 
   function openNewShift(opts: { employeeId: string | "open"; date: string }) {
     setEditShift(null)
@@ -1129,12 +1104,6 @@ function formatRangeLong(weekStart: Date) {
   return `${fmt(weekStart)} - ${fmt(weekEnd)}`
 }
 
-function formatDayHeaderLong(d: Date) {
-  const dow = d.toLocaleDateString(undefined, { weekday: "short" })
-  const day = d.getDate()
-  const month = d.toLocaleDateString(undefined, { month: "short" })
-  return `${dow}, ${day} ${month}`
-}
 
 function formatRangeShort(weekStart: Date) {
   const weekEnd = addDays(weekStart, 6)
@@ -1142,14 +1111,6 @@ function formatRangeShort(weekStart: Date) {
   return `${fmt(weekStart)} – ${fmt(weekEnd)}`
 }
 
-function formatHoursMins(totalMins: number) {
-  const mins = Math.max(0, Math.round(totalMins))
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
-  if (h <= 0) return `${m}mins`
-  if (m === 0) return `${h}h`
-  return `${h}h ${m}mins`
-}
 
 function unique<T>(arr: T[]) {
   return Array.from(new Set(arr))

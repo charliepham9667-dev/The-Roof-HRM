@@ -6,7 +6,7 @@ import {
   useUpdateTaskTemplate,
   useDeleteTaskTemplate,
 } from '../../hooks/useTasks';
-import type { TaskTemplate, TaskItem, TaskTemplateType } from '../../types';
+import type { TaskTemplate, TaskTemplateType } from '../../types';
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -462,7 +462,7 @@ function TemplateForm({
 function TemplateCard({
   template,
   onEdit,
-  onDelete,
+  onDelete: _onDelete,
 }: {
   template: TaskTemplate;
   onEdit: () => void;

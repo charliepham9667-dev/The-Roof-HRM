@@ -8,9 +8,13 @@ export type EmploymentType = 'full_time' | 'part_time' | 'casual';
 
 // Job roles at The Roof
 export type JobRole = 
-  | 'bartender' 
-  | 'service' 
-  | 'floor_manager' 
+  | 'bartender'
+  | 'head_bartender'
+  | 'service'
+  | 'waiter'
+  | 'supervisor'
+  | 'floor_manager'
+  | 'general_manager'
   | 'receptionist' 
   | 'host' 
   | 'videographer' 

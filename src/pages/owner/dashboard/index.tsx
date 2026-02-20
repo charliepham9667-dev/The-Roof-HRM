@@ -4,7 +4,6 @@ import {
   Activity,
   CalendarClock,
   Pencil,
-  Play,
   Trash2,
 } from "lucide-react"
 
@@ -18,9 +17,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet"
 import { useAuthStore } from "@/stores/authStore"
 import type { BoardColumnKey, CreateDelegationTaskInput, DelegationTask, TaskCategory, TaskStatus } from "@/types"
@@ -93,11 +89,6 @@ function isClubNight(weekday: string) {
   return ["Thursday", "Friday", "Saturday"].includes(weekday)
 }
 
-function badgeClass(kind: "on" | "off") {
-  return kind === "on"
-    ? "bg-success/10 text-success border border-success/20"
-    : "bg-error/10 text-error border border-error/20"
-}
 
 function priorityPill(priority: string) {
   const p = String(priority || "").toLowerCase()
@@ -138,11 +129,6 @@ const CATEGORY_OPTIONS: Array<{ value: TaskCategory; label: string }> = [
   { value: "event", label: "Events" },
 ]
 
-const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
-  { value: "todo", label: "Not Started" },
-  { value: "in_progress", label: "In progress" },
-  { value: "blocked", label: "Delegated" },
-]
 
 function formatDue(dueIso: string | undefined) {
   if (!dueIso) return "—"
@@ -153,14 +139,6 @@ function formatDue(dueIso: string | undefined) {
   }
 }
 
-function formatTimeStarted(ts: string | undefined) {
-  if (!ts) return "—"
-  try {
-    return new Date(ts).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-  } catch {
-    return ts
-  }
-}
 
 
 function AnalogClock({
@@ -299,7 +277,7 @@ export default function OwnerDashboardPage() {
   const { data: kpi, isLoading: kpiLoading } = useKPISummary()
   const { data: velocity, isLoading: velocityLoading } = useRevenueVelocity()
   const { data: googleReviews } = useGoogleReviews()
-  const { data: dailyInput, isLoading: dailyInputLoading } = useExecutiveDashboardDailyInput(todayIso)
+  const { data: dailyInput, isLoading: _dailyInputLoading } = useExecutiveDashboardDailyInput(todayIso)
   const upsertDailyInput = useUpsertExecutiveDashboardDailyInput()
   const { data: paxTarget } = useMonthlyTarget("pax", periodStartIso)
   const { pax: csvPaxConfirmed, isLoading: csvPaxLoading } = useTodayPaxConfirmed()
@@ -309,12 +287,6 @@ export default function OwnerDashboardPage() {
   const tonightsRevenue = dailyInput?.tonightsRevenue ?? 0
   const daysInMonth = velocity?.daysInMonth ?? 0
   const monthlyTarget = velocity?.monthlyTarget ?? 0
-  const projectedMonthEnd = velocity?.projectedMonthEnd ?? 0
-  const tonightTarget =
-    daysInMonth > 0 ? (projectedMonthEnd >= monthlyTarget ? projectedMonthEnd : monthlyTarget) / daysInMonth : 0
-  const tonightPercentToGoal = tonightTarget > 0 ? Math.round((tonightsRevenue / tonightTarget) * 100) : 0
-  const tonightTrackingLow = tonightTarget > 0 ? tonightsRevenue < tonightTarget : false
-
   const mtdRevenue = kpi?.revenue.value ?? 0
   const mtdPax = kpi?.pax.value ?? 0
   const monthlyPaxPercent = paxTarget && paxTarget > 0 ? Math.round((mtdPax / paxTarget) * 100) : null
@@ -442,7 +414,6 @@ export default function OwnerDashboardPage() {
     return cols
   }, [boardTasksWithOverrides, todayIso, myUserId])
 
-  const finishTodayFocus = grouped.finish_today[0] || null
 
   const followUpList = useMemo(() => {
     // Only show tasks I delegated TO someone else (I am assigned_by, they are assigned_to)
@@ -468,7 +439,7 @@ export default function OwnerDashboardPage() {
   }, [allTasks, myUserId])
 
   const [taskView, setTaskView] = useState<"kanban" | "list">("kanban")
-  const [listStatusFilter, setListStatusFilter] = useState<"all" | TaskStatus>("all")
+  const [listStatusFilter, setListStatusFilter] = useState<"all" | TaskStatus | "finish_today">("all")
 
   const staff = useStaffList()
   // Include the owner themselves so they can self-assign tasks
@@ -502,6 +473,7 @@ export default function OwnerDashboardPage() {
     category: "operations" as TaskCategory,
     status: "todo" as TaskStatus,
     assignedTo: "",
+    priority: "medium" as import("@/types").TaskPriority,
   })
 
   useEffect(() => {
@@ -517,11 +489,12 @@ export default function OwnerDashboardPage() {
       category: (selectedTask.category || "operations") as TaskCategory,
       status: (selectedTask.status || "todo") as TaskStatus,
       assignedTo: selectedTask.assignedTo || "",
+      priority: (selectedTask.priority || "medium") as import("@/types").TaskPriority,
     })
   }, [selectedTask?.id])
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [createForColumn, setCreateForColumn] = useState<BoardColumnKey>("not_started")
+  const [_createForColumn, setCreateForColumn] = useState<BoardColumnKey>("not_started")
   const [createError, setCreateError] = useState<string | null>(null)
   const [createDraft, setCreateDraft] = useState<CreateDelegationTaskInput>(() => ({
     title: "",
@@ -549,7 +522,7 @@ export default function OwnerDashboardPage() {
     const defaultsByColumn: Partial<CreateDelegationTaskInput> =
       col === "in_progress"
         ? { status: "in_progress", timeStarted: new Date().toISOString() }
-        : col === "delegated_follow_up"
+        : (col as string) === "delegated_follow_up"
           ? { status: "blocked" }
           : col === "finish_today"
             ? { status: "todo", dueDate: todayIso }
@@ -598,7 +571,7 @@ export default function OwnerDashboardPage() {
   }
 
   const meetingKey = "roof_meeting_today"
-  const [meeting, setMeeting] = useState(() => {
+  const [_meeting, _setMeeting] = useState(() => {
     try {
       const raw = localStorage.getItem(meetingKey)
       if (!raw) return { title: "Team meeting — 15:00", location: "Briefing Room" }
@@ -611,7 +584,7 @@ export default function OwnerDashboardPage() {
       return { title: "Team meeting — 15:00", location: "Briefing Room" }
     }
   })
-  const [editingMeeting, setEditingMeeting] = useState<"title" | "location" | null>(null)
+  const [_editingMeeting, _setEditingMeeting] = useState<"title" | "location" | null>(null)
 
   return (
     <div className="space-y-6">
@@ -1231,7 +1204,7 @@ export default function OwnerDashboardPage() {
               {followUpList.length === 0 ? (
                 <div className="px-4 py-6 text-xs text-muted-foreground italic">No delegated tasks.</div>
               ) : (
-                followUpList.map(({ task, label, isFresh }) => {
+                followUpList.map(({ task, label: _label, isFresh }) => {
                   const assignee = people.find((p) => p.id === task.assignedTo)
                   const assigneeName = assignee?.full_name || assignee?.email || "Unknown"
                   const assigneeFirst = assigneeName.split(" ")[0]

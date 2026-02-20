@@ -137,16 +137,6 @@ function channelsForPost(post: ContentPost): Array<"ig" | "fb" | "tiktok"> {
   return ["tiktok"]
 }
 
-function ChannelIcons({ post }: { post: ContentPost }) {
-  const ch = channelsForPost(post)
-  return (
-    <div className="flex gap-[3px]">
-      {ch.includes("ig") ? <span className="text-xs">📸</span> : null}
-      {ch.includes("tiktok") ? <span className="text-xs">🎵</span> : null}
-      {ch.includes("fb") ? <span className="text-xs">📘</span> : null}
-    </div>
-  )
-}
 
 function postTitle(post: ContentPost) {
   const fromNotes = getNoteField(post.notes, "title")
@@ -172,7 +162,7 @@ export default function ContentCalendar() {
 
   const [view, setView] = useState<ViewMode>("monthly")
   const [cursor, setCursor] = useState<Date>(() => new Date())
-  const [pillarFilter, setPillarFilter] = useState<PillarKey>("all")
+  const [pillarFilter, _setPillarFilter] = useState<PillarKey>("all")
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPost, setEditingPost] = useState<ContentPost | null>(null)
