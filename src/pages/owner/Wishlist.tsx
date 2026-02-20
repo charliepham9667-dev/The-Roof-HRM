@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Trash2, Plus, Pencil, Wrench, ShoppingCart } from "lucide-react"
+import { Trash2, Plus, Pencil, Wrench, ShoppingCart, Music2, RefreshCw, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/stores/authStore"
@@ -24,6 +24,19 @@ import {
   type MaintenanceCategory,
   type CreateMaintenanceTaskInput,
 } from "@/hooks/useMaintenanceTasks"
+import {
+  useDJPayments,
+  useUpdateDJPayment,
+  useCreateDJPayment,
+  useDJPaymentsSync,
+  formatVndAmount,
+  formatTimeRange,
+  classifyDJType,
+  classifyDJPayer,
+  isOwnerDJ,
+  type DJPayment,
+  type CreateDJPaymentInput,
+} from "@/hooks/useDJPayments"
 
 // ─── Shared config ─────────────────────────────────────────────────────────────
 
@@ -843,14 +856,719 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   )
 }
 
+// ─── DJ Payments tab ───────────────────────────────────────────────────────────
+
+const DJ_STATUS_CONFIG = {
+  scheduled: { label: "Scheduled", cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  done:      { label: "Done",      cls: "bg-green-50 text-green-700 border-green-200" },
+  no_show:   { label: "No Show",   cls: "bg-red-50 text-red-700 border-red-200" },
+} as const
+
+const DJ_PAY_CONFIG = {
+  paid:   { label: "Paid",   cls: "bg-green-50 text-green-700 border-green-200" },
+  unpaid: { label: "Unpaid", cls: "bg-amber-50 text-[#b5620a] border-amber-200" },
+  na:     { label: "N/A",    cls: "bg-muted text-muted-foreground border-border" },
+} as const
+
+const DJ_PAYER_CONFIG = {
+  foreigner_charlie: { label: "Charlie",  cls: "text-blue-600" },
+  local_company:     { label: "Company",  cls: "text-green-600" },
+} as const
+
+function defaultDjDraft(p?: DJPayment | null): CreateDJPaymentInput {
+  return {
+    date: p?.date ?? new Date().toISOString().slice(0, 10),
+    event_name: p?.event_name ?? "",
+    event_type: p?.event_type ?? "default",
+    dj_name: p?.dj_name ?? "",
+    dj_type: p?.dj_type ?? undefined,
+    set_start: p?.set_start?.slice(0, 5) ?? "",
+    set_end: p?.set_end?.slice(0, 5) ?? "",
+    amount_vnd: p?.amount_vnd ?? undefined,
+    payer_type: p?.payer_type ?? undefined,
+    status: p?.status ?? "scheduled",
+    payment_status: p?.payment_status ?? "unpaid",
+    receipt_uploaded: p?.receipt_uploaded ?? false,
+    notes: p?.notes ?? "",
+  }
+}
+
+function DJPaymentSheet({
+  open,
+  onOpenChange,
+  payment,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  payment?: DJPayment | null
+}) {
+  const isEdit = !!payment
+  const create = useCreateDJPayment()
+  const update = useUpdateDJPayment()
+  const [draft, setDraft] = useState<CreateDJPaymentInput>(() => defaultDjDraft(payment))
+  const [amtOverride, setAmtOverride] = useState(payment?.amount_override ?? false)
+  const [error, setError] = useState<string | null>(null)
+
+  useState(() => { setDraft(defaultDjDraft(payment)); setAmtOverride(payment?.amount_override ?? false); setError(null) })
+
+  const isPending = create.isPending || update.isPending
+
+  function set<K extends keyof CreateDJPaymentInput>(k: K, v: CreateDJPaymentInput[K]) {
+    setDraft((d) => ({ ...d, [k]: v }))
+  }
+
+  async function handleSubmit() {
+    if (!draft.dj_name.trim()) { setError("DJ name is required."); return }
+    if (!draft.date) { setError("Date is required."); return }
+    if (!draft.event_name.trim()) { setError("Event name is required."); return }
+    setError(null)
+    try {
+      const payload = {
+        ...draft,
+        dj_type: draft.dj_type ?? classifyDJType(draft.dj_name),
+        payer_type: draft.payer_type ?? classifyDJPayer(draft.dj_name),
+      }
+      if (isEdit && payment) {
+        await update.mutateAsync({
+          id: payment.id,
+          status: payload.status,
+          payment_status: payload.payment_status,
+          amount_vnd: payload.amount_vnd,
+          amount_override: amtOverride,
+          receipt_uploaded: payload.receipt_uploaded,
+          notes: payload.notes,
+          payer_type: payload.payer_type,
+          dj_type: payload.dj_type,
+        })
+      } else {
+        await create.mutateAsync({ ...payload, amount_override: amtOverride })
+      }
+      onOpenChange(false)
+    } catch (e) {
+      setError((e as Error)?.message || "Failed to save.")
+    }
+  }
+
+  const inputCls = "w-full rounded border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:border-primary transition-colors"
+  const selectCls = inputCls + " cursor-pointer"
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="sm:max-w-[420px] p-0 flex flex-col overflow-hidden">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+          <SheetTitle className="text-base font-semibold">
+            {isEdit ? "Edit DJ Set" : "Add DJ Set"}
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {error && (
+            <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Date *</label>
+              <input type="date" className={inputCls} value={draft.date} onChange={(e) => set("date", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Event Type</label>
+              <select className={selectCls} value={draft.event_type} onChange={(e) => set("event_type", e.target.value)}>
+                <option value="default">Default</option>
+                <option value="tet">Tết (1.5×)</option>
+                <option value="new_year">New Year (1.5×)</option>
+                <option value="partnership">Partnership</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Event Name *</label>
+            <input type="text" className={inputCls} placeholder="e.g. SaturPlay" value={draft.event_name} onChange={(e) => set("event_name", e.target.value)} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">DJ Name *</label>
+              <input type="text" className={inputCls} placeholder="e.g. CharleS" value={draft.dj_name} onChange={(e) => set("dj_name", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">DJ Type</label>
+              <select className={selectCls} value={draft.dj_type ?? ""} onChange={(e) => set("dj_type", (e.target.value || undefined) as any)}>
+                <option value="">Auto</option>
+                <option value="foreigner">Foreigner</option>
+                <option value="local">Local</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Set Start</label>
+              <input type="time" className={inputCls} value={draft.set_start ?? ""} onChange={(e) => set("set_start", e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Set End</label>
+              <input type="time" className={inputCls} value={draft.set_end ?? ""} onChange={(e) => set("set_end", e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase">Amount (₫)</label>
+              <label className="flex items-center gap-1 ml-auto cursor-pointer">
+                <input type="checkbox" className="h-3 w-3" checked={amtOverride} onChange={(e) => setAmtOverride(e.target.checked)} />
+                <span className="text-[10px] text-muted-foreground">Manual override</span>
+              </label>
+            </div>
+            <input
+              type="number"
+              className={inputCls}
+              placeholder="Auto-calculated"
+              value={draft.amount_vnd ?? ""}
+              disabled={!amtOverride}
+              onChange={(e) => set("amount_vnd", e.target.value ? parseInt(e.target.value) : undefined)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Payer</label>
+              <select className={selectCls} value={draft.payer_type ?? ""} onChange={(e) => set("payer_type", (e.target.value || undefined) as any)}>
+                <option value="">Auto</option>
+                <option value="foreigner_charlie">Charlie</option>
+                <option value="local_company">Company</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Status</label>
+              <select className={selectCls} value={draft.status ?? "scheduled"} onChange={(e) => set("status", e.target.value as any)}>
+                <option value="scheduled">Scheduled</option>
+                <option value="done">Done</option>
+                <option value="no_show">No Show</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Payment Status</label>
+              <select className={selectCls} value={draft.payment_status ?? "unpaid"} onChange={(e) => set("payment_status", e.target.value as any)}>
+                <option value="unpaid">Unpaid</option>
+                <option value="paid">Paid</option>
+                <option value="na">N/A</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Receipt</label>
+              <select className={selectCls} value={draft.receipt_uploaded ? "yes" : "no"} onChange={(e) => set("receipt_uploaded", e.target.value === "yes")}>
+                <option value="no">Not uploaded</option>
+                <option value="yes">Uploaded ✓</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Notes</label>
+            <textarea rows={3} className={inputCls + " resize-none"} placeholder="Any notes…" value={draft.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
+          <button type="button" onClick={() => onOpenChange(false)} className="rounded border border-border px-4 py-1.5 text-xs text-muted-foreground hover:bg-secondary transition-colors">
+            Cancel
+          </button>
+          <button type="button" onClick={handleSubmit} disabled={isPending} className="rounded bg-primary px-4 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+            {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Set"}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function DJPaymentsTab({ canManage }: { canManage: boolean }) {
+  const { data: payments = [], isLoading } = useDJPayments()
+  const update = useUpdateDJPayment()
+  const { sync } = useDJPaymentsSync()
+
+  const [statusFilter, setStatusFilter] = useState<"all" | "done" | "scheduled" | "no_show">("all")
+  const [payFilter, setPayFilter] = useState<"all" | "unpaid" | "paid">("all")
+  const [payerFilter, setPayerFilter] = useState<"all" | "foreigner_charlie" | "local_company">("all")
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [editing, setEditing] = useState<DJPayment | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
+
+  const todayIso = new Date().toISOString().slice(0, 10)
+
+  const filtered = useMemo(() => payments.filter((p) => {
+    if (statusFilter !== "all" && p.status !== statusFilter) return false
+    if (payFilter !== "all" && p.payment_status !== payFilter) return false
+    if (payerFilter !== "all" && p.payer_type !== payerFilter) return false
+    return true
+  }), [payments, statusFilter, payFilter, payerFilter])
+
+  // Group by YYYY-MM
+  const grouped = useMemo(() => {
+    const map = new Map<string, DJPayment[]>()
+    const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date))
+    for (const p of sorted) {
+      const key = p.date.slice(0, 7) // YYYY-MM
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(p)
+    }
+    return map
+  }, [filtered])
+
+  // Summary stats
+  const stats = useMemo(() => {
+    const totalSets = payments.length
+    const uniqueDJs = new Set(payments.map((p) => p.dj_name.toLowerCase())).size
+    const totalPaid = payments.filter((p) => p.payment_status === "paid").reduce((s, p) => s + (p.amount_vnd ?? 0), 0)
+    const outstanding = payments.filter((p) => p.payment_status === "unpaid" && p.status !== "no_show").reduce((s, p) => s + (p.amount_vnd ?? 0), 0)
+    const noShows = payments.filter((p) => p.status === "no_show").length
+    return { totalSets, uniqueDJs, totalPaid, outstanding, noShows }
+  }, [payments])
+
+  const filteredPaid = useMemo(() => filtered.filter((p) => p.payment_status === "paid").reduce((s, p) => s + (p.amount_vnd ?? 0), 0), [filtered])
+  const filteredOutstanding = useMemo(() => filtered.filter((p) => p.payment_status === "unpaid" && p.status !== "no_show").reduce((s, p) => s + (p.amount_vnd ?? 0), 0), [filtered])
+
+  function openAdd() { setEditing(null); setSheetOpen(true) }
+  function openEdit(p: DJPayment) { setEditing(p); setSheetOpen(true) }
+
+  function toggleMonth(key: string) {
+    setExpandedMonths((prev) => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
+  async function handleSync() {
+    setIsSyncing(true)
+    setSyncMsg(null)
+    try {
+      const result = await sync()
+      const parts = [`${result.upserted} sets synced`]
+      if (result.skipped) parts.push(`${result.skipped} skipped`)
+      if (result.unmappedDJs.length) parts.push(`Unknown DJs: ${[...new Set(result.unmappedDJs)].join(", ")}`)
+      if (result.errors.length) parts.push(`Errors: ${result.errors.slice(0, 2).join("; ")}`)
+      setSyncMsg(parts.join(" · "))
+    } catch (e) {
+      setSyncMsg(`Sync failed: ${e}`)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  function exportCsv() {
+    const headers = ["Date", "Event", "DJ", "Type", "Set Time", "Duration (h)", "Multiplier", "Amount (VND)", "Payer", "Status", "Payment", "Receipt", "Notes"]
+    const rows = filtered.map((p) => [
+      p.date,
+      p.event_name,
+      p.dj_name,
+      p.dj_type ?? "",
+      formatTimeRange(p.set_start, p.set_end),
+      p.duration_hours ?? "",
+      p.multiplier,
+      p.amount_vnd ?? "",
+      p.payer_type ?? "",
+      p.status,
+      p.payment_status,
+      p.receipt_uploaded ? "yes" : "no",
+      p.notes ?? "",
+    ])
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `dj-payments-${todayIso}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const monthLabel = (key: string) => {
+    const [y, m] = key.split("-")
+    const d = new Date(Number(y), Number(m) - 1, 1)
+    return d.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+  }
+
+  const filterBtnCls = (active: boolean) => cn(
+    "px-3 py-1 rounded text-[10px] font-semibold border transition-colors",
+    active
+      ? "bg-foreground/10 border-foreground/20 text-foreground"
+      : "bg-transparent border-border text-muted-foreground hover:bg-secondary"
+  )
+
+  return (
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
+
+      {/* Sync bar */}
+      <div className="flex items-center gap-3 rounded-card border border-border bg-card px-4 py-2.5 shrink-0 shadow-card flex-wrap">
+        <div className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+        <span className="text-[11px] text-muted-foreground">
+          Source: <span className="font-medium text-foreground">HQ Calendar (Google Sheets)</span>
+          <span className="mx-1.5 opacity-30">·</span>Jan 1 – Today
+        </span>
+        {syncMsg && (
+          <span className="text-[10px] text-muted-foreground border border-border rounded px-2 py-0.5">{syncMsg}</span>
+        )}
+        <button
+          type="button"
+          onClick={handleSync}
+          disabled={isSyncing}
+          className="ml-auto flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50 shrink-0"
+        >
+          <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
+          {isSyncing ? "Syncing…" : "Sync Now"}
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-5 gap-3 shrink-0">
+        {[
+          { label: "Total Sets", value: stats.totalSets, sub: "Jan 1 – Today" },
+          { label: "Unique DJs", value: stats.uniqueDJs, sub: "in this period" },
+          { label: "Total Paid", value: `${formatVndAmount(stats.totalPaid)} ₫`, sub: "confirmed", accent: "green" },
+          { label: "Outstanding", value: `${formatVndAmount(stats.outstanding)} ₫`, sub: "unpaid sets", accent: "amber" },
+          { label: "No Shows", value: stats.noShows, sub: "no payment due" },
+        ].map((c) => (
+          <div
+            key={c.label}
+            className={cn(
+              "rounded-card border p-3 shadow-card",
+              c.accent === "green" ? "border-green-200 bg-green-50" :
+              c.accent === "amber" ? "border-amber-200 bg-amber-50" :
+              "border-border bg-card"
+            )}
+          >
+            <div className={cn(
+              "text-[9px] font-bold uppercase tracking-widest mb-1",
+              c.accent === "green" ? "text-green-700" :
+              c.accent === "amber" ? "text-[#b5620a]" :
+              "text-muted-foreground"
+            )}>{c.label}</div>
+            <div className={cn(
+              "font-mono text-lg font-semibold leading-none",
+              c.accent === "green" ? "text-green-700" :
+              c.accent === "amber" ? "text-[#b5620a]" :
+              "text-foreground"
+            )}>{c.value}</div>
+            <div className="text-[10px] text-muted-foreground mt-1">{c.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        {/* Status */}
+        <div className="flex items-center gap-1 rounded border border-border bg-card p-0.5">
+          {(["all", "done", "scheduled", "no_show"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => setStatusFilter(v)} className={filterBtnCls(statusFilter === v)}>
+              {v === "all" ? "All" : v === "no_show" ? "No Show" : v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
+        {/* Payment */}
+        <div className="flex items-center gap-1 rounded border border-border bg-card p-0.5">
+          {(["all", "unpaid", "paid"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => setPayFilter(v)} className={filterBtnCls(payFilter === v)}>
+              {v === "all" ? "All Payment" : v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
+        {/* Payer */}
+        <div className="flex items-center gap-1 rounded border border-border bg-card p-0.5">
+          {(["all", "foreigner_charlie", "local_company"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => setPayerFilter(v)} className={filterBtnCls(payerFilter === v)}>
+              {v === "all" ? "All Payer" : v === "foreigner_charlie" ? "Charlie" : "Company"}
+            </button>
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button type="button" onClick={exportCsv} className="flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
+            <Download className="h-3 w-3" />
+            Export CSV
+          </button>
+          {canManage && (
+            <button type="button" onClick={openAdd} className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Plus className="h-3.5 w-3.5" />
+              Add DJ Set
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 min-h-0 overflow-auto rounded-card border border-border shadow-card">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16 text-xs text-muted-foreground">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-2">
+            <Music2 className="h-8 w-8 text-muted-foreground/30" />
+            <div className="text-sm text-muted-foreground">No DJ sets found.</div>
+            {canManage && (
+              <button type="button" onClick={openAdd} className="text-xs text-primary hover:underline">+ Add first set</button>
+            )}
+          </div>
+        ) : (
+          <>
+            <table className="w-full border-collapse text-xs min-w-[900px]">
+              <thead>
+                <tr className="bg-muted/40 border-b border-border">
+                  {["Date", "Event", "DJ", "Set Time", "Dur.", "Rate", "Status", "Payment", "Amount (₫)", "Payer", "Receipt", "Notes", ""].map((h) => (
+                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-bold tracking-widest uppercase text-muted-foreground whitespace-nowrap border-b border-border">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from(grouped.entries()).map(([monthKey, rows]) => {
+                  const isExpanded = !expandedMonths.has(monthKey)
+                  const monthPaid = rows.filter((r) => r.payment_status === "paid").reduce((s, r) => s + (r.amount_vnd ?? 0), 0)
+                  const monthOut = rows.filter((r) => r.payment_status === "unpaid" && r.status !== "no_show").reduce((s, r) => s + (r.amount_vnd ?? 0), 0)
+
+                  return [
+                    // Month header row
+                    <tr key={`month-${monthKey}`} className="bg-muted/30 border-b border-border">
+                      <td colSpan={13} className="px-3 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleMonth(monthKey)}
+                          className="flex items-center gap-2 w-full text-left"
+                        >
+                          {isExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronUp className="h-3 w-3 text-muted-foreground" />}
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{monthLabel(monthKey)}</span>
+                          <span className="rounded-full bg-border/60 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">{rows.length}</span>
+                          {monthPaid > 0 && <span className="text-[10px] text-green-700 tabular-nums">Paid: {formatVndAmount(monthPaid)} ₫</span>}
+                          {monthOut > 0 && <span className="text-[10px] text-[#b5620a] tabular-nums">Outstanding: {formatVndAmount(monthOut)} ₫</span>}
+                        </button>
+                      </td>
+                    </tr>,
+                    // Data rows
+                    ...(isExpanded ? rows.map((p) => {
+                      const isTonight = p.date === todayIso
+                      const isOutstanding = p.payment_status === "unpaid" && p.status === "done"
+                      const isNoShow = p.status === "no_show"
+                      const statusCfg = DJ_STATUS_CONFIG[p.status as keyof typeof DJ_STATUS_CONFIG]
+                        ?? { label: p.status, cls: "bg-muted text-muted-foreground border-border" }
+                      const payCfg = DJ_PAY_CONFIG[p.payment_status as keyof typeof DJ_PAY_CONFIG]
+                        ?? { label: p.payment_status, cls: "bg-muted text-muted-foreground border-border" }
+                      const payerCfg = p.payer_type ? (DJ_PAYER_CONFIG[p.payer_type as keyof typeof DJ_PAYER_CONFIG] ?? null) : null
+
+                      const STATUS_CYCLE: DJPayment["status"][] = ["scheduled", "done", "no_show"]
+                      const PAY_CYCLE: DJPayment["payment_status"][] = ["unpaid", "paid", "na"]
+
+                      function cycleStatus(e: React.MouseEvent) {
+                        e.stopPropagation()
+                        if (!canManage) return
+                        const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(p.status) + 1) % STATUS_CYCLE.length]
+                        update.mutate({ id: p.id, status: next })
+                      }
+
+                      function cyclePayment(e: React.MouseEvent) {
+                        e.stopPropagation()
+                        if (!canManage || isNoShow) return
+                        const next = PAY_CYCLE[(PAY_CYCLE.indexOf(p.payment_status) + 1) % PAY_CYCLE.length]
+                        update.mutate({ id: p.id, payment_status: next })
+                      }
+
+                      return (
+                        <tr
+                          key={p.id}
+                          onClick={() => canManage && openEdit(p)}
+                          className={cn(
+                            "border-b border-border transition-colors cursor-pointer group",
+                            isNoShow ? "opacity-55" : "",
+                            isTonight ? "bg-amber-50/50" : "hover:bg-muted/30",
+                            isOutstanding ? "border-l-2 border-l-[#b5620a]" : "",
+                          )}
+                        >
+                          {/* Date */}
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            <div className="font-mono text-[11px] text-muted-foreground">
+                              {new Date(p.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" })}
+                            </div>
+                            {isTonight && (
+                              <div className="text-[9px] font-bold text-[#b5620a] uppercase tracking-wide mt-0.5">Tonight</div>
+                            )}
+                          </td>
+                          {/* Event */}
+                          <td className="px-3 py-2.5">
+                            <div className="font-medium text-foreground truncate max-w-[120px]">{p.event_name}</div>
+                            {(p.event_type === "tet" || p.event_type === "new_year") && (
+                              <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 rounded px-1">Tết</span>
+                            )}
+                          </td>
+                          {/* DJ */}
+                          <td className="px-3 py-2.5">
+                            <div className="font-semibold text-foreground">{p.dj_name}</div>
+                            {isOwnerDJ(p.dj_name) ? (
+                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-amber-50 text-[#b5620a] border-amber-200">
+                                👑 Owner
+                              </span>
+                            ) : (
+                              <span className={cn(
+                                "text-[9px] font-semibold px-1.5 py-0.5 rounded border",
+                                p.dj_type === "foreigner"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : "bg-green-50 text-green-700 border-green-200"
+                              )}>
+                                {p.dj_type === "foreigner" ? "✈ Foreigner" : "🇻🇳 Local"}
+                              </span>
+                            )}
+                          </td>
+                          {/* Set time */}
+                          <td className="px-3 py-2.5 whitespace-nowrap font-mono text-[11px] text-muted-foreground">
+                            {formatTimeRange(p.set_start, p.set_end)}
+                          </td>
+                          {/* Duration */}
+                          <td className="px-3 py-2.5 text-[11px] text-muted-foreground whitespace-nowrap">
+                            {p.duration_hours != null ? `${p.duration_hours}h` : "—"}
+                          </td>
+                          {/* Rate / multiplier */}
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            {p.multiplier > 1 ? (
+                              <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-200 rounded px-1.5 py-0.5">{p.multiplier}×</span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">1×</span>
+                            )}
+                          </td>
+                          {/* Status — click to cycle */}
+                          <td className="px-3 py-2.5">
+                            <button
+                              type="button"
+                              onClick={cycleStatus}
+                              title="Click to change status"
+                              className={cn(
+                                "inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-semibold transition-opacity",
+                                statusCfg.cls,
+                                canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default",
+                              )}
+                            >
+                              {statusCfg.label}
+                            </button>
+                          </td>
+                          {/* Payment — click to cycle */}
+                          <td className="px-3 py-2.5">
+                            {isNoShow ? (
+                              <span className="text-[10px] text-muted-foreground">N/A</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={cyclePayment}
+                                title="Click to change payment status"
+                                className={cn(
+                                  "inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-semibold transition-opacity",
+                                  payCfg.cls,
+                                  canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default",
+                                )}
+                              >
+                                {payCfg.label}
+                              </button>
+                            )}
+                          </td>
+                          {/* Amount */}
+                          <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                            {isNoShow ? (
+                              <span className="text-[11px] text-muted-foreground/40">—</span>
+                            ) : (
+                              <span className={cn(
+                                "font-mono text-[11px] font-medium",
+                                p.payment_status === "paid" ? "text-green-700" :
+                                p.payment_status === "unpaid" ? "text-[#b5620a]" :
+                                "text-muted-foreground"
+                              )}>
+                                {formatVndAmount(p.amount_vnd)}
+                              </span>
+                            )}
+                          </td>
+                          {/* Payer */}
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            {isOwnerDJ(p.dj_name) ? (
+                              <span className="text-[11px] font-medium text-[#b5620a]">Owner</span>
+                            ) : payerCfg ? (
+                              <span className={cn("text-[11px] font-medium", payerCfg.cls)}>{payerCfg.label}</span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          {/* Receipt */}
+                          <td className="px-3 py-2.5 text-center">
+                            {isNoShow ? (
+                              <span className="text-muted-foreground/30">—</span>
+                            ) : p.receipt_uploaded ? (
+                              <span className="text-green-600 text-xs font-bold">✓</span>
+                            ) : (
+                              <span className="text-red-500 text-xs">✗</span>
+                            )}
+                          </td>
+                          {/* Notes */}
+                          <td className="px-3 py-2.5 max-w-[140px]">
+                            <span className="text-[10px] text-muted-foreground truncate block">{p.notes || "—"}</span>
+                          </td>
+                          {/* Edit hint */}
+                          <td className="px-3 py-2.5">
+                            {canManage && (
+                              <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    }) : []),
+                  ]
+                })}
+              </tbody>
+            </table>
+
+            {/* Footer */}
+            <div className="px-4 py-2.5 border-t border-border bg-muted/20 flex items-center justify-between flex-wrap gap-2">
+              <span className="text-[10px] text-muted-foreground">Showing {filtered.length} of {payments.length} sets</span>
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] text-muted-foreground">
+                  Paid: <span className="font-mono font-semibold text-green-700">{formatVndAmount(filteredPaid)} ₫</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  Outstanding: <span className="font-mono font-semibold text-[#b5620a]">{formatVndAmount(filteredOutstanding)} ₫</span>
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <DJPaymentSheet
+        open={sheetOpen}
+        onOpenChange={(v) => { setSheetOpen(v); if (!v) setEditing(null) }}
+        payment={editing}
+        key={editing?.id ?? "new-dj"}
+      />
+    </div>
+  )
+}
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
-type Tab = "procurement" | "maintenance"
+type Tab = "procurement" | "maintenance" | "dj_payments"
 
 export function Wishlist() {
   const profile = useAuthStore((s) => s.profile)
   const canManage = profile?.role === "owner" || profile?.role === "manager"
   const [activeTab, setActiveTab] = useState<Tab>("procurement")
+
+  const tabCls = (t: Tab) => cn(
+    "flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
+    activeTab === t
+      ? "border-primary text-foreground"
+      : "border-transparent text-muted-foreground hover:text-foreground"
+  )
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -858,45 +1576,33 @@ export function Wishlist() {
       <div className="flex items-start justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Operations</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Procurement wishlist & maintenance tracker</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Procurement wishlist, maintenance tracker & DJ payment management</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-0 border-b border-border shrink-0">
-        <button
-          type="button"
-          onClick={() => setActiveTab("procurement")}
-          className={cn(
-            "flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
-            activeTab === "procurement"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
+        <button type="button" onClick={() => setActiveTab("procurement")} className={tabCls("procurement")}>
           <ShoppingCart className="h-3.5 w-3.5" />
           Procurement Wishlist
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("maintenance")}
-          className={cn(
-            "flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
-            activeTab === "maintenance"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
+        <button type="button" onClick={() => setActiveTab("maintenance")} className={tabCls("maintenance")}>
           <Wrench className="h-3.5 w-3.5" />
           Maintenance & Fixes
+        </button>
+        <button type="button" onClick={() => setActiveTab("dj_payments")} className={tabCls("dj_payments")}>
+          <Music2 className="h-3.5 w-3.5" />
+          DJ Payments
         </button>
       </div>
 
       {/* Tab content */}
       {activeTab === "procurement" ? (
         <ProcurementTab canManage={canManage} />
-      ) : (
+      ) : activeTab === "maintenance" ? (
         <MaintenanceTab canManage={canManage} />
+      ) : (
+        <DJPaymentsTab canManage={canManage} />
       )}
     </div>
   )

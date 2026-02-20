@@ -1453,7 +1453,7 @@ export default function OwnerDashboardPage() {
                 </div>
 
                 {/* Body */}
-                <div style={{ padding: "8px 10px" }}>
+                <div style={{ padding: "8px 10px", backgroundColor: "rgba(255, 255, 255, 1)" }}>
                   {weekCsvLoading ? (
                     <div style={{ fontSize: 10, color: "#9c9590" }}>Loading…</div>
                   ) : weekCsvError ? (
@@ -1475,8 +1475,10 @@ export default function OwnerDashboardPage() {
                         <div style={{ fontSize: 10, color: "#9c9590", fontStyle: "italic" }}>TBD</div>
                       )}
                       {djLines.length > 0 && (
-                        <div style={{ fontSize: 10, color: "#6b6560", marginTop: 3 }}>
-                          {djLines.join(" · ")}
+                        <div style={{ fontSize: 10, color: "#6b6560", marginTop: 3, display: "flex", flexDirection: "column", gap: 1 }}>
+                          {djLines.map((line: string, i: number) => (
+                            <div key={i}>{line}</div>
+                          ))}
                         </div>
                       )}
                       {isToday && (
@@ -1495,7 +1497,6 @@ export default function OwnerDashboardPage() {
 
         {/* RIGHT — Pipeline card */}
         <div style={{
-          background: "#faf8f5",
           border: "1px solid #e2ddd7",
           borderRadius: 8,
           overflow: "hidden",
@@ -1537,8 +1538,9 @@ export default function OwnerDashboardPage() {
                   gridTemplateColumns: "1.6fr 1fr 1fr 1.2fr 1.6fr",
                   gap: 16,
                   padding: "10px 18px",
-                  borderBottom: idx < pipelineRows.length - 1 ? "1px solid #e2ddd7" : "none",
-                  alignItems: "start",
+                  minHeight: 48,
+                  borderBottom: "1px solid #e2ddd7",
+                  alignItems: "center",
                   background: row.isToday ? "#fdf3e7" : "transparent",
                   opacity: isPipelinePast ? 0.55 : 1,
                 }}
@@ -1600,6 +1602,199 @@ export default function OwnerDashboardPage() {
             )
           })}
         </div>
+
+        {/* ── WEEKLY ANALYSIS ── */}
+        {(() => {
+          // ── Stats ─────────────────────────────────────────────────────────
+          // Events count: days that have at least one named event this week
+          const weekIsos = new Set(weekDates.map((d) => d.iso))
+          const eventCount = weekDates.filter((d) => {
+            const evts = (roofEvents || []).filter((e) => e.dateIso === d.iso && e.eventName)
+            return evts.length > 0
+          }).length
+
+          // DJs Booked: distinct DJ names across all week events
+          const djSet = new Set<string>()
+          for (const e of roofEvents || []) {
+            if (!weekIsos.has(e.dateIso)) continue
+            if (e.dj1) djSet.add(e.dj1.replace(/\s+\d{2}:\d{2}\s*-\s*\d{2}:\d{2}$/, "").trim())
+            if (e.dj2) djSet.add(e.dj2.replace(/\s+\d{2}:\d{2}\s*-\s*\d{2}:\d{2}$/, "").trim())
+          }
+          const djBookedCount = djSet.size
+
+          // Club Nights: days whose mode includes "club" (or THU/FRI/SAT default)
+          const clubNightCount = weekDates.filter((d) => {
+            const row = weekByDate.get(d.iso)
+            return (row?.mode || "").toLowerCase().includes("club")
+              || d.day === "THU" || d.day === "FRI" || d.day === "SAT"
+          }).length
+
+          // Unplanned: days with no event at all this week
+          const unplannedDays = weekDates.filter((d) => {
+            const evts = (roofEvents || []).filter((e) => e.dateIso === d.iso && e.eventName)
+            return evts.length === 0
+          })
+          const unplannedCount = unplannedDays.length
+
+          // ── Overall rating label ──────────────────────────────────────────
+          const rating =
+            eventCount >= 6 ? "Strong Week"
+            : eventCount >= 4 ? "Solid Week"
+            : eventCount >= 2 ? "Light Week"
+            : "Slow Week"
+          const ratingColor =
+            eventCount >= 6 ? "#22c55e"
+            : eventCount >= 4 ? "#84cc16"
+            : eventCount >= 2 ? "#f59e0b"
+            : "#ef4444"
+
+          // ── Insights ─────────────────────────────────────────────────────
+          const insights: Array<{ emoji: string; title: string; body: string }> = []
+
+          // 1. High DJ reliance: any DJ appearing on 3+ nights
+          const djNightCount = new Map<string, number>()
+          for (const d of weekDates) {
+            const dayEvts = (roofEvents || []).filter((e) => e.dateIso === d.iso && e.eventName)
+            const dayDJs = new Set<string>()
+            for (const e of dayEvts) {
+              if (e.dj1) dayDJs.add(e.dj1.replace(/\s+\d{2}:\d{2}\s*-\s*\d{2}:\d{2}$/, "").trim())
+              if (e.dj2) dayDJs.add(e.dj2.replace(/\s+\d{2}:\d{2}\s*-\s*\d{2}:\d{2}$/, "").trim())
+            }
+            for (const dj of dayDJs) djNightCount.set(dj, (djNightCount.get(dj) ?? 0) + 1)
+          }
+          const heavyDJs = Array.from(djNightCount.entries())
+            .filter(([, n]) => n >= 3)
+            .map(([name]) => name)
+          if (heavyDJs.length > 0) {
+            insights.push({
+              emoji: "⚠️",
+              title: "High DJ Reliance",
+              body: `${heavyDJs.join(", ")} ${heavyDJs.length === 1 ? "is" : "are"} booked ${heavyDJs.length === 1 ? djNightCount.get(heavyDJs[0]) : "3+"}+ nights — consider diversifying the lineup.`,
+            })
+          }
+
+          // 2. Club night with no promotion
+          const clubNightsNoPromo = weekDates.filter((d) => {
+            const isClub = (weekByDate.get(d.iso)?.mode || "").toLowerCase().includes("club")
+              || d.day === "THU" || d.day === "FRI" || d.day === "SAT"
+            if (!isClub) return false
+            const hasPromo = (roofEvents || []).some((e) => e.dateIso === d.iso && e.promotion)
+            return !hasPromo
+          })
+          if (clubNightsNoPromo.length > 0) {
+            const names = clubNightsNoPromo.map((d) => d.day).join(", ")
+            insights.push({
+              emoji: "📣",
+              title: "Club Nights Without Promotion",
+              body: `${names} ${clubNightsNoPromo.length === 1 ? "has" : "have"} no promotion attached — add an offer to drive footfall.`,
+            })
+          }
+
+          // 3. Unplanned days → opportunity
+          if (unplannedCount > 0) {
+            const names = unplannedDays.map((d) => d.day).join(", ")
+            insights.push({
+              emoji: "📅",
+              title: `${unplannedCount} Unplanned ${unplannedCount === 1 ? "Night" : "Nights"}`,
+              body: `${names} ${unplannedCount === 1 ? "has" : "have"} no event scheduled — opportunity to fill the calendar.`,
+            })
+          }
+
+          // 4. Fully planned week
+          if (unplannedCount === 0 && eventCount === 7) {
+            insights.push({
+              emoji: "✅",
+              title: "Full Week Planned",
+              body: "Every night this week has an event — great execution on calendar coverage.",
+            })
+          }
+
+          // Fallback if nothing flagged
+          if (insights.length === 0) {
+            insights.push({
+              emoji: "📊",
+              title: "Week on Track",
+              body: `${eventCount} events scheduled with ${djBookedCount} DJs across ${clubNightCount} club nights.`,
+            })
+          }
+
+          return (
+            <div style={{ borderTop: "3px solid #e2ddd7", background: "#fff" }}>
+
+              {/* Stats bar */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 18px",
+                borderBottom: "1px solid #e2ddd7",
+                gap: 12,
+                backgroundColor: "#faf8f5",
+              }}>
+                {/* Left: label + badge */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                  <span style={{ color: "#c9a84c", fontSize: 11, lineHeight: 1 }}>✦</span>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                    textTransform: "uppercase" as const, color: "#9c9590",
+                  }}>Weekly Analysis</span>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3,
+                    background: `${ratingColor}18`, border: `1px solid ${ratingColor}55`,
+                    color: ratingColor, letterSpacing: "0.05em", textTransform: "uppercase" as const,
+                  }}>{rating}</span>
+                </div>
+
+                {/* Right: 4 stats */}
+                <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                  {[
+                    { label: "Events", value: String(eventCount) },
+                    { label: "DJs Booked", value: String(djBookedCount) },
+                    { label: "Club Nights", value: String(clubNightCount) },
+                    { label: "Unplanned", value: String(unplannedCount), amber: unplannedCount > 0 },
+                  ].map((stat, i, arr) => (
+                    <div key={stat.label} style={{
+                      display: "flex", flexDirection: "column" as const, alignItems: "center",
+                      padding: "0 16px",
+                      borderLeft: i > 0 ? "1px solid #e2ddd7" : "none",
+                    }}>
+                      <span style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 14, fontWeight: 900, color: stat.amber ? "#d97706" : "#1a1714",
+                        lineHeight: 1,
+                      }}>{stat.value}</span>
+                      <span style={{
+                        fontSize: 8, fontWeight: 600, letterSpacing: "0.08em",
+                        textTransform: "uppercase" as const,
+                        color: "#9c9590", marginTop: 3,
+                      }}>{stat.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Insights */}
+              <div style={{ display: "flex", flexDirection: "column" as const }}>
+                {insights.map((ins, i) => (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "flex-start", gap: 10,
+                    padding: "9px 18px",
+                    borderTop: i > 0 ? "1px solid #f0ece6" : "none",
+                    flex: 1,
+                  }}>
+                    <span style={{ fontSize: 13, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{ins.emoji}</span>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1714", lineHeight: 1.3 }}>{ins.title}</div>
+                      <div style={{ fontSize: 10, color: "#6b6560", marginTop: 2, lineHeight: 1.5 }}>{ins.body}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+          )
+        })()}
+
         </div>{/* end pipeline-card */}
 
         </div>{/* end two-column grid */}

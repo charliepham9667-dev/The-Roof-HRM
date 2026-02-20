@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { addDays, format, isSameDay, startOfMonth, startOfWeek } from "date-fns"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
@@ -190,15 +190,7 @@ export default function ContentCalendar() {
   const { sync, isSyncing, lastSynced, lastResult, error: syncError } = useGoogleSheetsSync()
   const [syncBannerDismissed, setSyncBannerDismissed] = useState(false)
 
-  // Auto-sync once on mount; cancelled flag guards against StrictMode double-invoke
-  useEffect(() => {
-    let cancelled = false
-    sync().then(() => {
-      if (!cancelled) queryClient.invalidateQueries({ queryKey: ["content_calendar"] })
-    })
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Sync is manual only — triggered by the Sync button in the toolbar
 
   const filteredPosts = useMemo(() => {
     return posts.filter((p) => {

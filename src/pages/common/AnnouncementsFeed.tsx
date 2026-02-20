@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import {
@@ -13,6 +13,8 @@ import {
 } from "@/hooks/useAnnouncements"
 import { useAuthStore } from "@/stores/authStore"
 import type { Announcement, AnnouncementAudience, CreateAnnouncementInput } from "@/types"
+import { useChatMessages, useSendChatMessage } from "@/hooks/useChatMessages"
+import { useStaffList } from "@/hooks/useShifts"
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -595,80 +597,65 @@ const CHANNELS: ChannelDef[] = [
   { id: "#marketing",  icon: "📣", name: "# marketing",  displayName: "#marketing",  desc: "Marketing team",            lastMessage: "Content calendar updated",                 lastTime: "Yesterday" },
 ]
 
-const DMS: ChannelDef[] = [
-  { id: "@john",  icon: "JN", name: "John Nguyen",  displayName: "@john",  desc: "General Manager",   isDm: true, dmStatus: "online",  dmColor: "#8B6914", lastMessage: "Confirmed — supplier arriving Friday AM", lastTime: "17:20" },
-  { id: "@tiny",  icon: "TI", name: "Tiny",         displayName: "@tiny",  desc: "Floor Manager",     isDm: true, dmStatus: "online",  dmColor: "#1565C0", lastMessage: "Floor briefed on rain protocol.",          lastTime: "16:45" },
-  { id: "@thuy",  icon: "TH", name: "Thuy",         displayName: "@thuy",  desc: "Supervisor",        isDm: true, dmStatus: "away",    dmColor: "#00695C", lastMessage: "All feedback documented.",                 lastTime: "15:30" },
-  { id: "@phu",   icon: "PH", name: "Phu Hoang",    displayName: "@phu",   desc: "Head Bartender",    isDm: true, dmStatus: "online",  dmColor: "#1B5E20", lastMessage: "Coal + Ly Xi all prepped.",                lastTime: "14:00" },
-]
-
-const INITIAL_MESSAGES: Record<string, ChatMsg[]> = {
-  "#general": [
-    { id: "g1", av: "JN", color: "#8B6914", name: "John Nguyen",  time: "Mon 10:02", text: "Good morning team 🙏 Happy Tết everyone. Big week ahead — let's make it count. Lunar New Year tonight, full house expected.", reactions: [{ emoji: "🙏", count: 8, mine: true }, { emoji: "🔥", count: 5 }] },
-    { id: "g2", av: "PH", color: "#1B5E20", name: "Phu Hoang",    time: "Mon 11:15", text: "Coal is ready, Ly Xi cocktails are prepped ✅ New Tet special spec sheet uploaded to Resources if anyone needs to review the recipe.", attachmentName: "Tet-Cocktail-Spec-Sheet.pdf" },
-    { id: "g3", av: "CP", color: "#5C6BC0", name: "Charlie Pham", time: "Tue 9:00",  text: "Amazing night last night 🔥 Revenue was strong, guests loved the Tet vibe. Huge thank you to everyone. All 5-star Google reviews. Keep that energy going!", reactions: [{ emoji: "🔥", count: 11 }, { emoji: "🙏", count: 9, mine: true }, { emoji: "❤️", count: 7 }] },
-    { id: "g4", av: "JN", color: "#8B6914", name: "John Nguyen",  time: "Tue 17:28", text: "Roster for this week is published — check Schedule. 6 staff confirmed for tonight's Mùng 1 event. Charle$ arrives at 21:00 for soundcheck." },
-    { id: "g5", av: "CP", color: "#5C6BC0", name: "Charlie Pham", time: "Today 9:45", text: "⚡ Important: rain forecast Saturday. John please confirm covers with supplier today. Tiny brief the floor team at start of shift. This needs to be sorted before Saturday opens." },
-    { id: "g6", av: "TI", color: "#1565C0", name: "Tiny",         time: "Today 10:12", text: "Understood. Will brief the team and do a check of the cover anchors this afternoon ✅", reactions: [{ emoji: "👍", count: 3, mine: true }] },
-    { id: "g7", av: "JN", color: "#8B6914", name: "John Nguyen",  time: "Today 17:28", text: "Just confirmed with the supplier. Cover replacements arriving Friday morning. We're all set for Saturday 👍" },
-  ],
-  "#operations": [
-    { id: "o1", av: "TI", color: "#1565C0", name: "Tiny",      time: "Today 16:50", text: "Covers are set and anchors checked ✅" },
-    { id: "o2", av: "JN", color: "#8B6914", name: "John",      time: "Today 16:52", text: "Good work. Let's do a final check Friday morning before opening." },
-  ],
-  "#bar-team": [
-    { id: "b1", av: "PH", color: "#1B5E20", name: "Phu Hoang", time: "Today 14:30", text: "New Tet menu is live. Ly Xi is the featured cocktail. Check the spec sheet in Resources.", attachmentName: "Tet-Cocktail-Spec-Sheet.pdf" },
-    { id: "b2", av: "BI", color: "#8B3030", name: "Billy",     time: "Today 14:45", text: "Got it, practiced it already 👍" },
-  ],
-  "#events": [
-    { id: "e1", av: "CP", color: "#5C6BC0", name: "Charlie Pham", time: "Today 13:00", text: "DJ brief for tonight: Charle$ 21:30–23:00, Cece 23:00–00:30. Make sure stage area is clear by 21:00." },
-  ],
-  "#marketing": [
-    { id: "m1", av: "CP", color: "#5C6BC0", name: "Charlie Pham", time: "Yesterday", text: "Content calendar for Feb updated. Reels going out Mon/Wed/Fri. Tag the venue in everything." },
-  ],
-  "@john": [
-    { id: "j1", av: "JN", color: "#8B6914", name: "John Nguyen", time: "Today 17:20", text: "Confirmed — supplier arriving Friday AM with the cover parts. All good for Saturday." },
-  ],
-  "@tiny": [
-    { id: "t1", av: "TI", color: "#1565C0", name: "Tiny", time: "Today 16:45", text: "Floor briefed on rain protocol. Team is ready." },
-  ],
-  "@thuy": [
-    { id: "th1", av: "TH", color: "#00695C", name: "Thuy", time: "Today 15:30", text: "All feedback documented. Will share summary in the morning meeting." },
-  ],
-  "@phu": [
-    { id: "p1", av: "PH", color: "#1B5E20", name: "Phu Hoang", time: "Today 14:00", text: "Coal + Ly Xi all prepped. Anything else you need from the bar tonight?" },
-  ],
-}
 
 function ChatPanel({ profile }: { profile: any }) {
   const [activeChannel, setActiveChannel] = useState<string>("#general")
-  const [messages, setMessages] = useState<Record<string, ChatMsg[]>>(INITIAL_MESSAGES)
   const [text, setText] = useState("")
   const [search, setSearch] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const currentChannelDef = [...CHANNELS, ...DMS].find((c) => c.id === activeChannel)
-  const currentMessages = messages[activeChannel] || []
+  const { data: staffList = [] } = useStaffList()
+  const { data: rawMessages = [], isLoading: messagesLoading } = useChatMessages(activeChannel)
+  const sendMutation = useSendChatMessage()
+
+  // Build DM channel list from real staff, excluding the current user
+  const dmChannels: ChannelDef[] = useMemo(() => {
+    return staffList
+      .filter((s) => s.id !== profile?.id)
+      .map((s) => ({
+        id: `@${s.id}`,
+        icon: initials(s.full_name || "?"),
+        name: s.full_name || "Unknown",
+        displayName: `@${(s.full_name || "unknown").split(" ")[0].toLowerCase()}`,
+        desc: s.job_role || s.role || "",
+        isDm: true,
+        dmStatus: "offline" as const,
+        dmColor: avatarColor(s.full_name || "?"),
+        lastMessage: "",
+        lastTime: "",
+      }))
+  }, [staffList, profile?.id])
+
+  // Map DB messages to the ChatMsg shape used by the render
+  const currentMessages: ChatMsg[] = useMemo(() => {
+    return rawMessages.map((m) => {
+      const authorName = m.author?.full_name || "Unknown"
+      return {
+        id: m.id,
+        av: initials(authorName),
+        color: avatarColor(authorName),
+        name: authorName,
+        time: new Date(m.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }),
+        text: m.body,
+      }
+    })
+  }, [rawMessages])
+
+  const currentChannelDef = [...CHANNELS, ...dmChannels].find((c) => c.id === activeChannel)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [activeChannel, messages])
+  }, [activeChannel, currentMessages])
 
   function sendMessage() {
     const trimmed = text.trim()
-    if (!trimmed) return
-    const now = new Date()
-    const timeStr = `Today ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })}`
-    const msg: ChatMsg = {
-      id: `msg-${Date.now()}`,
-      av: initials(profile?.fullName || "Me"),
-      color: avatarColor(profile?.fullName || "Me"),
-      name: profile?.fullName || "Me",
-      time: timeStr,
-      text: trimmed,
-    }
-    setMessages((prev) => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), msg] }))
+    if (!trimmed || !profile?.id) return
+    sendMutation.mutate({
+      channel_id: activeChannel,
+      author_id: profile.id,
+      body: trimmed,
+    })
     setText("")
     textareaRef.current?.focus()
   }
@@ -683,7 +670,7 @@ function ChatPanel({ profile }: { profile: any }) {
   const filteredChannels = CHANNELS.filter((c) =>
     !search || c.name.toLowerCase().includes(search.toLowerCase())
   )
-  const filteredDms = DMS.filter((c) =>
+  const filteredDms = dmChannels.filter((c) =>
     !search || c.name.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -704,57 +691,65 @@ function ChatPanel({ profile }: { profile: any }) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-2 px-2">
-          <div className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase px-2 py-2">Channels</div>
-          {filteredChannels.map((ch) => (
-            <button
-              key={ch.id}
-              onClick={() => setActiveChannel(ch.id)}
-              className={cn(
-                "w-full flex items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
-                activeChannel === ch.id ? "bg-secondary" : "hover:bg-secondary/60",
-              )}
-            >
-              <div className={cn("h-7 w-7 rounded-md flex items-center justify-center text-sm shrink-0", activeChannel === ch.id ? "bg-primary/10" : "bg-secondary")}>
-                {ch.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[12.5px] font-medium text-foreground truncate">{ch.name}</div>
-                <div className="text-[11px] text-muted-foreground truncate">{ch.lastMessage}</div>
-              </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <div className="text-[10px] text-muted-foreground">{ch.lastTime}</div>
-                {ch.unread && <span className="rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 min-w-[16px] text-center">{ch.unread}</span>}
-              </div>
-            </button>
-          ))}
-
-          <div className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase px-2 py-2 mt-2">Direct Messages</div>
-          {filteredDms.map((dm) => (
-            <button
-              key={dm.id}
-              onClick={() => setActiveChannel(dm.id)}
-              className={cn(
-                "w-full flex items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
-                activeChannel === dm.id ? "bg-secondary" : "hover:bg-secondary/60",
-              )}
-            >
-              <div className="relative shrink-0">
-                <div className="h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ background: dm.dmColor }}>
-                  {dm.icon}
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden py-2 px-2">
+          {/* Channels — fixed, no scroll needed (small list) */}
+          <div className="shrink-0">
+            <div className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase px-2 py-2">Channels</div>
+            {filteredChannels.map((ch) => (
+              <button
+                key={ch.id}
+                onClick={() => setActiveChannel(ch.id)}
+                className={cn(
+                  "w-full flex items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
+                  activeChannel === ch.id ? "bg-secondary" : "hover:bg-secondary/60",
+                )}
+              >
+                <div className={cn("h-7 w-7 rounded-md flex items-center justify-center text-sm shrink-0", activeChannel === ch.id ? "bg-primary/10" : "bg-secondary")}>
+                  {ch.icon}
                 </div>
-                <span className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card",
-                  dm.dmStatus === "online" ? "bg-green-500" : dm.dmStatus === "away" ? "bg-amber-400" : "bg-muted-foreground",
-                )} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[12.5px] font-medium text-foreground truncate">{dm.name}</div>
-                <div className="text-[11px] text-muted-foreground truncate">{dm.desc}</div>
-              </div>
-              <div className="text-[10px] text-muted-foreground shrink-0">{dm.lastTime}</div>
-            </button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12.5px] font-medium text-foreground truncate">{ch.name}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{ch.lastMessage}</div>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="text-[10px] text-muted-foreground">{ch.lastTime}</div>
+                  {ch.unread && <span className="rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 min-w-[16px] text-center">{ch.unread}</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Direct Messages — scrollable so many users don't break the layout */}
+          <div className="flex flex-col min-h-0 mt-2">
+            <div className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase px-2 py-2 shrink-0">Direct Messages</div>
+            <div className="overflow-y-auto flex-1">
+              {filteredDms.map((dm) => (
+                <button
+                  key={dm.id}
+                  onClick={() => setActiveChannel(dm.id)}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
+                    activeChannel === dm.id ? "bg-secondary" : "hover:bg-secondary/60",
+                  )}
+                >
+                  <div className="relative shrink-0">
+                    <div className="h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ background: dm.dmColor }}>
+                      {dm.icon}
+                    </div>
+                    <span className={cn(
+                      "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card",
+                      dm.dmStatus === "online" ? "bg-green-500" : dm.dmStatus === "away" ? "bg-amber-400" : "bg-muted-foreground",
+                    )} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12.5px] font-medium text-foreground truncate">{dm.name}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{dm.desc}</div>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground shrink-0">{dm.lastTime}</div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -790,6 +785,12 @@ function ChatPanel({ profile }: { profile: any }) {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
+          {messagesLoading && (
+            <div className="flex items-center justify-center h-16 text-xs text-muted-foreground">Loading messages…</div>
+          )}
+          {!messagesLoading && currentMessages.length === 0 && (
+            <div className="flex items-center justify-center h-16 text-xs text-muted-foreground">No messages yet. Be the first to say something!</div>
+          )}
           {currentMessages.map((msg, idx) => {
             const isFirst = idx === 0 || currentMessages[idx - 1].name !== msg.name
             return (

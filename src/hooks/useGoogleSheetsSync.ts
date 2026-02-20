@@ -202,10 +202,11 @@ export function useGoogleSheetsSync() {
 
       const dataRows = allRows.slice(headerIdx + 1)
 
-      // 3. Map rows → upsert payloads
+      // 3. Map rows → upsert payloads (keyed by gsheet_id column)
       let lastDate: string | null = null
 
       const toUpsert: Array<{
+        gsheet_id: string
         scheduled_date: string
         scheduled_time: string
         platform: string
@@ -242,7 +243,7 @@ export function useGoogleSheetsSync() {
         const platform = mapPlatform(rawPlatform)
         const gsheetId = buildGsheetId(date, rawTitle, platform)
 
-        // Build notes metadata block
+        // Build notes metadata block (gsheet_id line kept for legacy readability)
         const noteParts: string[] = [`gsheet_id:${gsheetId}`]
         if (rawTitle) noteParts.push(`title:${rawTitle}`)
         if (rawPillar) noteParts.push(`pillar:${mapPillar(rawPillar)}`)
@@ -255,6 +256,7 @@ export function useGoogleSheetsSync() {
         const mediaUrl = extractUrl(rawMedia) || extractUrl(rawLinkAir)
 
         toUpsert.push({
+          gsheet_id: gsheetId,
           scheduled_date: date,
           scheduled_time: "18:00:00",
           platform,
@@ -266,59 +268,21 @@ export function useGoogleSheetsSync() {
         })
       }
 
-      // 4. Load all existing synced rows in one query, build gsheet_id → DB id map
-      const { data: existingRows, error: fetchErr } = await supabase
-        .from("content_calendar")
-        .select("id, notes")
-        .like("notes", "gsheet_id:%")
+      // 4. Upsert all rows in one batch using the unique gsheet_id column.
+      //    onConflict: 'gsheet_id' means duplicate rows are updated, never inserted twice.
+      const BATCH = 50
+      for (let i = 0; i < toUpsert.length; i += BATCH) {
+        const batch = toUpsert.slice(i, i + BATCH)
+        const { error: upsertErr, data: upsertedRows } = await supabase
+          .from("content_calendar")
+          .upsert(batch, { onConflict: "gsheet_id", ignoreDuplicates: false })
+          .select("id")
 
-      if (fetchErr) throw new Error(`Failed to load existing rows: ${fetchErr.message}`)
-
-      // Map: gsheet_id value → DB row id
-      const existingMap = new Map<string, string>()
-      for (const row of existingRows ?? []) {
-        // notes starts with "gsheet_id:<value>\n..." — extract the exact key
-        const firstLine = (row.notes ?? "").split("\n")[0]
-        if (firstLine.startsWith("gsheet_id:")) {
-          existingMap.set(firstLine, row.id)
-        }
-      }
-
-      // 5. Insert or update each row
-      for (const payload of toUpsert) {
-        try {
-          const gsheetKey = payload.notes.split("\n")[0] // "gsheet_id:<value>"
-          const existingId = existingMap.get(gsheetKey)
-
-          if (existingId) {
-            // Update existing row
-            const { error: updateErr } = await supabase
-              .from("content_calendar")
-              .update(payload)
-              .eq("id", existingId)
-
-            if (updateErr) {
-              result.errors.push(`Update error for ${gsheetKey}: ${updateErr.message}`)
-            } else {
-              result.upserted++
-            }
-          } else {
-            // Insert new row
-            const { error: insertErr } = await supabase
-              .from("content_calendar")
-              .insert(payload)
-
-            if (insertErr) {
-              result.errors.push(`Insert error for ${gsheetKey}: ${insertErr.message}`)
-            } else {
-              result.upserted++
-              // Add to map so subsequent syncs within same session don't re-insert
-              existingMap.set(gsheetKey, "pending")
-            }
-          }
-        } catch (rowErr) {
-          result.errors.push(String(rowErr))
-          result.skipped++
+        if (upsertErr) {
+          result.errors.push(`Upsert error (batch ${i / BATCH + 1}): ${upsertErr.message}`)
+          result.skipped += batch.length
+        } else {
+          result.upserted += upsertedRows?.length ?? batch.length
         }
       }
 
