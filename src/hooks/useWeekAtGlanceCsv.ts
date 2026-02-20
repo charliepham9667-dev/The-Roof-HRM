@@ -121,10 +121,13 @@ function formatDjCell(cell: string | null) {
     const end = normalizeTime(m[3])
     if (start && end) return `${name} ${start.display} - ${end.display}`
   }
+  // No time range — clean up and return just the name
   return s
     .replace(/^DJ\s+/i, "")
     .replace(/;/g, ":")
     .replace(/\s*-\s*/g, " - ")
+    .replace(/\s*\(.*?\)\s*/g, "")
+    .trim() || null
 }
 
 function findHeaderRow(lines: string[]) {
@@ -163,15 +166,23 @@ function parseWeekCsv(csvText: string): WeekAtGlanceItem[] {
     // Examples:
     // "DJ Charle$ 21:30 - 23:00"
     // "DJ Charle$ 23:00 - 01;00"
+    // "DJ Charle$" (no time — treat as midnight start)
+    // "DJ CHARLE$ (9-Late)"
     const m = s.match(/^(?:DJ\s*)?(.+?)\s+(\d{1,2}[:;]\d{2})\s*-\s*(\d{1,2}[:;]\d{2})/i)
-    if (!m) return null
-    const name = String(m[1] || "").replace(/\s+/g, " ").trim()
-    const start = timeToMinutes(m[2])
-    const end0 = timeToMinutes(m[3])
-    if (start === null || end0 === null) return null
-    let end = end0
-    if (end < start) end += 1440 // crosses midnight
-    return { name, start, end }
+    if (m) {
+      const name = String(m[1] || "").replace(/\s+/g, " ").trim()
+      const start = timeToMinutes(m[2])
+      const end0 = timeToMinutes(m[3])
+      if (start !== null && end0 !== null) {
+        let end = end0
+        if (end < start) end += 1440 // crosses midnight
+        return { name, start, end }
+      }
+    }
+    // No time range — extract name only, default start 21:00
+    const nameOnly = s.replace(/^DJ\s+/i, "").replace(/\s*\(.*?\)\s*/g, "").trim()
+    if (!nameOnly) return null
+    return { name: nameOnly, start: 21 * 60, end: 23 * 60 }
   }
 
   // Aggregate to one item per date (Week-at-a-Glance cards)
@@ -320,10 +331,16 @@ export function useRoofCalendarWeekData() {
     queryKey: ["roof-calendar-week-data", url],
     queryFn: async (): Promise<RoofCalendarWeekData> => {
       if (!url) return { byDate: [], events: [] }
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`Failed to load week CSV (${res.status})`)
-      const text = await res.text()
-      return { byDate: parseWeekCsv(text), events: parseRoofCalendarEvents(text) }
+      try {
+        const res = await fetch(url, { mode: "cors", cache: "no-store" })
+        if (!res.ok) return { byDate: [], events: [] }
+        const text = await res.text()
+        // If we got an HTML error page instead of CSV, return empty
+        if (text.trim().startsWith("<!")) return { byDate: [], events: [] }
+        return { byDate: parseWeekCsv(text), events: parseRoofCalendarEvents(text) }
+      } catch {
+        return { byDate: [], events: [] }
+      }
     },
     enabled: Boolean(url),
     staleTime: 1000 * 60 * 5,
