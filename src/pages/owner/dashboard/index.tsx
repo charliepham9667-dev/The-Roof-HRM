@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ElementType } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Activity,
@@ -383,7 +383,7 @@ export default function OwnerDashboardPage() {
         dayEvents.forEach((ev, i) => {
           rows.push({
             iso: d.iso, day: d.day, dateNum: d.dateNum, isToday, isFirstForDay: i === 0,
-            event: ev.eventName,
+            event: ev.eventName ?? "—",
             when: formatPipelineWhen(d.iso, ev.startTime, ev.endTime),
             dj1: ev.dj1 || "—", dj2: ev.dj2 || "—",
             genre: ev.genre || "—", promo: ev.promotion || "—",
@@ -1459,7 +1459,6 @@ export default function OwnerDashboardPage() {
             // DJ lines from aggregated data
             const djLines = row?.djLines || []
             const isLast = dIdx === weekDates.length - 1
-            const firstEvent = dayEvents[0]
 
             return (
               <div
@@ -1717,7 +1716,7 @@ export default function OwnerDashboardPage() {
             : "#ef4444"
 
           // ── Insights ─────────────────────────────────────────────────────
-          const insights: Array<{ emoji: string; title: string; body: string }> = []
+          const insights: Array<{ icon: ElementType; title: string; body: string }> = []
 
           // 1. High DJ reliance: any DJ appearing on 3+ nights
           const djNightCount = new Map<string, number>()

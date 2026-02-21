@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ElementType } from 'react';
 import { AlertTriangle, BarChart2, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Megaphone, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
@@ -221,7 +221,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
   const ratingColor = eventCount >= 6 ? '#22c55e' : eventCount >= 4 ? '#84cc16' : eventCount >= 2 ? '#f59e0b' : '#ef4444';
 
   const insights = useMemo(() => {
-    const list: { emoji: string; title: string; body: string }[] = [];
+    const list: { icon: ElementType; title: string; body: string }[] = [];
 
     const djNightCount = new Map<string, number>();
     for (const d of weekDates) {
@@ -460,7 +460,6 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
               const isClub = (row?.mode || '').toLowerCase().includes('club') || d.day === 'THU' || d.day === 'FRI' || d.day === 'SAT';
               const dayEvents = roofEvents.filter((e) => e.dateIso === d.iso && e.eventName).sort((a, b) => (a.startMinutes ?? 999999) - (b.startMinutes ?? 999999));
               const djLines = row?.djLines || [];
-              const firstEvent = dayEvents[0];
               const myShift = myShiftsByDate.get(d.iso);
               const isLast = dIdx === weekDates.length - 1;
 
