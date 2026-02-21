@@ -296,14 +296,6 @@ export function ManagerDashboard() {
   const shiftTimerStr = fmtSecs(shiftElapsed)
   const breakTimerStr = fmtSecs(breakElapsed)
 
-  // ── Ritual phase countdown ────────────────────────────────────────────────────
-  const [ritualSecs, setRitualSecs] = useState(103 * 60)
-  useEffect(() => {
-    const id = window.setInterval(() => setRitualSecs((s) => Math.max(0, s - 1)), 1000)
-    return () => window.clearInterval(id)
-  }, [])
-  const ritualCountdown = `${pad2(Math.floor(ritualSecs / 60))}:${pad2(ritualSecs % 60)}`
-
   const ict = useMemo(() => getIctParts(tick), [tick])
   const greeting = greetingFromHour(ict.hour)
   const dateString = `${ict.weekday.toUpperCase()}, ${ict.month.toUpperCase()} ${ict.day}, ${ict.year}`
@@ -854,42 +846,6 @@ export function ManagerDashboard() {
             </div>
           </div>
         </CardShell>
-      </div>
-
-      {/* ── Ritual Phase Banner ─────────────────────────────────────────────── */}
-      <div className="rounded-card border border-border bg-card px-5 py-3 shadow-card flex items-center justify-between gap-4 flex-wrap">
-        {/* Left: phase name + cues */}
-        <div className="flex items-center gap-4">
-          <div className="shrink-0">
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Current Phase</div>
-            <div className="font-subheading text-base font-medium italic text-primary">Seduction</div>
-          </div>
-          <div className="border-l border-border pl-4 text-xs text-muted-foreground leading-relaxed">
-            <span className="font-semibold text-foreground">Now:</span> Amber warm lighting active · Shisha round check due · CharleS set running
-            <br />
-            <span className="font-semibold text-foreground">Coming:</span> Candle relight at 21:00 · Brief bar team on Girls Wine at 20:45
-          </div>
-        </div>
-        {/* Right: next phase + countdown + phase dots */}
-        <div className="flex items-center gap-4 shrink-0">
-          <div className="text-xs text-muted-foreground">
-            Next: <span className="font-semibold text-foreground">Expansion</span>
-          </div>
-          <div className="rounded-sm border border-border bg-secondary px-3 py-1 font-mono text-sm text-foreground">
-            {ritualCountdown}
-          </div>
-          <div className="flex items-center gap-1">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className={cn(
-                  "h-1 w-6 rounded-full",
-                  i === 0 ? "bg-muted-foreground/40" : i === 1 ? "bg-primary" : "bg-border"
-                )}
-              />
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* ── Section 2: Today's Pulse ─────────────────────────────────────────── */}
