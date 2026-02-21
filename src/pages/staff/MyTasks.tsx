@@ -302,7 +302,7 @@ export function StaffMyTasks() {
       {/* Page header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-[28px] font-semibold text-foreground">My Tasks</h1>
+          <h1 className="text-[22px] sm:text-[28px] font-semibold text-foreground">My Tasks</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {today} · {activeTasks.length} pending · {doneToday.length} completed today
           </p>

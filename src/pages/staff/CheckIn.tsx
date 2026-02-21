@@ -237,7 +237,7 @@ export function CheckIn() {
         />
       )}
 
-      <h1 className="text-[28px] font-semibold text-foreground">Check In / Out</h1>
+      <h1 className="text-[22px] sm:text-[28px] font-semibold text-foreground">Check In / Out</h1>
 
       {/* ── ACTIVE SHIFT PANEL ─────────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">

@@ -640,7 +640,7 @@ export default function OwnerDashboardPage() {
       </div>
 
       {/* HQ row */}
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[320px_1fr]">
         <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />}>
           <div className="grid gap-4 overflow-hidden">
             <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
@@ -654,12 +654,12 @@ export default function OwnerDashboardPage() {
         </CardShell>
 
         <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />}>
-          <div className="flex items-stretch gap-0">
+          <div className="flex flex-wrap items-stretch gap-0">
             {/* Current conditions */}
-            <div className="min-w-[200px] border-r border-border pr-6">
+            <div className="min-w-0 w-full sm:w-auto sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
               <div className="flex items-center gap-3">
                 <div className="text-[32px]">🌤</div>
-                <div className="font-display text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
+                <div className="font-display text-[34px] sm:text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
               </div>
               <div className="mt-2 text-xs text-secondary-foreground tracking-wide">Broken Clouds · Humidity 78%</div>
 
@@ -822,7 +822,7 @@ export default function OwnerDashboardPage() {
 
           {/* Right: 3 metric cards (row 1) + revenue bar (row 2) */}
           <div className="flex flex-col gap-4 h-full">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <MetricCard
               title="Reservations"
               footer={
@@ -976,9 +976,9 @@ export default function OwnerDashboardPage() {
                   <div>
                     <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-1">Today's Revenue Target</div>
                     <div className="flex items-baseline gap-3">
-                      <div className="font-display text-[38px] leading-none tracking-[2px] text-foreground">
+                      <div className="font-display text-[28px] sm:text-[38px] leading-none tracking-[2px] text-foreground">
                         {velocityLoading ? "—" : formatCompactVnd(requiredToday)}
-                        <span className="text-2xl text-muted-foreground font-light"> đ</span>
+                        <span className="text-xl sm:text-2xl text-muted-foreground font-light"> đ</span>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">needed today</div>
                     </div>
@@ -1016,7 +1016,7 @@ export default function OwnerDashboardPage() {
                 </div>
 
                 {/* Smart metrics row */}
-                <div className="grid grid-cols-4 gap-3 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                   <div className="rounded-md bg-secondary/50 px-3 py-2">
                     <div className="text-[9.5px] uppercase tracking-widest text-muted-foreground mb-0.5">Avg/day</div>
                     <div className={cn("text-xs font-semibold", momentumGood ? "text-success" : momentumCritical ? "text-destructive" : "text-warning")}>
@@ -1105,7 +1105,8 @@ export default function OwnerDashboardPage() {
             </div>
 
             {tasksLoading ? (
-              <div className="overflow-hidden rounded-card border border-border bg-card shadow-card divide-y divide-border">
+              <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card divide-y divide-border">
+                <div className="min-w-[420px]">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="grid grid-cols-[1fr_110px_90px_80px] items-center px-3 py-2.5 gap-2">
                     <Skeleton className="h-4 w-3/4" />
@@ -1114,9 +1115,11 @@ export default function OwnerDashboardPage() {
                     <Skeleton className="h-3 w-12" />
                   </div>
                 ))}
+                </div>
               </div>
             ) : taskView === "list" ? (
-              <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
+              <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card">
+                <div className="min-w-[420px]">
                 {/* Status filter pills */}
                 <div className="flex items-center gap-1.5 flex-wrap px-3 py-2.5 border-b border-border bg-secondary/30">
                   {([
@@ -1212,6 +1215,7 @@ export default function OwnerDashboardPage() {
                     )
                   })
                 })()}
+                </div>
               </div>
             ) : (
               <KanbanBoard

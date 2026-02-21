@@ -581,7 +581,7 @@ export function StaffDashboard() {
             <p className="mb-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground"><CloudSun className="h-3 w-3 shrink-0" /> Da Nang — Weather</p>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-3xl">⛅</span>
-              <span className="text-[28px] font-light text-foreground">27°</span>
+              <span className="text-[22px] sm:text-[28px] font-light text-foreground">27°</span>
             </div>
             <p className="text-[11px] text-muted-foreground">Broken Clouds · Humidity 78%</p>
             <div className="mt-2 inline-flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">

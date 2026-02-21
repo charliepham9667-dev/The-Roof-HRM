@@ -800,7 +800,7 @@ export function ManagerDashboard() {
       </div>
 
       {/* HQ + Weather row */}
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr] min-w-0">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[320px_1fr] min-w-0">
         <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />} className="min-w-0">
           <div className="grid gap-4">
             <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
@@ -815,8 +815,8 @@ export function ManagerDashboard() {
           <div className="flex flex-col sm:flex-row items-stretch gap-0">
             <div className="min-w-0 sm:min-w-[200px] sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
               <div className="flex items-center gap-3">
-                <div className="text-[32px]">🌤</div>
-                <div className="font-display text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
+                <div className="text-[28px] sm:text-[32px]">🌤</div>
+                <div className="font-display text-[34px] sm:text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
               </div>
               <div className="mt-2 text-xs text-secondary-foreground tracking-wide">Broken Clouds · Humidity 78%</div>
               <div className="mt-3 flex items-center gap-1.5 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
@@ -1058,7 +1058,7 @@ export function ManagerDashboard() {
               </span>
             </div>
             <div className="flex-1 px-4 py-3">
-              <div className="font-mono text-[30px] font-normal leading-none text-foreground">
+              <div className="font-mono text-[24px] sm:text-[30px] font-normal leading-none text-foreground">
                 {csvPaxLoading ? "—" : allCsvReservations.filter(r => r.status === "today").length}
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">Confirmed tonight</div>
@@ -1206,7 +1206,8 @@ export function ManagerDashboard() {
                 <div className="text-xs text-muted-foreground">Loading tasks…</div>
               </div>
             ) : taskView === "list" ? (
-              <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
+              <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card">
+                <div className="min-w-[420px]">
                 <div className="grid grid-cols-[1fr_110px_90px_80px] px-3 py-2 text-[10px] tracking-widest text-muted-foreground uppercase border-b border-border">
                   <div>Task</div><div>Status</div><div>Priority</div><div>Due</div>
                 </div>
@@ -1236,6 +1237,7 @@ export function ManagerDashboard() {
                     )
                   })
                 })()}
+                </div>
               </div>
             ) : (
               <KanbanBoard
