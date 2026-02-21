@@ -519,7 +519,7 @@ function ReplySection({ announcementId }: { announcementId: string }) {
 
   return (
     <div className="border-t border-border px-5 py-4 space-y-3 bg-secondary/30">
-      {isLoading ? (
+      {(isLoading || isError) ? (
         <div className="text-xs text-muted-foreground italic">Loading…</div>
       ) : replies && replies.length > 0 ? (
         <div className="space-y-3">
@@ -1074,8 +1074,8 @@ export function AnnouncementsFeed() {
             )}
 
             {/* List */}
-            {isLoading ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">Loading announcements…</div>
+            {(isLoading || isError) ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">{isError ? "⚠️ Unable to load announcements. Please refresh." : "Loading announcements…"}</div>
             ) : (
               <div className="space-y-3">
                 {filterAnnouncements([...pinned, ...unpinned]).map((a) => (
