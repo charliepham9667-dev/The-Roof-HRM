@@ -11,7 +11,7 @@ import {
   useAnnouncementReplies,
   useAnnouncement,
 } from "@/hooks/useAnnouncements"
-import { useAuthStore } from "@/stores/authStore"
+import { useAuthStore } from "@/stores/authStore
 import type { Announcement, AnnouncementAudience, CreateAnnouncementInput } from "@/types"
 import { useChatMessages, useSendChatMessage } from "@/hooks/useChatMessages"
 import { useStaffList } from "@/hooks/useShifts"
@@ -899,7 +899,7 @@ function ChatPanel({ profile }: { profile: any }) {
 
 export function AnnouncementsFeed() {
   const profile = useAuthStore((s) => s.profile)
-  const { data: announcements, isLoading } = useAnnouncements()
+  const { data: announcements, isLoading, isError } = useAnnouncements()
   const [searchParams] = useSearchParams()
 
   const [activeTab, setActiveTab] = useState<"ann" | "chat">(() =>
