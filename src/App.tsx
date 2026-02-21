@@ -44,7 +44,7 @@ import { Payslips } from './pages/staff/Payslips';
 import { CheckIn } from './pages/staff/CheckIn';
 
 // Manager pages
-import { ManagerDashboard, Reservations, LeaveApproval, Announcements } from './pages/manager';
+import { ManagerDashboard, Reservations, LeaveApproval } from './pages/manager';
 import { ShiftSummary } from './pages/manager/ShiftSummary';
 import { Promotions } from './pages/manager/Promotions';
 import { Events } from './pages/manager/Events';

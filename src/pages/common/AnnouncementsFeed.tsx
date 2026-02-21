@@ -509,7 +509,7 @@ function AnnouncementCard({
 // ─── Reply Section ─────────────────────────────────────────────────────────────
 
 function ReplySection({ announcementId }: { announcementId: string }) {
-  const { data: replies, isLoading } = useAnnouncementReplies(announcementId)
+  const { data: replies, isLoading, isError } = useAnnouncementReplies(announcementId)
   const createReply = useCreateAnnouncementReply()
   const [text, setText] = useState("")
 

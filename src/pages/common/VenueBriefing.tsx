@@ -180,7 +180,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
         dayEvents.forEach((ev, i) => {
           rows.push({
             iso: d.iso, day: d.day, dateNum: d.dateNum, isToday, isFirstForDay: i === 0,
-            event: ev.eventName,
+            event: ev.eventName ?? '—',
             when: formatPipelineWhen(d.iso, ev.startTime, ev.endTime),
             dj1: ev.dj1 || '—', dj2: ev.dj2 || '—',
             genre: ev.genre || '—', promo: ev.promotion || '—',
