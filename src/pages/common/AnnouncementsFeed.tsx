@@ -13,7 +13,7 @@ import {
   useAnnouncementReplies,
   useAnnouncement,
 } from "@/hooks/useAnnouncements"
-import { useAuthStore } from "@/stores/authStore
+import { useAuthStore } from "@/stores/authStore"
 import type { Announcement, AnnouncementAudience, CreateAnnouncementInput } from "@/types"
 import { useChatMessages, useSendChatMessage } from "@/hooks/useChatMessages"
 import { useStaffList } from "@/hooks/useShifts"
