@@ -255,7 +255,7 @@ export function ManagerMyTasks() {
   const profile = useAuthStore((s) => s.profile);
   const myId = profile?.id ?? '';
 
-  const { data: activeTasks = [], isLoading } = useManagerTasks(['todo', 'in_progress', 'blocked']);
+  const { data: activeTasks = [], isLoading, isError } = useManagerTasks(['todo', 'in_progress', 'blocked']);
   const { data: completedTasks = [] } = useManagerCompletedTasks();
   const updateStatus = useUpdateTaskStatus();
 
@@ -370,8 +370,8 @@ export function ManagerMyTasks() {
           </span>
         </div>
 
-        {isLoading ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">Loading tasks…</div>
+        {(isLoading || isError) ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">{isError ? "⚠️ Unable to load tasks. Please refresh." : "Loading tasks…"}</div>
         ) : (
           <div className="px-4">
             {/* Pending group */}
