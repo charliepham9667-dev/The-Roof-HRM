@@ -16,13 +16,14 @@ export function Login() {
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
 
-  // Redirect already-authenticated active users away from login
+  // Redirect as soon as both user + profile are ready
   const profile = useAuthStore((s) => s.profile);
   useEffect(() => {
     if (user && profile) {
       if (profile.status === 'pending' || profile.status === 'rejected') {
         navigate('/pending-approval', { replace: true });
       } else {
+        // Navigate to / — DashboardRedirect will pick the right role dashboard
         navigate('/', { replace: true });
       }
     }
@@ -31,14 +32,15 @@ export function Login() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     try {
       if (mode === 'signup') {
         await signUp(email, password, fullName, 'staff');
         navigate('/pending-approval');
       } else {
+        // signIn sets user + fetches profile; the useEffect above will
+        // navigate once profile is available — no manual navigate needed here.
         await signIn(email, password);
-        navigate('/');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Authentication failed';

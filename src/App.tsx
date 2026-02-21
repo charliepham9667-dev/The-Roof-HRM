@@ -92,14 +92,23 @@ function DashboardRedirect() {
   const profile = useAuthStore((s) => s.profile);
   const viewAs = useAuthStore((s) => s.viewAs);
   const initialized = useAuthStore((s) => s.initialized);
+  const isLoading = useAuthStore((s) => s.isLoading);
 
-  // Wait until auth is fully initialised and profile is loaded
-  if (!initialized || !profile) {
-    return null;
+  // Still initialising auth or fetching profile — show a spinner so the
+  // component stays mounted and will re-render once profile arrives.
+  if (!initialized || isLoading || !profile) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-primary" />
+          <p className="text-xs text-muted-foreground">Loading your workspace…</p>
+        </div>
+      </div>
+    );
   }
 
   const effectiveRole = viewAs?.role || profile.role;
-  
+
   if (effectiveRole === 'staff') {
     return <Navigate to="/staff/dashboard" replace />;
   }
