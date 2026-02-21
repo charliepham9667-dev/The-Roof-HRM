@@ -134,9 +134,18 @@ function extractUrl(raw: string): string | null {
   return match ? match[0] : null
 }
 
-/** Build a stable dedup key for a row */
+/** Build a stable dedup key for a row.
+ *  Normalises title aggressively so minor whitespace/punctuation changes
+ *  in the sheet don't generate a different key and create duplicates.
+ */
 function buildGsheetId(date: string, title: string, platform: string): string {
-  return `gsheet:${date}:${title.trim().toLowerCase().slice(0, 40)}:${platform}`
+  const normTitle = title
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")       // collapse whitespace
+    .replace(/[^\w\s]/g, "")    // strip punctuation
+    .slice(0, 40)
+  return `gsheet:${date}:${normTitle}:${platform}`
 }
 
 // ── Column indices (0-based) from header: Date,Pillar,Format,Platform,Title/Ideas,Caption,Link Brief,Link Photo/Video,Status,Notes,Link air ──
@@ -268,23 +277,35 @@ export function useGoogleSheetsSync() {
         })
       }
 
-      // 4. Upsert all rows in one batch using the unique gsheet_id column.
-      //    onConflict: 'gsheet_id' means duplicate rows are updated, never inserted twice.
+      // 4. Delete ALL sheet-sourced rows (those with a gsheet_id or with the
+      //    legacy "gsheet_id:" prefix in notes). This is a full-replace strategy:
+      //    sheet rows are always re-imported from source so deleting and reinserting
+      //    is the only reliable way to avoid duplicates when the gsheet_id column
+      //    wasn't populated on earlier syncs.
+      //    Rows created manually in the app (no gsheet_id prefix in notes) are preserved.
+      // Delete rows that have a gsheet_id column value (any previously synced row)
+      await supabase.from("content_calendar").delete().not("gsheet_id", "is", null)
+
+      // Also delete legacy rows where gsheet_id was only stored in the notes field
+      await supabase.from("content_calendar").delete().like("notes", "gsheet_id:%")
+
+      // 5. Insert all sheet rows fresh — no conflict possible since we just deleted them.
       const BATCH = 50
       for (let i = 0; i < toUpsert.length; i += BATCH) {
         const batch = toUpsert.slice(i, i + BATCH)
-        const { error: upsertErr, data: upsertedRows } = await supabase
+        const { error: insertErr, data: insertedRows } = await supabase
           .from("content_calendar")
-          .upsert(batch, { onConflict: "gsheet_id", ignoreDuplicates: false })
+          .insert(batch)
           .select("id")
 
-        if (upsertErr) {
-          result.errors.push(`Upsert error (batch ${i / BATCH + 1}): ${upsertErr.message}`)
+        if (insertErr) {
+          result.errors.push(`Insert error (batch ${i / BATCH + 1}): ${insertErr.message}`)
           result.skipped += batch.length
         } else {
-          result.upserted += upsertedRows?.length ?? batch.length
+          result.upserted += insertedRows?.length ?? batch.length
         }
       }
+
 
       lastSyncTimestamp = Date.now()
       setLastSynced(new Date())

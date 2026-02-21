@@ -828,8 +828,14 @@ export function CFOExecutiveSummary({
     [currentMonth, momAnalysis, drivers]
   );
 
-  const monthName = getMonthName(currentMonth.month);
-  
+  const today = new Date();
+  const editionMonth = (
+    year > today.getFullYear() ||
+    (year === today.getFullYear() && currentMonth.month > today.getMonth() + 1)
+  ) ? today.getMonth() + 1 : currentMonth.month;
+  const editionYear = year > today.getFullYear() ? today.getFullYear() : year;
+  const monthName = getMonthName(editionMonth);
+
   const healthColors: Record<HealthStatus, { bg: string; text: string; border: string }> = {
     'Excellent': { bg: 'bg-success/20', text: 'text-success', border: 'border-success/30' },
     'Good': { bg: 'bg-success/20', text: 'text-success', border: 'border-success/30' },
@@ -847,7 +853,7 @@ export function CFOExecutiveSummary({
             <h2 className="text-xl font-serif text-foreground">CFO Executive Summary</h2>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">{monthName} {year} Edition</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{monthName} {editionYear} Edition</p>
             <p className="text-xs text-muted-foreground">Published {new Date().toLocaleDateString()}</p>
           </div>
         </div>

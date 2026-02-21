@@ -11,6 +11,7 @@ import { PendingApproval } from './pages/auth/PendingApproval';
 
 // Owner pages
 import { Dashboard } from './pages/owner/Dashboard';
+import { CompanyProfile } from './pages/owner/CompanyProfile';
 import { Staffing } from './pages/owner/Staffing';
 import { Alerts } from './pages/owner/Alerts';
 import { WeeklyFocus } from './pages/owner/WeeklyFocus';
@@ -90,8 +91,14 @@ import MarketingDashboard from '@/pages/marketing/MarketingDashboard';
 function DashboardRedirect() {
   const profile = useAuthStore((s) => s.profile);
   const viewAs = useAuthStore((s) => s.viewAs);
-  
-  const effectiveRole = viewAs?.role || profile?.role;
+  const initialized = useAuthStore((s) => s.initialized);
+
+  // Wait until auth is fully initialised and profile is loaded
+  if (!initialized || !profile) {
+    return null;
+  }
+
+  const effectiveRole = viewAs?.role || profile.role;
   
   if (effectiveRole === 'staff') {
     return <Navigate to="/staff/dashboard" replace />;
@@ -203,6 +210,11 @@ export default function App() {
               <Wishlist />
             </RoleGuard>
           } />
+          <Route path="owner/company" element={
+            <RoleGuard allowedRoles={['owner']}>
+              <CompanyProfile />
+            </RoleGuard>
+          } />
           <Route path="weekly-focus" element={
             <RoleGuard allowedRoles={['owner']}>
               <WeeklyFocus />
@@ -278,7 +290,7 @@ export default function App() {
           } />
           <Route path="manager/announcements" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
-              <Announcements />
+              <AnnouncementsFeed />
             </RoleGuard>
           } />
           <Route path="manager/shift-summary" element={
@@ -334,6 +346,16 @@ export default function App() {
           <Route path="manager/resources" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <ResourcesHub />
+            </RoleGuard>
+          } />
+          <Route path="manager/check-in" element={
+            <RoleGuard allowedRoles={['owner', 'manager']}>
+              <CheckIn />
+            </RoleGuard>
+          } />
+          <Route path="manager/my-shifts" element={
+            <RoleGuard allowedRoles={['owner', 'manager']}>
+              <MyShifts />
             </RoleGuard>
           } />
 

@@ -189,25 +189,36 @@ export function useToggleTaskItem() {
       currentCompletedTasks,
       taskName,
       shiftId,
+      photoUrls,
     }: {
       template: TaskTemplate;
       currentCompletedTasks: CompletedTaskItem[];
       taskName: string;
       shiftId?: string;
+      photoUrls?: string[];
     }) => {
-      const isCompleted = currentCompletedTasks.some(t => t.taskName === taskName);
+      const existingEntry = currentCompletedTasks.find(t => t.taskName === taskName);
+      const isCompleted = !!existingEntry;
       
       let newCompletedTasks: CompletedTaskItem[];
-      if (isCompleted) {
-        // Remove the task
+      if (isCompleted && !photoUrls) {
+        // Un-toggle: remove the task
         newCompletedTasks = currentCompletedTasks.filter(t => t.taskName !== taskName);
+      } else if (isCompleted && photoUrls) {
+        // Already completed — just update photos
+        newCompletedTasks = currentCompletedTasks.map(t =>
+          t.taskName === taskName
+            ? { ...t, photoUrls: [...(t.photoUrls || []), ...photoUrls] }
+            : t
+        );
       } else {
-        // Add the task
+        // Mark as completed (optionally with photos)
         newCompletedTasks = [
           ...currentCompletedTasks,
           {
             taskName,
             completedAt: new Date().toISOString(),
+            photoUrls: photoUrls && photoUrls.length > 0 ? photoUrls : undefined,
           },
         ];
       }
@@ -218,6 +229,149 @@ export function useToggleTaskItem() {
         template,
         shiftId,
       });
+    },
+  });
+}
+
+// Upload photo(s) for a task item and append URLs to the CompletedTaskItem
+export function useUploadTaskPhoto() {
+  const profile = useAuthStore((s) => s.profile);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      template,
+      currentCompletedTasks,
+      taskName,
+      blobs,
+    }: {
+      template: TaskTemplate;
+      currentCompletedTasks: CompletedTaskItem[];
+      taskName: string;
+      blobs: Blob[];
+    }) => {
+      if (!profile?.id) throw new Error('Not authenticated');
+      if (blobs.length === 0) return;
+
+      const today = new Date().toISOString().split('T')[0];
+      const taskSlug = taskName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+
+      const uploadedUrls: string[] = [];
+      for (const blob of blobs) {
+        const timestamp = Date.now();
+        const path = `${profile.id}/${today}/${template.id}/${taskSlug}/${timestamp}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('task-checklist-photos')
+          .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (uploadError) throw uploadError;
+
+        const { data: signedData, error: signError } = await supabase.storage
+          .from('task-checklist-photos')
+          .createSignedUrl(path, 7 * 24 * 60 * 60); // 7-day signed URL
+        if (signError) throw signError;
+        if (signedData?.signedUrl) uploadedUrls.push(signedData.signedUrl);
+      }
+
+      // Append URLs to the existing completed task entry (or create one)
+      const existingEntry = currentCompletedTasks.find(t => t.taskName === taskName);
+      let newCompletedTasks: CompletedTaskItem[];
+      if (existingEntry) {
+        newCompletedTasks = currentCompletedTasks.map(t =>
+          t.taskName === taskName
+            ? { ...t, photoUrls: [...(t.photoUrls || []), ...uploadedUrls] }
+            : t
+        );
+      } else {
+        newCompletedTasks = [
+          ...currentCompletedTasks,
+          { taskName, completedAt: new Date().toISOString(), photoUrls: uploadedUrls },
+        ];
+      }
+
+      const totalTasks = template.tasks.length;
+      const completedCount = newCompletedTasks.length;
+      const completionPercentage = Math.round((completedCount / totalTasks) * 100);
+      const isFullyCompleted = completedCount === totalTasks;
+
+      const { error } = await supabase
+        .from('task_completions')
+        .upsert({
+          template_id: template.id,
+          staff_id: profile.id,
+          completion_date: today,
+          completed_tasks: newCompletedTasks,
+          completion_percentage: completionPercentage,
+          is_fully_completed: isFullyCompleted,
+          submitted_at: isFullyCompleted ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'template_id,staff_id,completion_date' });
+      if (error) throw error;
+
+      return newCompletedTasks;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
+      queryClient.invalidateQueries({ queryKey: ['task-completion', variables.template.id] });
+    },
+  });
+}
+
+// Remove a single photo URL from a task item (and delete from storage)
+export function useDeleteTaskPhoto() {
+  const profile = useAuthStore((s) => s.profile);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      template,
+      currentCompletedTasks,
+      taskName,
+      photoUrl,
+    }: {
+      template: TaskTemplate;
+      currentCompletedTasks: CompletedTaskItem[];
+      taskName: string;
+      photoUrl: string;
+    }) => {
+      if (!profile?.id) throw new Error('Not authenticated');
+
+      // Extract storage path from signed URL (path is after /object/sign/bucket-name/)
+      const pathMatch = photoUrl.match(/\/object\/sign\/task-checklist-photos\/(.+?)(?:\?|$)/);
+      if (pathMatch?.[1]) {
+        await supabase.storage
+          .from('task-checklist-photos')
+          .remove([decodeURIComponent(pathMatch[1])]);
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const newCompletedTasks = currentCompletedTasks.map(t =>
+        t.taskName === taskName
+          ? { ...t, photoUrls: (t.photoUrls || []).filter(u => u !== photoUrl) }
+          : t
+      );
+
+      const totalTasks = template.tasks.length;
+      const completionPercentage = Math.round((newCompletedTasks.length / totalTasks) * 100);
+      const isFullyCompleted = newCompletedTasks.length === totalTasks;
+
+      const { error } = await supabase
+        .from('task_completions')
+        .upsert({
+          template_id: template.id,
+          staff_id: profile.id,
+          completion_date: today,
+          completed_tasks: newCompletedTasks,
+          completion_percentage: completionPercentage,
+          is_fully_completed: isFullyCompleted,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'template_id,staff_id,completion_date' });
+      if (error) throw error;
+
+      return newCompletedTasks;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-completions'] });
+      queryClient.invalidateQueries({ queryKey: ['task-completion', variables.template.id] });
     },
   });
 }

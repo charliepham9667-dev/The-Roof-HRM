@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, GripVertical, X, Check, Loader2, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   useTaskTemplates,
   useCreateTaskTemplate,
@@ -29,13 +31,6 @@ const ROLE_LABELS: Record<string, string> = {
   manager: 'Manager',
 };
 
-const TYPE_COLORS: Record<TaskTemplateType, string> = {
-  opening: 'border-amber-200 bg-amber-50 text-amber-700',
-  closing: 'border-blue-200 bg-blue-50 text-blue-700',
-  midshift: 'border-green-200 bg-green-50 text-green-700',
-  event: 'border-purple-200 bg-purple-50 text-purple-700',
-  special: 'border-pink-200 bg-pink-50 text-pink-700',
-};
 
 const TYPE_DOT: Record<TaskTemplateType, string> = {
   opening: 'bg-amber-500',
@@ -442,16 +437,17 @@ function TemplateForm({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 border-t border-border bg-secondary/30 px-6 py-4">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="px-4 py-2 text-sm h-auto"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 rounded-md bg-foreground px-5 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-80 disabled:opacity-60"
+            className="px-5 py-2 text-sm font-semibold h-auto"
           >
             {isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -459,7 +455,7 @@ function TemplateForm({
               <Check className="h-4 w-4" />
             )}
             {form.id ? 'Save Changes' : 'Create Checklist'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -493,9 +489,7 @@ function TemplateCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-foreground">{template.name}</span>
-            <span className={`rounded-sm border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TYPE_COLORS[template.taskType]}`}>
-              {template.taskType}
-            </span>
+            <Badge variant="brand">{template.taskType}</Badge>
           </div>
           {template.description && (
             <p className="mt-0.5 text-xs text-muted-foreground">{template.description}</p>
@@ -573,7 +567,7 @@ function TemplateCard({
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {task.required && (
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] text-amber-700 uppercase">req</span>
+                    <Badge variant="warning">REQ</Badge>
                   )}
                   {task.estimatedMinutes && (
                     <span className="text-[10px] text-muted-foreground">{task.estimatedMinutes}m</span>
@@ -613,20 +607,20 @@ export function ManageChecklists() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-4 min-w-0">
+        <div className="flex-1 min-w-0">
           <h1 className="text-[28px] font-bold leading-tight text-foreground">Manage Checklists</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Create and edit task templates assigned to staff by role and shift type
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setFormState(emptyForm())}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors"
+          className="shrink-0 whitespace-nowrap"
         >
           <Plus className="h-4 w-4" />
           + New Checklist
-        </button>
+        </Button>
       </div>
 
       {/* Filter pills */}
@@ -673,13 +667,13 @@ export function ManageChecklists() {
           <ClipboardList className="mb-3 h-10 w-10 text-muted-foreground/40" />
           <p className="text-sm font-medium text-foreground">No checklists yet</p>
           <p className="mt-1 text-xs text-muted-foreground">Create your first checklist template to get started</p>
-          <button
+          <Button
             onClick={() => setFormState(emptyForm())}
-            className="mt-4 flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-80"
+            className="mt-4"
           >
             <Plus className="h-4 w-4" />
             New Checklist
-          </button>
+          </Button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-border py-12 text-center">

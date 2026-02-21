@@ -7,6 +7,7 @@ import {
   Download,
   Filter
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { usePLData, usePLComparison, usePLYears } from '../../hooks/usePLData';
 import {
   RevenueMixChart,
@@ -121,22 +122,22 @@ export function PLPerformance() {
     <div className="space-y-6" onClick={closeDropdowns}>
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+        <div className="flex items-start justify-between gap-4 min-w-0">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-foreground">P&L Performance Overview</h1>
             <p className="text-sm text-muted-foreground mt-1">Real-time financial health and variance reporting</p>
           </div>
           
           {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 text-sm text-foreground border border-border rounded-lg hover:bg-muted transition-colors">
+          <div className="flex shrink-0 items-center gap-2">
+            <Button variant="outline" className="h-auto px-4 py-2 text-sm whitespace-nowrap">
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Export</span>
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors">
+            </Button>
+            <Button className="h-auto px-4 py-2 text-sm whitespace-nowrap">
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Download PDF</span>
-            </button>
+            </Button>
           </div>
         </div>
 

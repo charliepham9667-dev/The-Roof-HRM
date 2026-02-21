@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, FileSpreadsheet, DollarSign, Bug } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useSyncLogs, useSyncSheets, extractSheetId } from '../../hooks/useSync';
 import { usePLSync } from '../../hooks/usePLData';
 import { supabase } from '../../lib/supabase';
@@ -279,14 +280,14 @@ export function SyncData() {
             </div>
           )}
 
-          <button
+          <Button
             onClick={handleSync}
             disabled={syncSheets.isPending || !sheetUrl}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-auto px-4 py-2.5 text-sm font-medium"
           >
             <RefreshCw className={`h-4 w-4 ${syncSheets.isPending ? 'animate-spin' : ''}`} />
             {syncSheets.isPending ? 'Syncing...' : 'Sync Now'}
-          </button>
+          </Button>
         </div>
       </div>
 

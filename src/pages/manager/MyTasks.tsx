@@ -18,6 +18,7 @@ import {
 import type { DelegationTask, TaskStatus, TaskPriority, CreateDelegationTaskInput } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -370,8 +371,24 @@ export function ManagerMyTasks() {
           </span>
         </div>
 
-        {(isLoading || isError) ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">{isError ? "⚠️ Unable to load tasks. Please refresh." : "Loading tasks…"}</div>
+        {isError ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">⚠️ Unable to load tasks. Please refresh.</div>
+        ) : isLoading ? (
+          <div className="px-4 divide-y divide-border/50">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start gap-3 py-3 px-1">
+                <Skeleton className="mt-0.5 h-4 w-4 rounded shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-3.5 w-10 rounded" />
+                    <Skeleton className="h-3.5 w-16 rounded" />
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-10 rounded-md shrink-0" />
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="px-4">
             {/* Pending group */}

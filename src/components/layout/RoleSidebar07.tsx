@@ -51,7 +51,7 @@ import {
 import type { UserRole } from '@/types';
 
 // Extends UserRole with virtual nav keys for manager sub-types
-type NavRole = UserRole | 'marketing_manager';
+type NavRole = UserRole | 'marketing_manager' | 'floor_manager' | 'bar_manager';
 
 /**
  * Navigation item type
@@ -183,9 +183,221 @@ const navigationGroups: NavGroup[] = [
       },
     ],
   },
+  {
+    label: 'Company',
+    roles: ['owner'],
+    items: [
+      {
+        title: 'Company Profile',
+        url: '/owner/company',
+        icon: Building2,
+        roles: ['owner'],
+      },
+    ],
+  },
 
   // =========================================================
-  // MANAGER NAV
+  // FLOOR MANAGER NAV
+  // =========================================================
+  {
+    label: 'Core',
+    roles: ['floor_manager'],
+    items: [
+      {
+        title: 'Dashboard',
+        url: '/manager/dashboard',
+        icon: LayoutDashboard,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'My Tasks',
+        url: '/manager/tasks',
+        icon: CheckSquare,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'Check In/Out',
+        url: '/manager/check-in',
+        icon: Clock,
+        roles: ['floor_manager'],
+      },
+    ],
+  },
+  {
+    label: 'Management',
+    roles: ['floor_manager'],
+    items: [
+      {
+        title: 'Venue Manager',
+        url: '/manager/venue',
+        icon: MapPin,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'Operations',
+        url: '/manager/operations',
+        icon: ShoppingCart,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'Floor Issues',
+        url: '/manager/floor-issues',
+        icon: AlertTriangle,
+        roles: ['floor_manager'],
+      },
+    ],
+  },
+  {
+    label: 'Team',
+    roles: ['floor_manager'],
+    items: [
+      {
+        title: 'My Shifts',
+        url: '/manager/my-shifts',
+        icon: Clock,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'Schedule',
+        url: '/manager/schedule',
+        icon: Calendar,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'Venue Briefing',
+        url: '/manager/calendar',
+        icon: Calendar,
+        roles: ['floor_manager'],
+      },
+    ],
+  },
+  {
+    label: 'Common Hub',
+    roles: ['floor_manager'],
+    items: [
+      {
+        title: 'Manage Checklists',
+        url: '/manager/checklists',
+        icon: ClipboardList,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'Resources',
+        url: '/manager/resources',
+        icon: FolderOpen,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'Announcements & Chat',
+        url: '/manager/announcements',
+        icon: Megaphone,
+        roles: ['floor_manager'],
+      },
+    ],
+  },
+
+  // =========================================================
+  // BAR MANAGER NAV
+  // =========================================================
+  {
+    label: 'Core',
+    roles: ['bar_manager'],
+    items: [
+      {
+        title: 'Dashboard',
+        url: '/manager/dashboard',
+        icon: LayoutDashboard,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'My Tasks',
+        url: '/manager/tasks',
+        icon: CheckSquare,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'Check In/Out',
+        url: '/manager/check-in',
+        icon: Clock,
+        roles: ['bar_manager'],
+      },
+    ],
+  },
+  {
+    label: 'Management',
+    roles: ['bar_manager'],
+    items: [
+      {
+        title: 'Venue Manager',
+        url: '/manager/venue',
+        icon: MapPin,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'Operations',
+        url: '/manager/operations',
+        icon: ShoppingCart,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'Floor Issues',
+        url: '/manager/floor-issues',
+        icon: AlertTriangle,
+        roles: ['bar_manager'],
+      },
+    ],
+  },
+  {
+    label: 'Team',
+    roles: ['bar_manager'],
+    items: [
+      {
+        title: 'My Shifts',
+        url: '/manager/my-shifts',
+        icon: Clock,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'Schedule',
+        url: '/manager/schedule',
+        icon: Calendar,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'Venue Briefing',
+        url: '/manager/calendar',
+        icon: Calendar,
+        roles: ['bar_manager'],
+      },
+    ],
+  },
+  {
+    label: 'Common Hub',
+    roles: ['bar_manager'],
+    items: [
+      {
+        title: 'Manage Checklists',
+        url: '/manager/checklists',
+        icon: ClipboardList,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'Resources',
+        url: '/manager/resources',
+        icon: FolderOpen,
+        roles: ['bar_manager'],
+      },
+      {
+        title: 'Announcements & Chat',
+        url: '/manager/announcements',
+        icon: Megaphone,
+        roles: ['bar_manager'],
+      },
+    ],
+  },
+
+  // =========================================================
+  // GENERIC MANAGER NAV (fallback for managers without a subtype)
   // =========================================================
   {
     label: 'Core',
@@ -204,9 +416,21 @@ const navigationGroups: NavGroup[] = [
         roles: ['manager'],
       },
       {
-        title: 'Floor Issues',
-        url: '/manager/floor-issues',
-        icon: AlertTriangle,
+        title: 'Check In/Out',
+        url: '/manager/check-in',
+        icon: Clock,
+        roles: ['manager'],
+      },
+    ],
+  },
+  {
+    label: 'Management',
+    roles: ['manager'],
+    items: [
+      {
+        title: 'Venue Manager',
+        url: '/manager/venue',
+        icon: MapPin,
         roles: ['manager'],
       },
       {
@@ -216,9 +440,9 @@ const navigationGroups: NavGroup[] = [
         roles: ['manager'],
       },
       {
-        title: 'Venue Manager',
-        url: '/manager/venue',
-        icon: MapPin,
+        title: 'Floor Issues',
+        url: '/manager/floor-issues',
+        icon: AlertTriangle,
         roles: ['manager'],
       },
     ],
@@ -227,6 +451,12 @@ const navigationGroups: NavGroup[] = [
     label: 'Team',
     roles: ['manager'],
     items: [
+      {
+        title: 'My Shifts',
+        url: '/manager/my-shifts',
+        icon: Clock,
+        roles: ['manager'],
+      },
       {
         title: 'Schedule',
         url: '/manager/schedule',
@@ -275,7 +505,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       {
         title: 'Dashboard',
-        url: '/marketing/dashboard',
+        url: '/manager/dashboard',
         icon: LayoutDashboard,
         roles: ['marketing_manager'],
       },
@@ -285,12 +515,24 @@ const navigationGroups: NavGroup[] = [
         icon: CheckSquare,
         roles: ['marketing_manager'],
       },
+      {
+        title: 'Check In/Out',
+        url: '/manager/check-in',
+        icon: Clock,
+        roles: ['marketing_manager'],
+      },
     ],
   },
   {
     label: 'Team',
     roles: ['marketing_manager'],
     items: [
+      {
+        title: 'My Shifts',
+        url: '/manager/my-shifts',
+        icon: Clock,
+        roles: ['marketing_manager'],
+      },
       {
         title: 'Schedule',
         url: '/marketing/schedule',
@@ -304,7 +546,7 @@ const navigationGroups: NavGroup[] = [
     roles: ['marketing_manager'],
     items: [
       {
-        title: 'Overview',
+        title: 'Marketing Overview',
         url: '/marketing/dashboard',
         icon: BarChart3,
         roles: ['marketing_manager'],
@@ -459,8 +701,10 @@ export function RoleSidebar07() {
   const navRole: NavRole = (() => {
     // Owner previewing via path — use the path-derived nav role directly
     if (actualRole === 'owner' && !viewAs?.role && pathRole) return pathRole;
-    // Marketing manager (by actual role + managerType, or viewAs)
+    // Manager sub-types
     if (effectiveRole === 'manager' && managerType === 'marketing') return 'marketing_manager';
+    if (effectiveRole === 'manager' && managerType === 'floor') return 'floor_manager';
+    if (effectiveRole === 'manager' && managerType === 'bar') return 'bar_manager';
     return effectiveRole;
   })();
 
@@ -493,7 +737,7 @@ export function RoleSidebar07() {
   };
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="sidebar" collapsible="icon">
       {/* Header - Brand */}
       <SidebarHeader>
         <SidebarMenu>

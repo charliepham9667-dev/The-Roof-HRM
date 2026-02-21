@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { MessageSquare, Settings, Wine, Music, Megaphone } from "lucide-react"
 import {
   useAnnouncements,
   useCreateAnnouncement,
@@ -220,19 +222,20 @@ function PostAnnouncementModal({
         </div>
 
         <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-border">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary transition-colors"
+            className="h-auto px-4 py-2 text-sm"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={isPending}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="h-auto px-4 py-2 text-sm font-medium"
           >
             {isPending ? "Saving…" : editAnnouncement ? "Save Changes" : "Post Announcement"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -550,13 +553,13 @@ function ReplySection({ announcementId }: { announcementId: string }) {
           placeholder="Write a comment…"
           className="flex-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground outline-none focus:border-primary"
         />
-        <button
+        <Button
           type="submit"
           disabled={!text.trim() || createReply.isPending}
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="h-auto px-3 py-1.5 text-xs font-medium"
         >
           {createReply.isPending ? "…" : "Post"}
-        </button>
+        </Button>
       </form>
     </div>
   )
@@ -577,7 +580,7 @@ interface ChatMsg {
 
 interface ChannelDef {
   id: string
-  icon: string
+  icon: React.ReactNode
   name: string
   displayName: string
   desc: string
@@ -590,11 +593,11 @@ interface ChannelDef {
 }
 
 const CHANNELS: ChannelDef[] = [
-  { id: "#general",    icon: "💬", name: "# general",    displayName: "#general",    desc: "All staff · 12 members",   unread: 3, lastMessage: "John: Roster confirmed for Sat",       lastTime: "17:28" },
-  { id: "#operations", icon: "🔧", name: "# operations", displayName: "#operations", desc: "Ops team · 6 members",      unread: 1, lastMessage: "Tiny: Covers are set ✓",              lastTime: "16:50" },
-  { id: "#bar-team",   icon: "🍹", name: "# bar-team",   displayName: "#bar-team",   desc: "Bar staff · 5 members",     lastMessage: "Phu: New Tet menu is live",                 lastTime: "14:30" },
-  { id: "#events",     icon: "🎶", name: "# events",     displayName: "#events",     desc: "Event planning · 4 members",unread: 1, lastMessage: "Charlie: DJ brief for tonight",       lastTime: "13:00" },
-  { id: "#marketing",  icon: "📣", name: "# marketing",  displayName: "#marketing",  desc: "Marketing team",            lastMessage: "Content calendar updated",                 lastTime: "Yesterday" },
+  { id: "#general",    icon: <MessageSquare className="h-3.5 w-3.5" />, name: "# general",    displayName: "#general",    desc: "All staff · 12 members",   unread: 3, lastMessage: "John: Roster confirmed for Sat",       lastTime: "17:28" },
+  { id: "#operations", icon: <Settings className="h-3.5 w-3.5" />,     name: "# operations", displayName: "#operations", desc: "Ops team · 6 members",      unread: 1, lastMessage: "Tiny: Covers are set ✓",              lastTime: "16:50" },
+  { id: "#bar-team",   icon: <Wine className="h-3.5 w-3.5" />,         name: "# bar-team",   displayName: "#bar-team",   desc: "Bar staff · 5 members",     lastMessage: "Phu: New Tet menu is live",                 lastTime: "14:30" },
+  { id: "#events",     icon: <Music className="h-3.5 w-3.5" />,        name: "# events",     displayName: "#events",     desc: "Event planning · 4 members",unread: 1, lastMessage: "Charlie: DJ brief for tonight",       lastTime: "13:00" },
+  { id: "#marketing",  icon: <Megaphone className="h-3.5 w-3.5" />,    name: "# marketing",  displayName: "#marketing",  desc: "Marketing team",            lastMessage: "Content calendar updated",                 lastTime: "Yesterday" },
 ]
 
 
@@ -704,7 +707,7 @@ function ChatPanel({ profile }: { profile: any }) {
                   activeChannel === ch.id ? "bg-secondary" : "hover:bg-secondary/60",
                 )}
               >
-                <div className={cn("h-7 w-7 rounded-md flex items-center justify-center text-sm shrink-0", activeChannel === ch.id ? "bg-primary/10" : "bg-secondary")}>
+                <div className={cn("h-7 w-7 rounded-md flex items-center justify-center shrink-0", activeChannel === ch.id ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground")}>
                   {ch.icon}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -762,7 +765,7 @@ function ChatPanel({ profile }: { profile: any }) {
               {currentChannelDef.icon}
             </div>
           ) : (
-            <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-lg shrink-0">
+            <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground shrink-0">
               {currentChannelDef?.icon}
             </div>
           )}
@@ -877,16 +880,16 @@ function ChatPanel({ profile }: { profile: any }) {
                   {t.icon}
                 </button>
               ))}
-              <button
+              <Button
                 onClick={sendMessage}
                 disabled={!text.trim()}
-                className="ml-auto flex items-center gap-1.5 rounded-md bg-foreground text-background px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+                className="ml-auto h-auto px-3 py-1.5 text-xs font-medium"
               >
                 Send
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                 </svg>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -942,13 +945,21 @@ export function AnnouncementsFeed() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-4 shrink-0 pb-4 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-[28px] font-bold leading-tight text-foreground whitespace-nowrap overflow-visible">Announcements</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Stay updated with team news and updates</p>
+        </div>
+      </div>
+
       {/* Tab bar */}
-      <div className="flex items-center border-b border-border bg-card px-5 shrink-0">
+      <div className="flex items-center border-b border-border bg-card shrink-0 min-w-0">
         {([
           {
             id: "ann", label: "Announcements", badge: unreadCount,
             icon: (
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 11l19-9-9 19-2-8-8-2z"/>
               </svg>
             ),
@@ -956,7 +967,7 @@ export function AnnouncementsFeed() {
           {
             id: "chat", label: "Chat", badge: 5,
             icon: (
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
               </svg>
             ),
@@ -966,16 +977,16 @@ export function AnnouncementsFeed() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-3.5 text-[14px] font-medium border-b-2 -mb-px transition-colors",
+              "flex-1 flex items-center justify-center gap-1.5 px-3 py-3.5 text-[14px] font-medium border-b-2 -mb-px transition-colors min-w-0",
               activeTab === tab.id
                 ? "border-[#78350F] text-[#1F2937]"
                 : "border-transparent text-[#6B7280] hover:text-[#1F2937]",
             )}
           >
             {tab.icon}
-            {tab.label}
+            <span className="truncate">{tab.label}</span>
             {tab.badge > 0 && (
-              <span className="rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 min-w-[16px] text-center leading-none">
+              <span className="shrink-0 rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 min-w-[16px] text-center leading-none">
                 {tab.badge}
               </span>
             )}
@@ -986,17 +997,11 @@ export function AnnouncementsFeed() {
       {/* ── Announcements panel ── */}
       {activeTab === "ann" && (
         <div className="flex-1 overflow-y-auto">
-          <div className="px-6 py-6 space-y-4">
-            {/* Page header */}
-            <div>
-              <h1 className="text-[28px] font-bold leading-tight text-foreground">Announcements</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Stay updated with team news and updates</p>
-            </div>
-
+          <div className="pt-6 space-y-4">
             {/* Compose strip */}
             <div
               onClick={openCreate}
-              className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 cursor-pointer hover:shadow-sm transition-all"
+              className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 cursor-pointer hover:shadow-sm transition-all min-w-0"
             >
               <div
                 className="h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
@@ -1004,15 +1009,14 @@ export function AnnouncementsFeed() {
               >
                 {userInitials}
               </div>
-              <span className="flex-1 min-w-[120px] text-sm text-muted-foreground">Share something with the team…</span>
+              <span className="flex-1 min-w-0 truncate text-sm text-muted-foreground">Share something with the team…</span>
               {canManage && (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); openCreate() }}
                   className="rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap shrink-0"
                 >
-                  <span className="hidden sm:inline">+ Post Announcement</span>
-                  <span className="sm:hidden">+ Post</span>
+                  + Post
                 </button>
               )}
             </div>

@@ -83,8 +83,8 @@ export function Reservations() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex items-start justify-between gap-4 min-w-0">
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-semibold text-foreground">Reservations</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Live from reservation form · updates every 5 minutes
@@ -93,7 +93,7 @@ export function Reservations() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          className="flex shrink-0 whitespace-nowrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
           Refresh

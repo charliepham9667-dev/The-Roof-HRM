@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, BarChart2, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Megaphone, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useShifts, useTodayShifts } from '@/hooks/useShifts';
@@ -158,7 +158,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
 
   const tonightPromo = tonightFirst?.promotion ?? null;
 
-  // ── Pipeline rows (same logic as owner dashboard) ─────────────────────────
+  // ── Pipeline rows — one row per event so all events are visible ──────────
   const pipelineRows = useMemo(() => {
     const byDate = new Map<string, typeof roofEvents>();
     for (const e of roofEvents) {
@@ -167,21 +167,28 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
       list.push(e);
       byDate.set(e.dateIso, list);
     }
-    return weekDates.map((d) => {
+    const rows: Array<{
+      iso: string; day: string; dateNum: number; isToday: boolean; isFirstForDay: boolean;
+      event: string; when: string; dj1: string; dj2: string; genre: string; promo: string;
+    }> = [];
+    for (const d of weekDates) {
       const dayEvents = (byDate.get(d.iso) || []).filter((e) => e.eventName).sort((a, b) => (a.startMinutes ?? 999999) - (b.startMinutes ?? 999999));
-      const first = dayEvents[0];
-      if (!first) {
-        return { iso: d.iso, day: d.day, dateNum: d.dateNum, isToday: d.iso === todayIso && isCurrentWeek, event: 'TBD', when: formatPipelineWhen(d.iso, null, null), dj1: '—', dj2: '—', genre: '—', promo: '—' };
+      const isToday = d.iso === todayIso && isCurrentWeek;
+      if (dayEvents.length === 0) {
+        rows.push({ iso: d.iso, day: d.day, dateNum: d.dateNum, isToday, isFirstForDay: true, event: 'TBD', when: formatPipelineWhen(d.iso, null, null), dj1: '—', dj2: '—', genre: '—', promo: '—' });
+      } else {
+        dayEvents.forEach((ev, i) => {
+          rows.push({
+            iso: d.iso, day: d.day, dateNum: d.dateNum, isToday, isFirstForDay: i === 0,
+            event: ev.eventName,
+            when: formatPipelineWhen(d.iso, ev.startTime, ev.endTime),
+            dj1: ev.dj1 || '—', dj2: ev.dj2 || '—',
+            genre: ev.genre || '—', promo: ev.promotion || '—',
+          });
+        });
       }
-      const extraCount = Math.max(0, dayEvents.length - 1);
-      return {
-        iso: d.iso, day: d.day, dateNum: d.dateNum, isToday: d.iso === todayIso && isCurrentWeek,
-        event: `${first.eventName}${extraCount ? ` +${extraCount} more` : ''}`,
-        when: formatPipelineWhen(d.iso, first.startTime, first.endTime),
-        dj1: first.dj1 || '—', dj2: first.dj2 || '—',
-        genre: first.genre || '—', promo: first.promotion || '—',
-      };
-    });
+    }
+    return rows;
   }, [roofEvents, weekDates, todayIso, isCurrentWeek]);
 
   // ── Weekly analysis (exact owner dashboard logic) ─────────────────────────
@@ -227,7 +234,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
     }
     const heavyDJs = Array.from(djNightCount.entries()).filter(([, n]) => n >= 3).map(([name]) => name);
     if (heavyDJs.length > 0) {
-      list.push({ emoji: '⚠️', title: 'High DJ Reliance', body: `${heavyDJs.join(', ')} ${heavyDJs.length === 1 ? 'is' : 'are'} booked ${heavyDJs.length === 1 ? djNightCount.get(heavyDJs[0]) : '3+'}+ nights — consider diversifying the lineup.` });
+      list.push({ icon: AlertTriangle, title: 'High DJ Reliance', body: `${heavyDJs.join(', ')} ${heavyDJs.length === 1 ? 'is' : 'are'} booked ${heavyDJs.length === 1 ? djNightCount.get(heavyDJs[0]) : '3+'}+ nights — consider diversifying the lineup.` });
     }
 
     const clubNoPromo = weekDates.filter((d) => {
@@ -235,17 +242,17 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
       return isClub && !roofEvents.some((e) => e.dateIso === d.iso && e.promotion);
     });
     if (clubNoPromo.length > 0) {
-      list.push({ emoji: '📣', title: 'Club Nights Without Promotion', body: `${clubNoPromo.map((d) => d.day).join(', ')} ${clubNoPromo.length === 1 ? 'has' : 'have'} no promotion attached — add an offer to drive footfall.` });
+      list.push({ icon: Megaphone, title: 'Club Nights Without Promotion', body: `${clubNoPromo.map((d) => d.day).join(', ')} ${clubNoPromo.length === 1 ? 'has' : 'have'} no promotion attached — add an offer to drive footfall.` });
     }
 
     if (unplannedCount > 0) {
-      list.push({ emoji: '📅', title: `${unplannedCount} Unplanned ${unplannedCount === 1 ? 'Night' : 'Nights'}`, body: `${unplannedDays.map((d) => d.day).join(', ')} ${unplannedCount === 1 ? 'has' : 'have'} no event scheduled — opportunity to fill the calendar.` });
+      list.push({ icon: CalendarDays, title: `${unplannedCount} Unplanned ${unplannedCount === 1 ? 'Night' : 'Nights'}`, body: `${unplannedDays.map((d) => d.day).join(', ')} ${unplannedCount === 1 ? 'has' : 'have'} no event scheduled — opportunity to fill the calendar.` });
     }
     if (unplannedCount === 0 && eventCount === 7) {
-      list.push({ emoji: '✅', title: 'Full Week Planned', body: 'Every night this week has an event — great execution on calendar coverage.' });
+      list.push({ icon: CheckCircle2, title: 'Full Week Planned', body: 'Every night this week has an event — great execution on calendar coverage.' });
     }
     if (list.length === 0) {
-      list.push({ emoji: '📊', title: 'Week on Track', body: `${eventCount} events scheduled with ${djBookedCount} DJs across ${clubNightCount} club nights.` });
+      list.push({ icon: BarChart2, title: 'Week on Track', body: `${eventCount} events scheduled with ${djBookedCount} DJs across ${clubNightCount} club nights.` });
     }
     return list;
   }, [weekDates, roofEvents, weekByDate, unplannedCount, unplannedDays, eventCount, djBookedCount, clubNightCount]);
@@ -255,6 +262,14 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
   // ──────────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+
+      {/* ── PAGE HEADER ──────────────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Venue Briefing</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Tonight's event details, pipeline, and team on shift
+        </p>
+      </div>
 
       {/* ══ SECTION 1 — TONIGHT'S BRIEFING ══════════════════════════════════ */}
       <div className="space-y-3">
@@ -279,7 +294,9 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
           {/* Amber gradient line */}
           <div style={{ height: 2, background: 'linear-gradient(90deg, #b5620a 0%, #c9a84c 55%, transparent 100%)' }} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          {/* Scroll wrapper — horizontal on tablet, vertical stack on phone */}
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))' }}>
 
             {/* Col 1: Tonight's Event */}
             <div style={{ padding: '16px 20px', borderRight: '1px solid #e2ddd7' }}>
@@ -403,6 +420,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
             </div>
 
           </div>
+          </div>{/* end scroll wrapper */}
         </div>
       </div>
 
@@ -460,23 +478,23 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
                       <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 3, textTransform: 'uppercase' as const, letterSpacing: '0.04em', background: '#f5edd8', color: '#7a5a10', border: '1px solid #e8d9b0' }}>Lounge</span>
                     )}
                   </div>
-                  <div style={{ padding: '8px 10px', backgroundColor: 'rgba(255,255,255,1)' }}>
+                  <div style={{ padding: '8px 10px', backgroundColor: 'rgba(255,255,255,1)', overflowY: 'auto', maxHeight: 90 }}>
                     {weekCsvLoading ? (
                       <div style={{ fontSize: 10, color: '#9c9590' }}>Loading…</div>
                     ) : weekCsvError ? (
                       <div style={{ fontSize: 10, color: '#b5620a' }}>Unable to load.</div>
                     ) : (
                       <>
-                        {firstEvent ? (
-                          <>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? '#b5620a' : '#1a1714', lineHeight: 1.3 }}>{firstEvent.eventName}</div>
-                            {(firstEvent.startTime || firstEvent.endTime) && (
-                              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#9c9590', marginTop: 2 }}>
-                                {firstEvent.startTime}{firstEvent.startTime && firstEvent.endTime ? ' – ' : ''}{firstEvent.endTime}
+                        {dayEvents.length > 0 ? dayEvents.map((ev, evIdx) => (
+                          <div key={evIdx} style={{ marginTop: evIdx > 0 ? 6 : 0, borderTop: evIdx > 0 ? '1px solid #e2ddd7' : 'none', paddingTop: evIdx > 0 ? 5 : 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? '#b5620a' : '#1a1714', lineHeight: 1.3 }}>{ev.eventName}</div>
+                            {(ev.startTime || ev.endTime) && (
+                              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#9c9590', marginTop: 1 }}>
+                                {ev.startTime}{ev.startTime && ev.endTime ? ' – ' : ''}{ev.endTime}
                               </div>
                             )}
-                          </>
-                        ) : (
+                          </div>
+                        )) : (
                           <div style={{ fontSize: 10, color: '#9c9590', fontStyle: 'italic' }}>TBD</div>
                         )}
                         {djLines.length > 0 && (
@@ -498,8 +516,8 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
             })}
           </div>
 
-          {/* RIGHT — Pipeline card (pixel-perfect copy of owner dashboard) */}
-          <div style={{ border: '1px solid #e2ddd7', borderRadius: 8, overflow: 'hidden', display: 'flex', flexDirection: 'column' as const }}>
+          {/* RIGHT — Pipeline card: stretches to match left sidebar height */}
+          <div style={{ border: '1px solid #e2ddd7', borderRadius: 8, overflow: 'hidden', display: 'flex', flexDirection: 'column' as const, height: '100%' }}>
 
             {/* Card header */}
             <div style={{ padding: '12px 18px', borderBottom: '1px solid #e2ddd7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -514,18 +532,19 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
               ))}
             </div>
 
-            {/* Rows */}
-            <div style={{ flex: 1 }}>
+            {/* Rows — flex:1 fills remaining space; overflow scrolls if many events */}
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {pipelineRows.map((row, idx) => {
                 const isPipelinePast = row.iso < todayIso && isCurrentWeek;
                 const genres = row.genre !== '—' ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : [];
                 const promos = row.promo !== '—' ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : [];
+                const topBorder = row.isFirstForDay && idx > 0 ? '2px solid #d4cfc9' : '1px solid #e2ddd7';
                 return (
-                  <div key={`${row.iso}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr 1.6fr', gap: 16, padding: '10px 18px', minHeight: 48, borderBottom: '1px solid #e2ddd7', alignItems: 'center', background: row.isToday ? '#fdf3e7' : 'transparent', opacity: isPipelinePast ? 0.55 : 1 }}>
+                  <div key={`${row.iso}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr 1.6fr', gap: 16, padding: '10px 18px', minHeight: 48, borderBottom: '1px solid #e2ddd7', borderTop: topBorder, alignItems: 'center', background: row.isToday ? '#fdf3e7' : 'transparent', opacity: isPipelinePast ? 0.55 : 1 }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: row.isToday ? '#b5620a' : row.event === 'TBD' ? '#9c9590' : '#1a1714', fontStyle: row.event === 'TBD' ? 'italic' : 'normal' }}>{row.event}</span>
-                        {row.isToday && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 7px', borderRadius: 3, background: '#b5620a', color: '#fff', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Today</span>}
+                        {row.isToday && row.isFirstForDay && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 7px', borderRadius: 3, background: '#b5620a', color: '#fff', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Today</span>}
                       </div>
                       <div style={{ fontSize: 10, color: '#9c9590', marginTop: 2 }}>{row.when}</div>
                     </div>
@@ -542,14 +561,14 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
               })}
             </div>
 
-            {/* Weekly analysis strip (exact copy of owner dashboard) */}
-            <div style={{ borderTop: '3px solid #e2ddd7', background: '#fff' }}>
+            {/* Weekly analysis strip — pinned to bottom */}
+            <div style={{ borderTop: '2px solid #e2ddd7', background: '#fff' }}>
               {/* Stats bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 18px', borderBottom: '1px solid #e2ddd7', gap: 12, backgroundColor: '#faf8f5' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                  <span style={{ color: '#c9a84c', fontSize: 11, lineHeight: 1 }}>✦</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#9c9590' }}>Weekly Analysis</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 3, background: `${ratingColor}18`, border: `1px solid ${ratingColor}55`, color: ratingColor, letterSpacing: '0.05em', textTransform: 'uppercase' as const }}>{rating}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px', borderBottom: '1px solid #e2ddd7', gap: 8, backgroundColor: '#faf8f5' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <Sparkles style={{ width: 10, height: 10, color: '#c9a84c', flexShrink: 0 }} />
+                  <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#9c9590' }}>Weekly Analysis</span>
+                  <span style={{ fontSize: 8, fontWeight: 700, padding: '1px 6px', borderRadius: 3, background: `${ratingColor}18`, border: `1px solid ${ratingColor}55`, color: ratingColor, letterSpacing: '0.05em', textTransform: 'uppercase' as const }}>{rating}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
                   {[
@@ -558,24 +577,27 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
                     { label: 'Club Nights', value: String(clubNightCount) },
                     { label: 'Unplanned', value: String(unplannedCount), amber: unplannedCount > 0 },
                   ].map((stat, i) => (
-                    <div key={stat.label} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', padding: '0 16px', borderLeft: i > 0 ? '1px solid #e2ddd7' : 'none' }}>
-                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 900, color: stat.amber ? '#d97706' : '#1a1714', lineHeight: 1 }}>{stat.value}</span>
-                      <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#9c9590', marginTop: 3 }}>{stat.label}</span>
+                    <div key={stat.label} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', padding: '0 12px', borderLeft: i > 0 ? '1px solid #e2ddd7' : 'none' }}>
+                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 900, color: stat.amber ? '#d97706' : '#1a1714', lineHeight: 1 }}>{stat.value}</span>
+                      <span style={{ fontSize: 7, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#9c9590', marginTop: 2 }}>{stat.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
               {/* Insights */}
               <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-                {insights.map((ins, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 18px', borderTop: i > 0 ? '1px solid #f0ece6' : 'none', flex: 1 }}>
-                    <span style={{ fontSize: 13, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{ins.emoji}</span>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1714', lineHeight: 1.3 }}>{ins.title}</div>
-                      <div style={{ fontSize: 10, color: '#6b6560', marginTop: 2, lineHeight: 1.5 }}>{ins.body}</div>
+                {insights.map((ins, i) => {
+                  const InsIcon = ins.icon;
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderTop: i > 0 ? '1px solid #f0ece6' : 'none' }}>
+                      <InsIcon style={{ width: 11, height: 11, flexShrink: 0, color: '#9c9590' }} />
+                      <div>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#1a1714' }}>{ins.title}</span>
+                        <span style={{ fontSize: 10, color: '#6b6560', marginLeft: 5 }}>{ins.body}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

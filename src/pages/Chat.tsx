@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Send, Users, Hash, Plus, Search, Phone, Video, MoreVertical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Message {
   id: string;
@@ -231,9 +232,9 @@ export function Chat() {
               placeholder={`Message #${currentChannel?.name}`}
               className="flex-1 rounded-lg bg-background border border-border px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
             />
-            <button className="rounded-lg bg-primary p-3 text-primary-foreground hover:bg-primary/90 transition-colors">
+            <Button className="h-auto p-3" aria-label="Send message">
               <Send className="h-5 w-5" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

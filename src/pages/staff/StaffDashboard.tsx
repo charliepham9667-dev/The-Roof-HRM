@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, ListChecks, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, ListChecks, AlertTriangle, CloudSun, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../../stores/authStore';
-import { useShifts } from '../../hooks/useShifts';
+import { useShifts, useUpcomingShiftReminder } from '../../hooks/useShifts';
 import { useAnnouncements } from '../../hooks/useAnnouncements';
 import { useClockIn, useClockOut, useClockStatus } from '../../hooks/useClockRecords';
 import { useMyTaskTemplates, useTaskCompletion, useToggleTaskItem } from '../../hooks/useTasks';
@@ -244,6 +245,7 @@ export function StaffDashboard() {
 
   const { data: shifts } = useShifts(now);
   const { data: announcements } = useAnnouncements();
+  useUpcomingShiftReminder();
   const clockInMut = useClockIn();
   const clockOutMut = useClockOut();
   const { isLoading: clockStatusLoading } = useClockStatus();
@@ -397,9 +399,9 @@ export function StaffDashboard() {
           </div>
 
           {/* Centre */}
-          <div className="text-center">
-            <div className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">{dateLabel}</div>
-            <div className="mt-0.5 font-serif italic text-[14px] text-foreground">{getGreeting()}, {firstName}</div>
+          <div className="text-center min-w-0 shrink-0">
+            <div className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground whitespace-nowrap">{dateLabel}</div>
+            <div className="mt-0.5 font-serif italic text-[14px] text-foreground whitespace-nowrap">{getGreeting()}, {firstName}</div>
           </div>
 
           {/* Right */}
@@ -462,47 +464,62 @@ export function StaffDashboard() {
             {showCheckoutConfirm && (
               <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
                 <span className="text-xs text-destructive">End your shift and clock out?</span>
-                <button
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={handleClockOut}
                   disabled={clkPending}
-                  className="rounded bg-destructive px-3 py-1 text-xs font-semibold text-destructive-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+                  className="h-auto px-3 py-1 text-xs font-semibold"
                 >
                   {clkPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Yes, Check Out'}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowCheckoutConfirm(false)}
-                  className="rounded border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                  className="h-auto px-3 py-1 text-xs"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             )}
 
             {checkedIn && !showCheckoutConfirm && (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={toggleBreak}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`h-auto px-3 py-1.5 text-xs font-medium ${
                   onBreak
-                    ? 'border-warning/30 bg-warning/10 text-warning hover:bg-warning/20'
-                    : 'border-border bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    ? 'border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 hover:text-warning'
+                    : ''
                 }`}
               >
                 {onBreak ? '▶ End Break' : '☕ Take Break'}
-              </button>
+              </Button>
             )}
 
             {!showCheckoutConfirm && (
-              <button
-                onClick={checkedIn ? () => setShowCheckoutConfirm(true) : handleClockIn}
-                disabled={clkPending || clockStatusLoading}
-                className={`rounded-md px-4 py-1.5 text-xs font-semibold tracking-wide transition-colors disabled:opacity-60 ${
-                  checkedIn
-                    ? 'border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10'
-                    : 'bg-foreground text-background hover:opacity-80'
-                }`}
-              >
-                {clkPending ? <Loader2 className="h-3.5 w-3.5 animate-spin inline" /> : checkedIn ? '→ Check Out' : '→ Check In'}
-              </button>
+              checkedIn ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCheckoutConfirm(true)}
+                  disabled={clkPending || clockStatusLoading}
+                  className="h-auto px-4 py-1.5 text-xs font-semibold tracking-wide border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  {clkPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '→ Check Out'}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={handleClockIn}
+                  disabled={clkPending || clockStatusLoading}
+                  className="h-auto px-4 py-1.5 text-xs font-semibold tracking-wide"
+                >
+                  {clkPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '→ Check In'}
+                </Button>
+              )
             )}
           </div>
         </div>
@@ -550,7 +567,7 @@ export function StaffDashboard() {
 
         {/* Clock card */}
         <Panel className="flex flex-col items-center gap-2 px-3.5 py-4">
-          <span className="self-start text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">⚡ HQ — Da Nang</span>
+          <span className="self-start flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground"><Zap className="h-3 w-3 shrink-0" /> HQ — Da Nang</span>
           <AnalogClock date={now} />
           <span className="font-mono text-[22px] font-medium tabular-nums text-foreground">
             {pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}
@@ -561,14 +578,14 @@ export function StaffDashboard() {
         {/* Weather placeholder */}
         <Panel className="flex items-center px-5 py-4">
           <div className="flex-1">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">📅 Da Nang — Weather</p>
+            <p className="mb-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground"><CloudSun className="h-3 w-3 shrink-0" /> Da Nang — Weather</p>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-3xl">⛅</span>
               <span className="text-[28px] font-light text-foreground">27°</span>
             </div>
             <p className="text-[11px] text-muted-foreground">Broken Clouds · Humidity 78%</p>
             <div className="mt-2 inline-flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-              ⚡ Rain expected Saturday — prep covers &amp; heaters by 13:00
+              <Zap className="h-3 w-3 shrink-0" /> Rain expected Saturday — prep covers &amp; heaters by 13:00
             </div>
           </div>
           {/* forecast */}
@@ -651,12 +668,13 @@ export function StaffDashboard() {
             <span className="text-muted-foreground text-xs">→</span>
           </div>
           <div className="border-t border-border px-4 py-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => navigate('/staff/checklists')}
-              className="w-full rounded-[6px] border border-border py-2 text-[12px] font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
+              className="w-full h-auto py-2 text-[12px] font-medium"
             >
               Open Checklist
-            </button>
+            </Button>
           </div>
         </Panel>
 

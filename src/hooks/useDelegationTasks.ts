@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { DelegationTask, CreateDelegationTaskInput, TaskStatus, TaskPriority } from '../types';
+import { insertNotifications } from './useNotifications';
 
 // Get tasks assigned to current user
 export function useMyAssignedTasks() {
@@ -360,8 +361,18 @@ export function useCreateDelegationTask() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: ['delegation-tasks'] });
+      if (task.assigned_to && task.assigned_to !== task.assigned_by) {
+        insertNotifications([{
+          userId: task.assigned_to,
+          title: `New task: ${task.title}`,
+          body: task.description || undefined,
+          notificationType: 'task_assigned',
+          relatedType: 'task',
+          relatedId: task.id,
+        }]);
+      }
     },
   });
 }

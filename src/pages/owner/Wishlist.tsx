@@ -1,6 +1,9 @@
 import { useState, useMemo } from "react"
 import { Trash2, Plus, Pencil, Wrench, ShoppingCart, Music2, RefreshCw, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import type { BadgeProps } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/stores/authStore"
 import {
@@ -40,29 +43,44 @@ import {
 
 // ─── Shared config ─────────────────────────────────────────────────────────────
 
-const PRIORITY_BADGE: Record<WishlistPriority, { label: string; cls: string }> = {
-  high:   { label: "HIGH",   cls: "bg-[#ef4444]/15 text-[#991b1b] border-[#ef4444]/30" },
-  medium: { label: "MEDIUM", cls: "bg-[#f59e0b]/15 text-[#92400e] border-[#f59e0b]/30" },
-  low:    { label: "LOW",    cls: "bg-[#6b7280]/15 text-[#374151] border-[#6b7280]/30" },
+type BadgeVariant = BadgeProps["variant"]
+
+// Maps a badge variant to its active-state CSS classes (for selector buttons)
+const VARIANT_CLS: Record<NonNullable<BadgeVariant>, string> = {
+  default:     "bg-primary/10 text-primary border-primary/25",
+  secondary:   "bg-secondary text-secondary-foreground border-border",
+  destructive: "bg-destructive/10 text-destructive border-destructive/25",
+  outline:     "text-foreground border-border",
+  positive:    "bg-success/10 text-success border-success/25",
+  warning:     "bg-warning/10 text-warning border-warning/25",
+  danger:      "bg-error/10 text-error border-error/25",
+  neutral:     "bg-secondary text-muted-foreground border-border",
+  brand:       "bg-primary/10 text-primary border-primary/25",
 }
 
-const STATUS_BADGE: Record<WishlistStatus, { label: string; cls: string }> = {
-  request:   { label: "Request",   cls: "bg-[#6b7280]/15 text-[#374151] border-[#6b7280]/30" },
-  approved:  { label: "Approved",  cls: "bg-[#3b82f6]/15 text-[#1e40af] border-[#3b82f6]/30" },
-  ordered:   { label: "Ordered",   cls: "bg-[#f59e0b]/15 text-[#92400e] border-[#f59e0b]/30" },
-  delivered: { label: "Delivered", cls: "bg-[#10b981]/15 text-[#065f46] border-[#10b981]/30" },
+const PRIORITY_BADGE: Record<WishlistPriority, { label: string; variant: BadgeVariant }> = {
+  high:   { label: "HIGH",   variant: "danger"  },
+  medium: { label: "MEDIUM", variant: "warning" },
+  low:    { label: "LOW",    variant: "neutral" },
 }
 
-const MAINT_STATUS_CONFIG: Record<MaintenanceStatus, { label: string; cls: string; col: string }> = {
-  open:        { label: "Open",        cls: "bg-[#6b7280]/15 text-[#374151] border-[#6b7280]/30",   col: "border-t-[#6b7280]" },
-  in_progress: { label: "In Progress", cls: "bg-[#f59e0b]/15 text-[#92400e] border-[#f59e0b]/30",  col: "border-t-[#f59e0b]" },
-  done:        { label: "Done",        cls: "bg-[#10b981]/15 text-[#065f46] border-[#10b981]/30",   col: "border-t-[#10b981]" },
+const STATUS_BADGE: Record<WishlistStatus, { label: string; variant: BadgeVariant }> = {
+  request:   { label: "Request",   variant: "neutral"  },
+  approved:  { label: "Approved",  variant: "brand"    },
+  ordered:   { label: "Ordered",   variant: "warning"  },
+  delivered: { label: "Delivered", variant: "positive" },
 }
 
-const MAINT_PRIORITY_BADGE: Record<MaintenancePriority, { label: string; cls: string }> = {
-  high:   { label: "HIGH",   cls: "bg-[#ef4444]/15 text-[#991b1b] border-[#ef4444]/30" },
-  medium: { label: "MEDIUM", cls: "bg-[#f59e0b]/15 text-[#92400e] border-[#f59e0b]/30" },
-  low:    { label: "LOW",    cls: "bg-[#6b7280]/15 text-[#374151] border-[#6b7280]/30" },
+const MAINT_STATUS_CONFIG: Record<MaintenanceStatus, { label: string; variant: BadgeVariant; col: string }> = {
+  open:        { label: "Open",        variant: "neutral",  col: "border-t-muted-foreground" },
+  in_progress: { label: "In Progress", variant: "warning",  col: "border-t-warning" },
+  done:        { label: "Done",        variant: "positive", col: "border-t-success" },
+}
+
+const MAINT_PRIORITY_BADGE: Record<MaintenancePriority, { label: string; variant: BadgeVariant }> = {
+  high:   { label: "HIGH",   variant: "danger"  },
+  medium: { label: "MEDIUM", variant: "warning" },
+  low:    { label: "LOW",    variant: "neutral" },
 }
 
 const CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
@@ -217,7 +235,7 @@ function WishlistItemSheet({
                   onClick={() => setDraft((d) => ({ ...d, priority: p }))}
                   className={cn(
                     "rounded-sm border px-3 py-0.5 text-[10px] tracking-wide uppercase transition-all",
-                    draft.priority === p ? PRIORITY_BADGE[p].cls + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
+                    draft.priority === p ? VARIANT_CLS[PRIORITY_BADGE[p].variant!] + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
                   )}
                 >
                   {PRIORITY_BADGE[p].label}
@@ -236,7 +254,7 @@ function WishlistItemSheet({
                   onClick={() => setDraft((d) => ({ ...d, status: s }))}
                   className={cn(
                     "rounded-sm border px-3 py-0.5 text-[10px] tracking-wide transition-all",
-                    draft.status === s ? STATUS_BADGE[s].cls + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
+                    draft.status === s ? VARIANT_CLS[STATUS_BADGE[s].variant!] + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
                   )}
                 >
                   {STATUS_BADGE[s].label}
@@ -258,12 +276,12 @@ function WishlistItemSheet({
         </div>
 
         <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
-          <button type="button" onClick={() => onOpenChange(false)} className="rounded-sm border border-border px-4 py-2 text-xs text-muted-foreground hover:bg-secondary transition-colors">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-auto px-4 py-2 text-xs">
             Cancel
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={isPending} className="rounded-sm bg-primary px-4 py-2 text-xs text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
+          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} className="h-auto px-4 py-2 text-xs">
             {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Item"}
-          </button>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
@@ -382,7 +400,7 @@ function MaintenanceTaskSheet({
                   onClick={() => setDraft((d) => ({ ...d, priority: p }))}
                   className={cn(
                     "rounded-sm border px-3 py-0.5 text-[10px] tracking-wide uppercase transition-all",
-                    draft.priority === p ? MAINT_PRIORITY_BADGE[p].cls + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
+                    draft.priority === p ? VARIANT_CLS[MAINT_PRIORITY_BADGE[p].variant!] + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
                   )}
                 >
                   {MAINT_PRIORITY_BADGE[p].label}
@@ -401,7 +419,7 @@ function MaintenanceTaskSheet({
                   onClick={() => setDraft((d) => ({ ...d, status: s }))}
                   className={cn(
                     "rounded-sm border px-3 py-0.5 text-[10px] tracking-wide transition-all",
-                    draft.status === s ? MAINT_STATUS_CONFIG[s].cls + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
+                    draft.status === s ? VARIANT_CLS[MAINT_STATUS_CONFIG[s].variant!] + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
                   )}
                 >
                   {MAINT_STATUS_CONFIG[s].label}
@@ -435,12 +453,12 @@ function MaintenanceTaskSheet({
         </div>
 
         <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
-          <button type="button" onClick={() => onOpenChange(false)} className="rounded-sm border border-border px-4 py-2 text-xs text-muted-foreground hover:bg-secondary transition-colors">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-auto px-4 py-2 text-xs">
             Cancel
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={isPending} className="rounded-sm bg-primary px-4 py-2 text-xs text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
+          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} className="h-auto px-4 py-2 text-xs">
             {isPending ? "Saving…" : isEdit ? "Save Changes" : "Log Task"}
-          </button>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
@@ -531,14 +549,14 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
           ))}
         </div>
         {canManage && (
-          <button
+          <Button
             type="button"
             onClick={openAdd}
-            className="flex items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors shrink-0"
+            className="shrink-0"
           >
             <Plus className="h-4 w-4" />
             + Add Item
-          </button>
+          </Button>
         )}
       </div>
 
@@ -638,9 +656,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                               <div className="text-sm text-foreground">{item.quantity}</div>
                               <div className="text-sm text-foreground tabular-nums">{formatVnd(totalCost || item.estimatedCost)}</div>
                               <div>
-                                <span className={cn("rounded-sm border px-2 py-0.5 text-[9.5px] tracking-wide font-semibold uppercase", pri.cls)}>
-                                  {pri.label}
-                                </span>
+                                <Badge variant={pri.variant}>{pri.label}</Badge>
                               </div>
                               <div className="hidden sm:block text-xs text-muted-foreground truncate pr-2">{item.notes || "—"}</div>
                               <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -738,14 +754,15 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
           )}
         </div>
         {canManage && (
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={openAdd}
-            className="flex items-center gap-1.5 rounded-sm bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="h-auto px-3 py-1.5 text-xs font-medium"
           >
             <Plus className="h-3.5 w-3.5" />
             Log Task
-          </button>
+          </Button>
         )}
       </div>
 
@@ -804,12 +821,8 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                           </div>
 
                           <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                            <span className={cn("rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide font-semibold uppercase", pri.cls)}>
-                              {pri.label}
-                            </span>
-                            <span className="rounded-sm border border-border bg-secondary/50 px-1.5 py-0.5 text-[9px] tracking-wide text-muted-foreground uppercase">
-                              {CATEGORY_LABELS[task.category]}
-                            </span>
+                            <Badge variant={pri.variant}>{pri.label}</Badge>
+                            <Badge variant="neutral">{CATEGORY_LABELS[task.category]}</Badge>
                           </div>
 
                           {task.location && (
@@ -856,17 +869,17 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
 
 // ─── DJ Payments tab ───────────────────────────────────────────────────────────
 
-const DJ_STATUS_CONFIG = {
-  scheduled: { label: "Scheduled", cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  done:      { label: "Done",      cls: "bg-green-50 text-green-700 border-green-200" },
-  no_show:   { label: "No Show",   cls: "bg-red-50 text-red-700 border-red-200" },
-} as const
+const DJ_STATUS_CONFIG: Record<string, { label: string; variant: BadgeVariant }> = {
+  scheduled: { label: "Scheduled", variant: "brand"    },
+  done:      { label: "Done",      variant: "positive" },
+  no_show:   { label: "No Show",   variant: "danger"   },
+}
 
-const DJ_PAY_CONFIG = {
-  paid:   { label: "Paid",   cls: "bg-green-50 text-green-700 border-green-200" },
-  unpaid: { label: "Unpaid", cls: "bg-amber-50 text-[#b5620a] border-amber-200" },
-  na:     { label: "N/A",    cls: "bg-muted text-muted-foreground border-border" },
-} as const
+const DJ_PAY_CONFIG: Record<string, { label: string; variant: BadgeVariant }> = {
+  paid:   { label: "Paid",   variant: "positive" },
+  unpaid: { label: "Unpaid", variant: "warning"  },
+  na:     { label: "N/A",    variant: "neutral"  },
+}
 
 const DJ_PAYER_CONFIG = {
   foreigner_charlie: { label: "Charlie",  cls: "text-blue-600" },
@@ -1073,12 +1086,12 @@ function DJPaymentSheet({
         </div>
 
         <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
-          <button type="button" onClick={() => onOpenChange(false)} className="rounded border border-border px-4 py-1.5 text-xs text-muted-foreground hover:bg-secondary transition-colors">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-auto px-4 py-1.5 text-xs">
             Cancel
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={isPending} className="rounded bg-primary px-4 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} className="h-auto px-4 py-1.5 text-xs">
             {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Set"}
-          </button>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
@@ -1288,15 +1301,15 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <button type="button" onClick={exportCsv} className="flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
+          <Button type="button" variant="outline" onClick={exportCsv} className="h-auto px-3 py-1 text-[10px] font-medium">
             <Download className="h-3 w-3" />
             Export CSV
-          </button>
+          </Button>
           {canManage && (
-            <button type="button" onClick={openAdd} className="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+            <Button type="button" onClick={openAdd} className="h-auto px-3 py-1.5 text-[10px] font-semibold">
               <Plus className="h-3.5 w-3.5" />
               Add DJ Set
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -1443,13 +1456,9 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
                               type="button"
                               onClick={cycleStatus}
                               title="Click to change status"
-                              className={cn(
-                                "inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-semibold transition-opacity",
-                                statusCfg.cls,
-                                canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default",
-                              )}
+                              className={cn(canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default")}
                             >
-                              {statusCfg.label}
+                              <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
                             </button>
                           </td>
                           {/* Payment — click to cycle */}
@@ -1461,13 +1470,9 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
                                 type="button"
                                 onClick={cyclePayment}
                                 title="Click to change payment status"
-                                className={cn(
-                                  "inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-semibold transition-opacity",
-                                  payCfg.cls,
-                                  canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default",
-                                )}
+                                className={cn(canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default")}
                               >
-                                {payCfg.label}
+                                <Badge variant={payCfg.variant}>{payCfg.label}</Badge>
                               </button>
                             )}
                           </td>

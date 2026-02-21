@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/stores/authStore"
+import { insertNotifications } from "@/hooks/useNotifications"
 
 export interface ContentPost {
   id: string
@@ -52,8 +53,9 @@ export function useContentCalendar() {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
+    onSuccess: async (post) => {
       queryClient.invalidateQueries({ queryKey: ["content_calendar"] })
+      await notifyOwnersForApproval(post, profile?.id)
     },
   })
 
@@ -69,8 +71,12 @@ export function useContentCalendar() {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
+    onSuccess: async (post, variables) => {
       queryClient.invalidateQueries({ queryKey: ["content_calendar"] })
+      // Re-notify owners when a post is re-submitted for review (status set back to draft)
+      if (variables.status === 'draft') {
+        await notifyOwnersForApproval(post, profile?.id)
+      }
     },
   })
 
@@ -91,6 +97,38 @@ export function useContentCalendar() {
     createPost,
     updatePost,
     deletePost,
+  }
+}
+
+async function notifyOwnersForApproval(post: ContentPost, createdById?: string) {
+  try {
+    const { data: owners } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'owner')
+      .eq('is_active', true)
+      .eq('status', 'active')
+
+    if (!owners || owners.length === 0) return
+
+    const recipients = owners.filter((o: any) => o.id !== createdById)
+    if (recipients.length === 0) return
+
+    const platformLabel = post.platform === 'all' ? 'All Platforms' : post.platform.charAt(0).toUpperCase() + post.platform.slice(1)
+    const dateLabel = post.scheduled_date
+
+    await insertNotifications(
+      recipients.map((o: any) => ({
+        userId: o.id,
+        title: `Content needs approval: ${platformLabel} post on ${dateLabel}`,
+        body: post.caption ? (post.caption.length > 80 ? `${post.caption.slice(0, 80)}…` : post.caption) : undefined,
+        notificationType: 'content_approval' as const,
+        relatedType: 'content_post',
+        relatedId: post.id,
+      }))
+    )
+  } catch {
+    // notifications are best-effort
   }
 }
 

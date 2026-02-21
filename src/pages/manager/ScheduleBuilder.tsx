@@ -538,7 +538,7 @@ export function ScheduleBuilder() {
   return (
     <div className="space-y-3">
       {/* ── Schedule header bar ── */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between rounded-xl border border-border bg-card px-4 md:px-5 py-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between rounded-xl border border-border bg-card px-4 md:px-5 py-3 min-w-0">
         {/* Row 1: title + week nav + stats */}
         <div className="flex flex-wrap items-center gap-3 min-w-0">
           <h1 className="text-[28px] font-bold leading-tight text-foreground whitespace-nowrap">Schedule</h1>
@@ -575,8 +575,8 @@ export function ScheduleBuilder() {
 
           {/* Stats pills — wrap naturally */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11.5px] font-medium text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="flex items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2.5 py-1 text-[11.5px] font-medium text-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
               {onShiftNowCount} on shift now
             </div>
             <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11.5px] text-muted-foreground">
@@ -586,7 +586,7 @@ export function ScheduleBuilder() {
         </div>
 
         {/* Row 2 (mobile) / Right side (desktop): actions */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {isDesktop && (
             <Input
               value={teamQuery}
@@ -620,7 +620,7 @@ export function ScheduleBuilder() {
           </Button>
           <Button
             size="sm"
-            className="bg-foreground text-background hover:bg-foreground/90 text-xs gap-1.5"
+            className="text-xs gap-1.5"
             onClick={() => openNewShift({ employeeId: "open", date: toYmd(weekStart) })}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -660,13 +660,13 @@ export function ScheduleBuilder() {
                     const dayHrs = shifts
                       .filter((s) => s.date === ymd && s.status !== "cancelled")
                       .reduce((sum, s) => sum + hoursBetween(s.start_time, s.end_time), 0)
-                    const badgeCls = staffCount >= 6
-                      ? "bg-emerald-100 text-emerald-700"
+                    const badgeVariant = staffCount >= 6
+                      ? "positive"
                       : staffCount >= 3
-                        ? "bg-amber-100 text-amber-700"
+                        ? "warning"
                         : staffCount === 0
-                          ? "bg-muted text-muted-foreground"
-                          : "bg-red-100 text-red-700"
+                          ? "neutral"
+                          : "danger"
                     return (
                       <div
                         key={ymd}
@@ -679,9 +679,9 @@ export function ScheduleBuilder() {
                           {d.toLocaleDateString(undefined, { weekday: "short" })},{" "}
                           {d.toLocaleDateString(undefined, { month: "short" })} {d.getDate()}
                         </div>
-                        <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", badgeCls)}>
+                        <Badge variant={badgeVariant as "positive" | "warning" | "neutral" | "danger"} className="mt-1">
                           {staffCount === 0 ? "No shifts" : `${staffCount} staff`}
-                        </span>
+                        </Badge>
                         {dayHrs > 0 && (
                           <div className="mt-0.5 text-[10px] text-muted-foreground font-mono">{dayHrs.toFixed(1)}h total</div>
                         )}
@@ -1608,9 +1608,7 @@ function MobileDayList({
                           </div>
                           <div className="flex items-center gap-2">
                             {s.role ? (
-                              <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                                {s.role}
-                              </Badge>
+                              <Badge variant="brand">{s.role}</Badge>
                             ) : null}
                           </div>
                         </button>

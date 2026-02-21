@@ -390,17 +390,18 @@ function AnnouncementForm({ onClose, editId }: AnnouncementFormProps) {
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="px-4 py-2 text-sm font-medium h-auto"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isPending}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium h-auto"
             >
               {isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -408,7 +409,7 @@ function AnnouncementForm({ onClose, editId }: AnnouncementFormProps) {
                 <Send className="h-4 w-4" />
               )}
               {editId ? 'Update' : 'Post'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

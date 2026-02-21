@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
+import { insertNotifications } from './useNotifications';
 
 export interface Shift {
   id: string;
@@ -293,6 +295,67 @@ export function usePendingProfiles() {
       if (error) throw error;
       return data || [];
     },
+  });
+}
+
+// Check for upcoming shifts within 24 hours and create a reminder notification
+// if one has not been sent yet for the shift. Safe to call on every app load.
+export function useUpcomingShiftReminder() {
+  const profile = useAuthStore((s) => s.profile);
+
+  return useQuery({
+    queryKey: ['upcoming-shift-reminder', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+
+      const now = new Date();
+      const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const todayIso = now.toISOString().split('T')[0];
+      const tomorrowIso = in24h.toISOString().split('T')[0];
+
+      const { data: shifts, error: shiftsError } = await supabase
+        .from('shifts')
+        .select('id, shift_date, start_time, end_time, role')
+        .eq('staff_id', profile.id)
+        .in('shift_date', [todayIso, tomorrowIso])
+        .eq('status', 'scheduled')
+        .order('shift_date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(3);
+
+      if (shiftsError || !shifts || shifts.length === 0) return null;
+
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('related_id')
+        .eq('user_id', profile.id)
+        .eq('notification_type', 'shift_reminder')
+        .in('related_id', shifts.map((s) => s.id));
+
+      const notifiedIds = new Set((existing || []).map((n: any) => n.related_id));
+      const unnotified = shifts.filter((s) => !notifiedIds.has(s.id));
+
+      if (unnotified.length === 0) return null;
+
+      await insertNotifications(
+        unnotified.map((shift) => {
+          const isToday = shift.shift_date === todayIso;
+          return {
+            userId: profile.id,
+            title: `${isToday ? 'Today' : 'Tomorrow'}'s shift: ${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}`,
+            body: `You have a ${shift.role} shift scheduled`,
+            notificationType: 'shift_reminder' as const,
+            relatedType: 'shift',
+            relatedId: shift.id,
+          };
+        })
+      );
+
+      return unnotified.length;
+    },
+    enabled: !!profile?.id,
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
   });
 }
 

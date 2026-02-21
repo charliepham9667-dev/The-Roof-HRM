@@ -1,17 +1,28 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
+  BookOpen,
+  Briefcase,
+  ClipboardList,
   FileText,
-  Plus,
-  ExternalLink,
-  X,
-  Loader2,
-  AlertCircle,
-  Search,
-  FileSpreadsheet,
-  Presentation,
-  Link,
-  Video,
   FolderOpen,
+  Grid3x3,
+  Link,
+  Loader2,
+  Plus,
+  Presentation,
+  Search,
+  Shield,
+  Sparkles,
+  UtensilsCrossed,
+  Users,
+  Video,
+  X,
+  AlertCircle,
+  ExternalLink,
+  FileSpreadsheet,
+  FlaskConical,
+  ScrollText,
 } from 'lucide-react'
 import { useResources, useCreateResource, useDeleteResource } from '../../hooks/useResources'
 import type { ResourceLink, ResourceCategory } from '../../types'
@@ -21,19 +32,19 @@ import { cn } from '@/lib/utils'
 
 const CATEGORY_CONFIG: Record<ResourceCategory, {
   label: string
-  icon: string
+  icon: React.ReactNode
   colorClass: string
   badgeClass: string
 }> = {
-  sop:      { label: 'SOPs',      icon: '📋', colorClass: 'text-info',            badgeClass: 'border-info/20 bg-info/8 text-info' },
-  training: { label: 'Training',  icon: '📚', colorClass: 'text-success',         badgeClass: 'border-success/20 bg-success/8 text-success' },
-  safety:   { label: 'Safety',    icon: '🛡️',  colorClass: 'text-error',           badgeClass: 'border-error/20 bg-error/8 text-error' },
-  branding: { label: 'Branding',  icon: '✦',  colorClass: 'text-purple-400',      badgeClass: 'border-purple-400/20 bg-purple-400/8 text-purple-400' },
-  hr:       { label: 'HR',        icon: '👥', colorClass: 'text-warning',         badgeClass: 'border-warning/20 bg-warning/8 text-warning' },
-  menu:     { label: 'Menu',      icon: '🍽️',  colorClass: 'text-primary',         badgeClass: 'border-primary/20 bg-primary/8 text-primary' },
-  recipes:  { label: 'Recipes',   icon: '🧪', colorClass: 'text-teal-500',        badgeClass: 'border-teal-500/20 bg-teal-500/8 text-teal-500' },
-  licenses: { label: 'Licenses',  icon: '📜', colorClass: 'text-cyan-400',        badgeClass: 'border-cyan-400/20 bg-cyan-400/8 text-cyan-400' },
-  other:    { label: 'Other',     icon: '◎',  colorClass: 'text-muted-foreground', badgeClass: 'border-border bg-secondary text-muted-foreground' },
+  sop:      { label: 'SOPs',      icon: <ClipboardList className="h-[18px] w-[18px]" />, colorClass: 'text-info',             badgeClass: 'border-info/20 bg-info/8 text-info' },
+  training: { label: 'Training',  icon: <BookOpen className="h-[18px] w-[18px]" />,      colorClass: 'text-success',          badgeClass: 'border-success/20 bg-success/8 text-success' },
+  safety:   { label: 'Safety',    icon: <Shield className="h-[18px] w-[18px]" />,         colorClass: 'text-error',            badgeClass: 'border-error/20 bg-error/8 text-error' },
+  branding: { label: 'Branding',  icon: <Sparkles className="h-[18px] w-[18px]" />,       colorClass: 'text-purple-400',       badgeClass: 'border-purple-400/20 bg-purple-400/8 text-purple-400' },
+  hr:       { label: 'HR',        icon: <Users className="h-[18px] w-[18px]" />,          colorClass: 'text-warning',          badgeClass: 'border-warning/20 bg-warning/8 text-warning' },
+  menu:     { label: 'Menu',      icon: <UtensilsCrossed className="h-[18px] w-[18px]" />, colorClass: 'text-primary',         badgeClass: 'border-primary/20 bg-primary/8 text-primary' },
+  recipes:  { label: 'Recipes',   icon: <FlaskConical className="h-[18px] w-[18px]" />,   colorClass: 'text-teal-500',         badgeClass: 'border-teal-500/20 bg-teal-500/8 text-teal-500' },
+  licenses: { label: 'Licenses',  icon: <ScrollText className="h-[18px] w-[18px]" />,     colorClass: 'text-cyan-400',         badgeClass: 'border-cyan-400/20 bg-cyan-400/8 text-cyan-400' },
+  other:    { label: 'Other',     icon: <Briefcase className="h-[18px] w-[18px]" />,       colorClass: 'text-muted-foreground', badgeClass: 'border-border bg-secondary text-muted-foreground' },
 }
 
 // ─── File type config ────────────────────────────────────────────────────────
@@ -96,47 +107,32 @@ export function Resources() {
     <div className="space-y-6">
 
       {/* ── Page header ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-4 min-w-0">
+        <div className="min-w-0">
           <h1 className="text-[28px] font-bold leading-tight text-foreground">Resource Library</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             SOPs, training materials, and important documents — all linked to Google Drive
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setShowAdd(true)}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors"
+          className="shrink-0 whitespace-nowrap"
         >
           <Plus className="h-4 w-4" />
           + Add Resource
-        </button>
+        </Button>
       </div>
 
-      {/* ── Category tabs — Row 1 ── */}
-      <div className="grid grid-cols-5 md:grid-cols-7 lg:grid-cols-[repeat(5,1fr)] gap-2">
-        {/* All */}
+      {/* ── Category tabs ── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-none">
         <CategoryTab
-          icon="◈"
+          icon={<Grid3x3 className="h-[18px] w-[18px]" />}
           label="All"
           count={countFor('all')}
           active={categoryFilter === 'all'}
           onClick={() => setCategoryFilter('all')}
         />
-        {(Object.keys(CATEGORY_CONFIG) as ResourceCategory[]).slice(0, 4).map((cat) => (
-          <CategoryTab
-            key={cat}
-            icon={CATEGORY_CONFIG[cat].icon}
-            label={CATEGORY_CONFIG[cat].label}
-            count={countFor(cat)}
-            active={categoryFilter === cat}
-            onClick={() => setCategoryFilter(categoryFilter === cat ? 'all' : cat)}
-          />
-        ))}
-      </div>
-
-      {/* ── Category tabs — Row 2 ── */}
-      <div className="grid grid-cols-5 md:grid-cols-7 lg:grid-cols-[repeat(5,1fr)] gap-2 -mt-3">
-        {(Object.keys(CATEGORY_CONFIG) as ResourceCategory[]).slice(4).map((cat) => (
+        {(Object.keys(CATEGORY_CONFIG) as ResourceCategory[]).map((cat) => (
           <CategoryTab
             key={cat}
             icon={CATEGORY_CONFIG[cat].icon}
@@ -157,13 +153,18 @@ export function Resources() {
               key={t}
               onClick={() => setTypeFilter(t)}
               className={cn(
-                'rounded-full border px-3 py-0.5 text-[10px] tracking-wide uppercase transition-colors',
+                'flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[10px] tracking-wide uppercase transition-colors',
                 typeFilter === t
                   ? 'bg-foreground border-foreground text-background'
                   : 'border-border bg-card text-muted-foreground hover:border-border/80 hover:text-secondary-foreground',
               )}
             >
-              {t === 'all' ? 'All' : t === 'pdf' ? '📄 PDF' : t === 'doc' ? '📝 Doc' : t === 'sheet' ? '📊 Sheet' : t === 'slide' ? '📑 Slides' : t === 'video' ? '🎬 Video' : '🔗 Link'}
+              {t === 'all' ? 'All' : (
+                <>
+                  <span className={cn("opacity-70", typeFilter === t ? "text-background" : "")}>{FILE_CONFIG[t].icon}</span>
+                  {FILE_CONFIG[t].label}
+                </>
+              )}
             </button>
           ))}
         </div>
@@ -229,12 +230,12 @@ export function Resources() {
 
 function CategoryTab({
   icon, label, count, active, onClick,
-}: { icon: string; label: string; count: number; active: boolean; onClick: () => void }) {
+}: { icon: React.ReactNode; label: string; count: number; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'relative flex flex-col items-center gap-1.5 rounded-card border px-2 py-3 text-center transition-all shadow-card hover:shadow-md hover:-translate-y-px',
+        'relative flex shrink-0 flex-col items-center gap-1.5 rounded-card border px-2 py-3 text-center transition-all shadow-card hover:shadow-md hover:-translate-y-px min-w-[68px]',
         active
           ? 'border-primary/40 bg-primary/[0.06]'
           : 'border-border bg-card hover:border-border/80',
@@ -243,7 +244,7 @@ function CategoryTab({
       {active && (
         <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />
       )}
-      <span className="text-xl leading-none">{icon}</span>
+      <span className="leading-none flex items-center justify-center">{icon}</span>
       <span className={cn(
         'text-[9px] tracking-wide uppercase leading-none',
         active ? 'text-primary' : 'text-secondary-foreground',
@@ -392,21 +393,23 @@ function DetailModal({ resource, onClose }: { resource: ResourceLink; onClose: (
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-secondary/30">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="rounded-sm border border-border px-4 py-1.5 text-xs tracking-wide text-muted-foreground uppercase hover:text-secondary-foreground transition-colors"
+            className="h-auto px-4 py-1.5 text-xs tracking-wide uppercase"
           >
             Close
-          </button>
-          <a
-            href={resource.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-sm bg-primary px-4 py-1.5 text-xs tracking-wide text-primary-foreground uppercase hover:bg-primary/90 transition-colors"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Open in Drive
-          </a>
+          </Button>
+          <Button asChild className="h-auto px-4 py-1.5 text-xs tracking-wide uppercase">
+            <a
+              href={resource.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open in Drive
+            </a>
+          </Button>
         </div>
       </div>
     </div>
@@ -524,21 +527,22 @@ function AddModal({ onClose }: { onClose: () => void }) {
 
           {/* Footer */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-secondary/30">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="rounded-sm border border-border px-4 py-1.5 text-xs tracking-wide text-muted-foreground uppercase hover:text-secondary-foreground transition-colors"
+              className="h-auto px-4 py-1.5 text-xs tracking-wide uppercase"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={createResource.isPending}
-              className="flex items-center gap-2 rounded-sm bg-primary px-4 py-1.5 text-xs tracking-wide text-primary-foreground uppercase hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              className="h-auto px-4 py-1.5 text-xs tracking-wide uppercase"
             >
               {createResource.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
               Save Resource
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, CalendarDays } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../../stores/authStore';
 import { useShifts } from '../../hooks/useShifts';
 import type { Shift } from '../../hooks/useShifts';
@@ -122,7 +123,7 @@ function SwapModal({ shift, teammates, onClose, onSubmit, submitting }: SwapModa
 
           {/* Shift being swapped */}
           <div className="flex items-start gap-3 rounded-md border border-border px-3 py-3">
-            <span className="text-base">📅</span>
+            <CalendarDays className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
             <div>
               <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Shift to swap</div>
               <div className="mt-0.5 text-sm font-medium text-foreground">{timeLabel}</div>
@@ -179,19 +180,20 @@ function SwapModal({ shift, teammates, onClose, onSubmit, submitting }: SwapModa
 
         {/* Footer */}
         <div className="flex gap-3 border-t border-border px-5 py-4">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary"
+            className="flex-1 h-auto py-2.5 text-sm font-medium"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={submitting}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-80 disabled:opacity-60"
+            className="flex-1 h-auto py-2.5 text-sm font-semibold"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Request →'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -273,8 +275,16 @@ export function MyShifts() {
   return (
     <div className="flex flex-col gap-5">
 
+      {/* ── PAGE HEADER ──────────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">My Shifts</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          View your schedule, upcoming shifts, and manage swap requests
+        </p>
+      </div>
+
       {/* ── WEEK SUMMARY STATS ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
         {[
           {
             label: 'This Week',
@@ -305,12 +315,12 @@ export function MyShifts() {
             valueSmall: true,
           },
         ].map((s) => (
-          <div key={s.label} className="rounded-card border border-border bg-card px-5 py-4 shadow-card">
+          <div key={s.label} className="rounded-card border border-border bg-card px-5 py-4 shadow-card min-w-0">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{s.label}</div>
-            <div className={`font-mono leading-none ${s.valueClass} ${s.valueSmall ? 'text-lg font-semibold' : 'text-[26px] font-medium'}`}>
+            <div className={`font-mono leading-none truncate ${s.valueClass} ${s.valueSmall ? 'text-lg font-semibold' : 'text-[26px] font-medium'}`}>
               {s.value}
             </div>
-            <div className="mt-1.5 text-[11px] text-muted-foreground">{s.sub}</div>
+            <div className="mt-1.5 text-[11px] text-muted-foreground truncate">{s.sub}</div>
           </div>
         ))}
       </div>
@@ -366,8 +376,9 @@ export function MyShifts() {
         </div>
 
         {/* 7-day grid */}
-        <div className="overflow-x-auto pb-1">
-        <div className="grid grid-cols-7 gap-2.5 min-w-[560px]">
+        <div className="relative">
+          <div className="overflow-x-auto pb-1 scrollbar-none">
+          <div className="grid grid-cols-7 gap-2.5 min-w-[560px]">
           {weekDays.map((day) => {
             const iso = toISO(day);
             const isToday = iso === todayIso;
@@ -436,7 +447,10 @@ export function MyShifts() {
             );
           })}
         </div>
-        </div>
+          </div>{/* end overflow-x-auto */}
+          {/* Right-edge fade — visible only when calendar can scroll (below xl) */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-10 xl:hidden bg-gradient-to-l from-background to-transparent" />
+        </div>{/* end relative */}
       </div>
 
       {/* ── UPCOMING SHIFTS TABLE ────────────────────────────────────── */}

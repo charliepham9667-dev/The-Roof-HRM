@@ -2,12 +2,22 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Activity,
+  AlertTriangle,
+  BarChart2,
   CalendarClock,
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Megaphone,
   Pencil,
+  Sparkles,
   Trash2,
+  Zap,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   useAllDelegationTasks,
   useCreateDelegationTask,
@@ -22,6 +32,7 @@ import { useAuthStore } from "@/stores/authStore"
 import type { BoardColumnKey, CreateDelegationTaskInput, DelegationTask, TaskCategory, TaskStatus } from "@/types"
 import { KanbanBoard, COLUMNS } from "@/components/dashboard/KanbanBoard"
 import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
 import { SectionTitle } from "@/components/ui/section-title"
 import { useStaffList, useTodayShifts } from "@/hooks/useShifts"
 import { useGoogleReviews, useKPISummary, useRevenueVelocity } from "@/hooks/useDashboardData"
@@ -91,11 +102,11 @@ function isClubNight(weekday: string) {
 }
 
 
-function priorityPill(priority: string) {
+function priorityPill(priority: string): { label: string; variant: "danger" | "warning" | "neutral" } {
   const p = String(priority || "").toLowerCase()
-  if (p === "urgent" || p === "high") return { label: p.toUpperCase(), className: "bg-error/10 text-error border border-error/20" }
-  if (p === "medium") return { label: "MEDIUM", className: "bg-muted text-muted-foreground border border-border" }
-  return { label: "LOW", className: "bg-muted text-muted-foreground border border-border" }
+  if (p === "urgent" || p === "high") return { label: p.toUpperCase(), variant: "danger"  }
+  if (p === "medium")                 return { label: "MEDIUM",        variant: "warning" }
+  return                                     { label: "LOW",           variant: "neutral" }
 }
 
 function formatPipelineWhen(dateIso: string, startTime: string | null, endTime: string | null) {
@@ -107,6 +118,26 @@ function formatPipelineWhen(dateIso: string, startTime: string | null, endTime: 
   const datePart = `${weekday} ${day} ${month}`
   if (startTime && endTime) return `${datePart}, ${startTime} - ${endTime}`
   return datePart
+}
+
+function buildWeekDates(anchorIso: string) {
+  const [y, m, d] = anchorIso.split("-").map(Number)
+  const anchor = new Date(Date.UTC(y, m - 1, d))
+  const dowMon0 = (anchor.getUTCDay() + 6) % 7
+  const start = new Date(Date.UTC(y, m - 1, d - dowMon0))
+  const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+  return Array.from({ length: 7 }, (_, i) => {
+    const dt = new Date(start)
+    dt.setUTCDate(start.getUTCDate() + i)
+    return { day: dayNames[i], dateNum: dt.getUTCDate(), iso: dt.toISOString().slice(0, 10) }
+  })
+}
+
+function fmtWeekRange(dates: { iso: string; dateNum: number }[]) {
+  const [, fm, fd] = dates[0].iso.split("-").map(Number)
+  const [, lm, ld] = dates[6].iso.split("-").map(Number)
+  const mo = (n: number) => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][n - 1]
+  return `${mo(fm)} ${fd} – ${mo(lm)} ${ld}`
 }
 
 function mapToBoardColumn(t: DelegationTask, todayIso: string, myUserId: string): BoardColumnKey {
@@ -317,22 +348,16 @@ export default function OwnerDashboardPage() {
     return map
   }, [weekCsv])
 
+  const [weekOffset, setWeekOffset] = useState(0)
+  const isCurrentWeek = weekOffset === 0
+
   const weekDates = useMemo(() => {
-    // Build Mon..Sun for the current week, using todayIso as anchor (stable, timezone-safe).
-    const [y, m, d] = todayIso.split("-").map((x) => Number(x))
-    const anchor = new Date(Date.UTC(y, m - 1, d))
-    const dowMon0 = (anchor.getUTCDay() + 6) % 7 // Mon=0..Sun=6
-    const start = new Date(Date.UTC(y, m - 1, d - dowMon0))
-    const out: Array<{ day: string; dateNum: number; iso: string }> = []
-    const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
-    for (let i = 0; i < 7; i++) {
-      const dt = new Date(start)
-      dt.setUTCDate(start.getUTCDate() + i)
-      const iso = dt.toISOString().slice(0, 10)
-      out.push({ day: dayNames[i], dateNum: dt.getUTCDate(), iso })
-    }
-    return out
-  }, [todayIso])
+    const base = buildWeekDates(todayIso)
+    if (weekOffset === 0) return base
+    const [y, m, d] = base[0].iso.split("-").map(Number)
+    const shifted = new Date(Date.UTC(y, m - 1, d + weekOffset * 7))
+    return buildWeekDates(shifted.toISOString().slice(0, 10))
+  }, [todayIso, weekOffset])
 
   const pipelineRows = useMemo(() => {
     const byDate = new Map<string, typeof roofEvents>()
@@ -342,42 +367,32 @@ export default function OwnerDashboardPage() {
       list.push(e)
       byDate.set(e.dateIso, list)
     }
-
-    return weekDates.map((d) => {
+    const rows: Array<{
+      iso: string; day: string; dateNum: number; isToday: boolean; isFirstForDay: boolean;
+      event: string; when: string; dj1: string; dj2: string; genre: string; promo: string;
+    }> = []
+    for (const d of weekDates) {
       const dayEvents = (byDate.get(d.iso) || [])
         .filter((e) => e.eventName)
         .slice()
         .sort((a, b) => (a.startMinutes ?? 999999) - (b.startMinutes ?? 999999))
-
-      const first = dayEvents[0]
-      if (!first) {
-        return {
-          iso: d.iso,
-          isToday: d.iso === todayIso,
-          event: "TBD",
-          when: formatPipelineWhen(d.iso, null, null),
-          dj1: "—",
-          dj2: "—",
-          genre: "—",
-          promo: "—",
-        }
+      const isToday = d.iso === todayIso && isCurrentWeek
+      if (dayEvents.length === 0) {
+        rows.push({ iso: d.iso, day: d.day, dateNum: d.dateNum, isToday, isFirstForDay: true, event: "TBD", when: formatPipelineWhen(d.iso, null, null), dj1: "—", dj2: "—", genre: "—", promo: "—" })
+      } else {
+        dayEvents.forEach((ev, i) => {
+          rows.push({
+            iso: d.iso, day: d.day, dateNum: d.dateNum, isToday, isFirstForDay: i === 0,
+            event: ev.eventName,
+            when: formatPipelineWhen(d.iso, ev.startTime, ev.endTime),
+            dj1: ev.dj1 || "—", dj2: ev.dj2 || "—",
+            genre: ev.genre || "—", promo: ev.promotion || "—",
+          })
+        })
       }
-
-      const extraCount = Math.max(0, dayEvents.length - 1)
-      const eventLabel = `${first.eventName}${extraCount ? ` +${extraCount} more` : ""}`
-
-      return {
-        iso: d.iso,
-        isToday: d.iso === todayIso,
-        event: eventLabel,
-        when: formatPipelineWhen(d.iso, first.startTime, first.endTime),
-        dj1: first.dj1 || "—",
-        dj2: first.dj2 || "—",
-        genre: first.genre || "—",
-        promo: first.promotion || "—",
-      }
-    })
-  }, [roofEvents, weekDates, todayIso])
+    }
+    return rows
+  }, [roofEvents, weekDates, todayIso, isCurrentWeek])
 
   const { data: allTasks = [], isLoading: tasksLoading } = useAllDelegationTasks([
     "todo",
@@ -642,8 +657,7 @@ export default function OwnerDashboardPage() {
           <div className="flex items-stretch gap-0">
             {/* Current conditions */}
             <div className="min-w-[200px] border-r border-border pr-6">
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Da Nang · Weather</div>
-              <div className="mt-2 flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <div className="text-[32px]">🌤</div>
                 <div className="font-display text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
               </div>
@@ -651,7 +665,7 @@ export default function OwnerDashboardPage() {
 
               <div className="mt-3 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
                 <div className="flex items-center gap-1.5">
-                  <span>⚡</span>
+                  <Zap className="h-3.5 w-3.5 shrink-0" />
                   <span>Rain expected Saturday — prep covers & heaters by 13:00</span>
                 </div>
                 <button
@@ -673,9 +687,9 @@ export default function OwnerDashboardPage() {
                   className="mt-1.5 flex items-center gap-1 rounded bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info hover:bg-info/20 disabled:opacity-60 transition-colors"
                 >
                   {rainTaskState === 'saving' ? (
-                    <><span className="animate-spin">⟳</span> Creating…</>
+                    <><Activity className="h-3 w-3 animate-spin" /> Creating…</>
                   ) : rainTaskState === 'done' ? (
-                    <>✓ Task Created</>
+                    <><CheckCircle2 className="h-3 w-3" /> Task Created</>
                   ) : (
                     <>+ Create Task</>
                   )}
@@ -1091,19 +1105,26 @@ export default function OwnerDashboardPage() {
             </div>
 
             {tasksLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <div className="text-xs text-muted-foreground">Loading tasks…</div>
+              <div className="overflow-hidden rounded-card border border-border bg-card shadow-card divide-y divide-border">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="grid grid-cols-[1fr_110px_90px_80px] items-center px-3 py-2.5 gap-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-5 w-16 rounded-sm" />
+                    <Skeleton className="h-5 w-14 rounded-sm" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                ))}
               </div>
             ) : taskView === "list" ? (
               <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
                 {/* Status filter pills */}
                 <div className="flex items-center gap-1.5 flex-wrap px-3 py-2.5 border-b border-border bg-secondary/30">
                   {([
-                    { value: "all",         label: "All",          cls: "border-border text-muted-foreground" },
-                    { value: "todo",        label: "Not Started",  cls: "border-[#6b7280]/40 text-[#6b7280] bg-[#6b7280]/10" },
-                    { value: "in_progress", label: "In Progress",  cls: "border-[#3b82f6]/40 text-[#3b82f6] bg-[#3b82f6]/10" },
-                    { value: "finish_today",label: "Finish Today", cls: "border-primary/40 text-primary bg-primary/10" },
-                    { value: "done",        label: "Done",         cls: "border-[#10b981]/40 text-[#10b981] bg-[#10b981]/10" },
+                    { value: "all",          label: "All",          activeCls: "border-border text-foreground bg-secondary" },
+                    { value: "todo",         label: "Not Started",  activeCls: "border-border bg-secondary text-muted-foreground" },
+                    { value: "in_progress",  label: "In Progress",  activeCls: "bg-primary/10 border-primary/25 text-primary" },
+                    { value: "finish_today", label: "Finish Today", activeCls: "bg-warning/10 border-warning/25 text-warning" },
+                    { value: "done",         label: "Done",         activeCls: "bg-success/10 border-success/25 text-success" },
                   ] as const).map((f) => (
                     <button
                       key={f.value}
@@ -1112,7 +1133,7 @@ export default function OwnerDashboardPage() {
                       className={cn(
                         "rounded-sm border px-2 py-0.5 text-[10px] tracking-wide uppercase transition-colors",
                         listStatusFilter === f.value
-                          ? f.cls + " font-semibold"
+                          ? f.activeCls + " font-semibold"
                           : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
                       )}
                     >
@@ -1139,12 +1160,12 @@ export default function OwnerDashboardPage() {
 
                 {/* Rows */}
                 {(() => {
-                  const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-                    todo:        { label: "Not Started",  cls: "border-[#6b7280]/30 bg-[#6b7280]/10 text-[#6b7280]" },
-                    in_progress: { label: "In Progress",  cls: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]" },
-                    finish_today:{ label: "Finish Today", cls: "border-primary/30 bg-primary/10 text-primary" },
-                    done:        { label: "Done",         cls: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]" },
-                    blocked:     { label: "Delegated",    cls: "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]" },
+                  const STATUS_BADGE: Record<string, { label: string; variant: "neutral" | "brand" | "positive" | "danger" | "warning" }> = {
+                    todo:         { label: "Not Started",  variant: "neutral"  },
+                    in_progress:  { label: "In Progress",  variant: "brand"    },
+                    finish_today: { label: "Finish Today", variant: "warning"  },
+                    done:         { label: "Done",         variant: "positive" },
+                    blocked:      { label: "Delegated",    variant: "danger"   },
                   }
                   const filtered = boardTasks.filter((t) => {
                     if (myUserId && t.assignedTo && t.assignedTo !== myUserId) return false
@@ -1179,14 +1200,10 @@ export default function OwnerDashboardPage() {
                           {t.title}
                         </div>
                         <div>
-                          <span className={cn("rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide uppercase", badge.cls)}>
-                            {badge.label}
-                          </span>
+                          <Badge variant={badge.variant}>{badge.label}</Badge>
                         </div>
                         <div>
-                          <span className={cn("rounded-sm border px-1.5 py-0.5 text-[10px] tracking-wide uppercase", pri.className)}>
-                            {pri.label}
-                          </span>
+                          <Badge variant={pri.variant}>{pri.label}</Badge>
                         </div>
                         <div className={cn("text-[10px] tabular-nums", isOverdue ? "text-error" : "text-muted-foreground")}>
                           {formatDue(t.dueDate)}
@@ -1219,14 +1236,14 @@ export default function OwnerDashboardPage() {
               {followUpList.length > 0 && (
                 <div className="flex items-center gap-1.5 ml-auto shrink-0">
                   {followUpList.filter((x) => x.task.priority === "urgent").length > 0 && (
-                    <span className="rounded-sm border border-error/25 bg-error/8 px-1.5 py-0.5 text-[9px] tracking-wide text-error uppercase">
+                    <Badge variant="danger">
                       {followUpList.filter((x) => x.task.priority === "urgent").length} urgent
-                    </span>
+                    </Badge>
                   )}
                   {followUpList.filter((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done").length > 0 && (
-                    <span className="rounded-sm border border-warning/25 bg-warning/8 px-1.5 py-0.5 text-[9px] tracking-wide text-warning uppercase">
+                    <Badge variant="warning">
                       {followUpList.filter((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done").length} overdue
-                    </span>
+                    </Badge>
                   )}
                 </div>
               )}
@@ -1260,15 +1277,15 @@ export default function OwnerDashboardPage() {
                     : "border-l-border"
 
                   // Badge config
-                  const badge = isDone
-                    ? { label: "✓ Done",    cls: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]" }
+                  const badge: { label: string; variant: "positive" | "danger" | "warning" | "brand" | "neutral" } = isDone
+                    ? { label: "✓ Done",    variant: "positive" }
                     : isOverdue
-                    ? { label: `↑ Overdue ${Math.round((new Date(todayIso).getTime() - new Date(task.dueDate!).getTime()) / 86400000)}d`, cls: "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]" }
+                    ? { label: `↑ Overdue ${Math.round((new Date(todayIso).getTime() - new Date(task.dueDate!).getTime()) / 86400000)}d`, variant: "danger" }
                     : task.dueDate === todayIso
-                    ? { label: "🔥 Today",  cls: "border-primary/30 bg-primary/10 text-primary" }
+                    ? { label: "🔥 Today",  variant: "warning" }
                     : isFresh
-                    ? { label: "↑ Today",   cls: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]" }
-                    : { label: "This Week", cls: "border-border bg-secondary text-muted-foreground" }
+                    ? { label: "↑ Today",   variant: "brand"   }
+                    : { label: "This Week", variant: "neutral"  }
 
                   return (
                     <button
@@ -1287,7 +1304,7 @@ export default function OwnerDashboardPage() {
                         "shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center",
                         isDone ? "border-[#10b981] bg-[#10b981]" : "border-border",
                       )}>
-                        {isDone && <span className="text-white text-[10px]">✓</span>}
+                        {isDone && <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                       </div>
 
                       {/* Content */}
@@ -1308,12 +1325,9 @@ export default function OwnerDashboardPage() {
                       </div>
 
                       {/* Right badge */}
-                      <span className={cn(
-                        "shrink-0 rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide uppercase whitespace-nowrap",
-                        badge.cls,
-                      )}>
+                      <Badge variant={badge.variant} className="shrink-0 whitespace-nowrap">
                         {badge.label}
-                      </span>
+                      </Badge>
                     </button>
                   )
                 })
@@ -1406,7 +1420,24 @@ export default function OwnerDashboardPage() {
 
       {/* Week at a glance + Pipeline — side-by-side two-column layout */}
       <div className="space-y-3">
-        <SectionTitle label="THIS WEEK" />
+        <div className="flex items-center gap-3">
+          <SectionTitle label="THIS WEEK" />
+          <div className="h-px flex-1 bg-border" />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button onClick={() => setWeekOffset((p) => p - 1)} className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-secondary transition-colors">
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="min-w-[120px] text-center text-xs font-medium text-foreground">{fmtWeekRange(weekDates)}</span>
+            <button onClick={() => setWeekOffset((p) => p + 1)} className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-secondary transition-colors">
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            {weekOffset !== 0 && (
+              <button onClick={() => setWeekOffset(0)} className="rounded-full border border-border px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-secondary transition-colors">
+                Today
+              </button>
+            )}
+          </div>
+        </div>
         {/* Two-column: vertical glance left, pipeline table right */}
         <div className="grid gap-3 lg:grid-cols-[220px_1fr]" style={{ alignItems: "stretch" }}>
 
@@ -1414,8 +1445,8 @@ export default function OwnerDashboardPage() {
         <div className="flex flex-col gap-1.5" style={{ height: "100%" }}>
         {weekDates.map((d, dIdx) => {
             const row = weekByDate.get(d.iso)
-            const isToday = d.iso === todayIso
-            const isPast = d.iso < todayIso
+            const isToday = d.iso === todayIso && isCurrentWeek
+            const isPast = d.iso < todayIso && isCurrentWeek
             const isClub = (row?.mode || "").toLowerCase().includes("club")
               || d.day === "THU" || d.day === "FRI" || d.day === "SAT"
 
@@ -1486,25 +1517,25 @@ export default function OwnerDashboardPage() {
                 </div>
 
                 {/* Body */}
-                <div style={{ padding: "8px 10px", backgroundColor: "rgba(255, 255, 255, 1)" }}>
+                <div style={{ padding: "8px 10px", backgroundColor: "rgba(255, 255, 255, 1)", overflowY: "auto", maxHeight: 90 }}>
                   {weekCsvLoading ? (
                     <div style={{ fontSize: 10, color: "#9c9590" }}>Loading…</div>
                   ) : weekCsvError ? (
                     <div style={{ fontSize: 10, color: "#b5620a" }}>Unable to load.</div>
                   ) : (
                     <>
-                      {firstEvent ? (
-                        <>
+                      {dayEvents.length > 0 ? dayEvents.map((ev, evIdx) => (
+                        <div key={evIdx} style={{ marginTop: evIdx > 0 ? 6 : 0, borderTop: evIdx > 0 ? "1px solid #e2ddd7" : "none", paddingTop: evIdx > 0 ? 5 : 0 }}>
                           <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? "#b5620a" : "#1a1714", lineHeight: 1.3 }}>
-                            {firstEvent.eventName}
+                            {ev.eventName}
                           </div>
-                          {(firstEvent.startTime || firstEvent.endTime) && (
-                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#9c9590", marginTop: 2 }}>
-                              {firstEvent.startTime}{firstEvent.startTime && firstEvent.endTime ? " – " : ""}{firstEvent.endTime}
+                          {(ev.startTime || ev.endTime) && (
+                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#9c9590", marginTop: 1 }}>
+                              {ev.startTime}{ev.startTime && ev.endTime ? " – " : ""}{ev.endTime}
                             </div>
                           )}
-                        </>
-                      ) : (
+                        </div>
+                      )) : (
                         <div style={{ fontSize: 10, color: "#9c9590", fontStyle: "italic" }}>TBD</div>
                       )}
                       {djLines.length > 0 && (
@@ -1535,11 +1566,13 @@ export default function OwnerDashboardPage() {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column" as const,
+          height: "100%",
         }}>
 
         {/* Card header */}
         <div style={{ padding: "12px 18px", borderBottom: "1px solid #e2ddd7", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1714" }}>This Week's Pipeline</div>
+          <div style={{ fontSize: 11, color: "#9c9590" }}>{fmtWeekRange(weekDates)}</div>
         </div>
 
         {/* Column headers */}
@@ -1556,12 +1589,13 @@ export default function OwnerDashboardPage() {
           ))}
         </div>
 
-        {/* Rows */}
-        <div style={{ flex: 1 }}>
+        {/* Rows — flex:1 fills remaining space; scrolls if many events */}
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {pipelineRows.map((row, idx) => {
-            const isPipelinePast = row.iso < todayIso
+            const isPipelinePast = row.iso < todayIso && isCurrentWeek
             const genres = row.genre !== "—" ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : []
             const promos = row.promo !== "—" ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : []
+            const topBorder = row.isFirstForDay && idx > 0 ? "2px solid #d4cfc9" : "1px solid #e2ddd7"
 
             return (
               <div
@@ -1573,6 +1607,7 @@ export default function OwnerDashboardPage() {
                   padding: "10px 18px",
                   minHeight: 48,
                   borderBottom: "1px solid #e2ddd7",
+                  borderTop: topBorder,
                   alignItems: "center",
                   background: row.isToday ? "#fdf3e7" : "transparent",
                   opacity: isPipelinePast ? 0.55 : 1,
@@ -1587,7 +1622,7 @@ export default function OwnerDashboardPage() {
                       color: row.isToday ? "#b5620a" : row.event === "TBD" ? "#9c9590" : "#1a1714",
                       fontStyle: row.event === "TBD" ? "italic" : "normal",
                     }}>{row.event}</span>
-                    {row.isToday && (
+                    {row.isToday && row.isFirstForDay && (
                       <span style={{
                         fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 3,
                         background: "#b5620a", color: "#fff",
@@ -1700,7 +1735,7 @@ export default function OwnerDashboardPage() {
             .map(([name]) => name)
           if (heavyDJs.length > 0) {
             insights.push({
-              emoji: "⚠️",
+              icon: AlertTriangle,
               title: "High DJ Reliance",
               body: `${heavyDJs.join(", ")} ${heavyDJs.length === 1 ? "is" : "are"} booked ${heavyDJs.length === 1 ? djNightCount.get(heavyDJs[0]) : "3+"}+ nights — consider diversifying the lineup.`,
             })
@@ -1717,7 +1752,7 @@ export default function OwnerDashboardPage() {
           if (clubNightsNoPromo.length > 0) {
             const names = clubNightsNoPromo.map((d) => d.day).join(", ")
             insights.push({
-              emoji: "📣",
+              icon: Megaphone,
               title: "Club Nights Without Promotion",
               body: `${names} ${clubNightsNoPromo.length === 1 ? "has" : "have"} no promotion attached — add an offer to drive footfall.`,
             })
@@ -1727,7 +1762,7 @@ export default function OwnerDashboardPage() {
           if (unplannedCount > 0) {
             const names = unplannedDays.map((d) => d.day).join(", ")
             insights.push({
-              emoji: "📅",
+              icon: CalendarDays,
               title: `${unplannedCount} Unplanned ${unplannedCount === 1 ? "Night" : "Nights"}`,
               body: `${names} ${unplannedCount === 1 ? "has" : "have"} no event scheduled — opportunity to fill the calendar.`,
             })
@@ -1736,7 +1771,7 @@ export default function OwnerDashboardPage() {
           // 4. Fully planned week
           if (unplannedCount === 0 && eventCount === 7) {
             insights.push({
-              emoji: "✅",
+              icon: CheckCircle2,
               title: "Full Week Planned",
               body: "Every night this week has an event — great execution on calendar coverage.",
             })
@@ -1745,34 +1780,34 @@ export default function OwnerDashboardPage() {
           // Fallback if nothing flagged
           if (insights.length === 0) {
             insights.push({
-              emoji: "📊",
+              icon: BarChart2,
               title: "Week on Track",
               body: `${eventCount} events scheduled with ${djBookedCount} DJs across ${clubNightCount} club nights.`,
             })
           }
 
           return (
-            <div style={{ borderTop: "3px solid #e2ddd7", background: "#fff" }}>
+            <div style={{ borderTop: "2px solid #e2ddd7", background: "#fff" }}>
 
               {/* Stats bar */}
               <div style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "10px 18px",
+                padding: "7px 14px",
                 borderBottom: "1px solid #e2ddd7",
-                gap: 12,
+                gap: 8,
                 backgroundColor: "#faf8f5",
               }}>
                 {/* Left: label + badge */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                  <span style={{ color: "#c9a84c", fontSize: 11, lineHeight: 1 }}>✦</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <Sparkles style={{ width: 10, height: 10, color: "#c9a84c", flexShrink: 0 }} />
                   <span style={{
-                    fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                    fontSize: 8, fontWeight: 700, letterSpacing: "0.12em",
                     textTransform: "uppercase" as const, color: "#9c9590",
                   }}>Weekly Analysis</span>
                   <span style={{
-                    fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3,
+                    fontSize: 8, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
                     background: `${ratingColor}18`, border: `1px solid ${ratingColor}55`,
                     color: ratingColor, letterSpacing: "0.05em", textTransform: "uppercase" as const,
                   }}>{rating}</span>
@@ -1788,18 +1823,18 @@ export default function OwnerDashboardPage() {
                   ].map((stat, i) => (
                     <div key={stat.label} style={{
                       display: "flex", flexDirection: "column" as const, alignItems: "center",
-                      padding: "0 16px",
+                      padding: "0 12px",
                       borderLeft: i > 0 ? "1px solid #e2ddd7" : "none",
                     }}>
                       <span style={{
                         fontFamily: "'Inter', sans-serif",
-                        fontSize: 14, fontWeight: 900, color: stat.amber ? "#d97706" : "#1a1714",
+                        fontSize: 13, fontWeight: 900, color: stat.amber ? "#d97706" : "#1a1714",
                         lineHeight: 1,
                       }}>{stat.value}</span>
                       <span style={{
-                        fontSize: 8, fontWeight: 600, letterSpacing: "0.08em",
+                        fontSize: 7, fontWeight: 600, letterSpacing: "0.08em",
                         textTransform: "uppercase" as const,
-                        color: "#9c9590", marginTop: 3,
+                        color: "#9c9590", marginTop: 2,
                       }}>{stat.label}</span>
                     </div>
                   ))}
@@ -1808,20 +1843,22 @@ export default function OwnerDashboardPage() {
 
               {/* Insights */}
               <div style={{ display: "flex", flexDirection: "column" as const }}>
-                {insights.map((ins, i) => (
-                  <div key={i} style={{
-                    display: "flex", alignItems: "flex-start", gap: 10,
-                    padding: "9px 18px",
-                    borderTop: i > 0 ? "1px solid #f0ece6" : "none",
-                    flex: 1,
-                  }}>
-                    <span style={{ fontSize: 13, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{ins.emoji}</span>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1714", lineHeight: 1.3 }}>{ins.title}</div>
-                      <div style={{ fontSize: 10, color: "#6b6560", marginTop: 2, lineHeight: 1.5 }}>{ins.body}</div>
+                {insights.map((ins, i) => {
+                  const InsIcon = ins.icon
+                  return (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "5px 14px",
+                      borderTop: i > 0 ? "1px solid #f0ece6" : "none",
+                    }}>
+                      <InsIcon style={{ width: 11, height: 11, flexShrink: 0, color: "#9c9590" }} />
+                      <div>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "#1a1714" }}>{ins.title}</span>
+                        <span style={{ fontSize: 10, color: "#6b6560", marginLeft: 5 }}>{ins.body}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
             </div>
@@ -1978,148 +2015,6 @@ export default function OwnerDashboardPage() {
         )
       })()}
 
-      {/* Who We Are + Identity + Targets */}
-      <div className="flex items-center gap-3">
-        <div className="text-xs font-medium tracking-widest text-muted-foreground uppercase whitespace-nowrap">
-          The Roof — Club &amp; Lounge
-        </div>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr_0.5fr]">
-
-        {/* Card 1: The Roof — Who We Are */}
-        <div className="rounded-card border border-border bg-card px-6 py-5 shadow-card">
-          <div className="font-display text-lg tracking-[3px] text-foreground mb-5">The Roof — Who We Are</div>
-          <div className="space-y-5">
-            <div>
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-2">Company</div>
-              <p className="text-sm font-body text-secondary-foreground leading-relaxed">
-                Da Nang's beachside rooftop destination, transforming from a stylish sunset lounge into a vibrant dancefloor after dark. Inspired by the warm, exotic atmosphere of Marrakech, we offer an unforgettable rooftop experience above My Khe Beach.
-              </p>
-              <p className="mt-2 text-sm font-body text-secondary-foreground leading-relaxed">
-                Located on the third floor with panoramic ocean views. Live DJs every Wednesday–Saturday, creating the perfect balance between laid-back afternoons and high-energy nights.
-              </p>
-              <p className="mt-2 text-sm font-body text-secondary-foreground leading-relaxed">
-                Known for premium cocktails, curated music, and one of the best shisha experiences in Da Nang — the go-to spot for sunset drinks, social nights, and an international crowd.
-              </p>
-            </div>
-            <div>
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-1.5">Niche</div>
-              <p className="text-sm font-body text-secondary-foreground leading-relaxed">
-                A unique blend of global influences creating an international atmosphere that brings people together — bridging the gap between east and west. A relaxing, inviting space where the music doesn't blow your head off.
-              </p>
-            </div>
-            <div>
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-2">Three Uniques</div>
-              <ol className="space-y-2 text-sm font-body text-secondary-foreground">
-                <li>
-                  <span className="text-foreground font-medium">① Our View</span>
-                  <span className="text-muted-foreground"> — </span>
-                  Panoramic views of My Khe Beach. Perfect for sunset evenings and relaxing nights in paradise.
-                </li>
-                <li>
-                  <span className="text-foreground font-medium">② The Atmosphere</span>
-                  <span className="text-muted-foreground"> — </span>
-                  Laidback, relaxing, genuine and unique — including the events.
-                </li>
-                <li>
-                  <span className="text-foreground font-medium">③ The Offerings</span>
-                  <span className="text-muted-foreground"> — </span>
-                  High quality shisha, refreshing cocktails at a reasonable price, attractive promotions and good food.
-                </li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Identity */}
-        <div className="rounded-card border border-border bg-card px-6 py-5 shadow-card">
-          <div className="font-display text-lg tracking-[3px] text-foreground mb-5">Identity</div>
-          <div className="space-y-5">
-            <div>
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-1.5">Vision</div>
-              <p className="text-sm font-light italic text-secondary-foreground leading-relaxed">
-                We aim to become a melting pot of culture, where diverse backgrounds, ideas, and experiences come together to create a vibrant, inclusive space. We celebrate the richness of different cultures and believe in the power of unity through shared experiences and connection.
-              </p>
-            </div>
-            <div>
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-3">Values</div>
-              <div className="space-y-3">
-                {[
-                  { name: "Fun & Positive", desc: "We bring a fun and positive energy to everything we do." },
-                  { name: "Down to Earth", desc: "We embrace freedom of expression and show up as our true selves." },
-                  { name: "Teamwork", desc: "We are a team of service-oriented individuals focused on guests' needs, working hard and lifting each other up." },
-                  { name: "Attitude", desc: "We are individuals with a growth mindset, always striving to improve and evolve." },
-                  { name: "Care", desc: "We genuinely prioritize the comfort and wellbeing of our guests, venue, partners and team." },
-                ].map((v) => (
-                  <div key={v.name} className="flex gap-2">
-                    <span className="rounded-full border border-primary/25 bg-primary/8 px-2.5 py-0.5 text-xs text-primary shrink-0 h-fit mt-0.5">{v.name}</span>
-                    <p className="text-xs text-secondary-foreground leading-relaxed">{v.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Targets */}
-        <div className="rounded-card border border-border bg-card px-6 py-5 shadow-card">
-          <div className="font-display text-lg tracking-[3px] text-foreground mb-5">Targets</div>
-          <div className="space-y-5">
-            {[
-              {
-                label: "10 Year Target",
-                year: "2035",
-                items: [
-                  "6,000 Monthly pax (avg)",
-                  "2.0B VND revenue / month (avg)",
-                  "25B VND for the year",
-                  "9B VND in profits",
-                  "35% Net profit target",
-                ],
-              },
-              {
-                label: "3 Year Target",
-                year: "2028",
-                items: [
-                  "4,250 Monthly pax (avg)",
-                  "1.5B VND revenue / month (avg)",
-                  "18B VND for the year",
-                  "6B VND in profits",
-                  "35% Net profit target",
-                ],
-              },
-              {
-                label: "1 Year Target",
-                year: "2026",
-                items: [
-                  "2,500 Monthly pax (avg)",
-                  "1.0B VND revenue / month (avg)",
-                  "9B VND for the year",
-                  "3B VND in profits",
-                  "30% Net profit target",
-                ],
-              },
-            ].map((target, i) => (
-              <div key={target.year} className={cn(i > 0 ? "border-t border-border pt-5" : "")}>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <div className="text-xs tracking-widest font-semibold text-foreground uppercase">{target.label}</div>
-                  <div className="text-xs text-primary border border-primary/25 bg-primary/8 rounded-sm px-1.5 py-0.5">{target.year}</div>
-                </div>
-                <ul className="space-y-1">
-                  {target.items.map((item) => (
-                    <li key={item} className="flex items-start gap-1.5 text-xs text-secondary-foreground">
-                      <span className="mt-[3px] h-1 w-1 rounded-full bg-primary/50 shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
 
       {/* ── Task detail sheet (Notion style) ── */}
       <Sheet
@@ -2155,7 +2050,7 @@ export default function OwnerDashboardPage() {
                   {/* Done / Check */}
                   <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
                     <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>✓</span> Check
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Check
                     </div>
                     <div className="flex-1 flex items-center gap-2">
                       <button
@@ -2221,7 +2116,7 @@ export default function OwnerDashboardPage() {
                   {/* Day */}
                   <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
                     <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>📅</span> Day
+                      <CalendarDays className="h-3.5 w-3.5 shrink-0" /> Day
                     </div>
                     <div className="flex-1 flex items-center gap-3">
                       <input
@@ -2415,7 +2310,7 @@ export default function OwnerDashboardPage() {
               {/* Check */}
               <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
                 <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>✓</span> Check
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Check
                 </div>
                 <div className="flex-1 flex items-center gap-2">
                   <button
@@ -2481,7 +2376,7 @@ export default function OwnerDashboardPage() {
               {/* Day */}
               <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
                 <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>📅</span> Day
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" /> Day
                 </div>
                 <div className="flex-1 flex items-center gap-3">
                   <input

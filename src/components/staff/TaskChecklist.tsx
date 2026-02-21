@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { 
   CheckCircle, 
   Circle, 
@@ -7,10 +7,14 @@ import {
   ChevronRight,
   ListChecks,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  X,
+  ZoomIn,
+  Plus,
 } from 'lucide-react';
-import { useMyTaskTemplates, useTaskCompletion, useToggleTaskItem } from '../../hooks/useTasks';
-import type { TaskTemplate } from '../../types';
+import { useMyTaskTemplates, useTaskCompletion, useToggleTaskItem, useUploadTaskPhoto, useDeleteTaskPhoto } from '../../hooks/useTasks';
+import type { CompletedTaskItem, TaskTemplate } from '../../types';
 
 interface TaskChecklistProps {
   taskType?: 'opening' | 'closing' | 'midshift';
@@ -158,58 +162,19 @@ function TaskTemplateCard({ template, isExpanded, onToggle }: TaskTemplateCardPr
               const completedTask = completedTasks.find(t => t.taskName === task.name);
 
               return (
-                <div
+                <TaskItemRow
                   key={index}
-                  onClick={() => handleToggleTask(task.name)}
-                  className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                    completed 
-                      ? 'bg-success/10 hover:bg-success/20' 
-                      : 'bg-background hover:bg-muted/50'
-                  }`}
-                >
-                  {/* Checkbox */}
-                  <div className="flex-shrink-0 mt-0.5">
-                    {toggleTask.isPending ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    ) : completed ? (
-                      <CheckCircle className="h-5 w-5 text-success" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-
-                  {/* Task Content */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${completed ? 'text-success line-through' : 'text-foreground'}`}>
-                      {task.name}
-                    </p>
-                    {task.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-1">
-                      {task.estimatedMinutes && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          ~{task.estimatedMinutes} min
-                        </span>
-                      )}
-                      {task.required && !completed && (
-                        <span className="flex items-center gap-1 text-xs text-warning">
-                          <AlertCircle className="h-3 w-3" />
-                          Required
-                        </span>
-                      )}
-                      {completed && completedTask && (
-                        <span className="text-xs text-success">
-                          Done at {new Date(completedTask.completedAt).toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  taskName={task.name}
+                  taskDescription={task.description}
+                  estimatedMinutes={task.estimatedMinutes}
+                  required={task.required}
+                  completed={completed}
+                  completedTask={completedTask}
+                  template={template}
+                  currentCompletedTasks={completedTasks}
+                  isPending={toggleTask.isPending}
+                  onToggle={() => handleToggleTask(task.name)}
+                />
               );
             })}
           </div>
@@ -224,6 +189,261 @@ function TaskTemplateCard({ template, isExpanded, onToggle }: TaskTemplateCardPr
         </div>
       )}
     </div>
+  );
+}
+
+interface TaskItemRowProps {
+  taskName: string;
+  taskDescription?: string;
+  estimatedMinutes?: number;
+  required: boolean;
+  completed: boolean;
+  completedTask?: CompletedTaskItem;
+  template: TaskTemplate;
+  currentCompletedTasks: CompletedTaskItem[];
+  isPending: boolean;
+  onToggle: () => void;
+}
+
+function TaskItemRow({
+  taskName,
+  taskDescription,
+  estimatedMinutes,
+  required,
+  completed,
+  completedTask,
+  template,
+  currentCompletedTasks,
+  isPending,
+  onToggle,
+}: TaskItemRowProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadPhoto = useUploadTaskPhoto();
+  const deletePhoto = useDeleteTaskPhoto();
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const photoUrls = completedTask?.photoUrls || [];
+
+  async function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1200;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) {
+            height = Math.round((height * MAX) / width);
+            width = MAX;
+          } else {
+            width = Math.round((width * MAX) / height);
+            height = MAX;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Draw timestamp watermark
+        const now = new Date();
+        const ts = now.toLocaleString('vi-VN', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+        });
+        const fontSize = Math.max(14, Math.round(width / 40));
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        const pad = 8;
+        const textWidth = ctx.measureText(ts).width;
+        ctx.fillRect(pad - 4, height - fontSize - pad - 4, textWidth + 8, fontSize + 8);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(ts, pad, height - pad);
+
+        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.82);
+      };
+      img.src = url;
+    });
+  }
+
+  async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = '';
+
+    setUploading(true);
+    try {
+      const blobs = await Promise.all(files.map(compressImage));
+      await uploadPhoto.mutateAsync({
+        template,
+        currentCompletedTasks,
+        taskName,
+        blobs,
+      });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleRemovePhoto(url: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    deletePhoto.mutate({
+      template,
+      currentCompletedTasks,
+      taskName,
+      photoUrl: url,
+    });
+  }
+
+  return (
+    <>
+      <div className={`rounded-lg transition-colors ${
+        completed ? 'bg-success/10' : 'bg-background'
+      }`}>
+        {/* Main task row */}
+        <div
+          onClick={onToggle}
+          className={`flex items-start gap-3 p-3 cursor-pointer rounded-lg ${
+            completed ? 'hover:bg-success/20' : 'hover:bg-muted/50'
+          }`}
+        >
+          {/* Checkbox */}
+          <div className="flex-shrink-0 mt-0.5">
+            {isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : completed ? (
+              <CheckCircle className="h-5 w-5 text-success" />
+            ) : (
+              <Circle className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+
+          {/* Task Content */}
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm ${completed ? 'text-success line-through' : 'text-foreground'}`}>
+              {taskName}
+            </p>
+            {taskDescription && (
+              <p className="text-xs text-muted-foreground mt-0.5">{taskDescription}</p>
+            )}
+            <div className="flex items-center gap-3 mt-1">
+              {estimatedMinutes && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  ~{estimatedMinutes} min
+                </span>
+              )}
+              {required && !completed && (
+                <span className="flex items-center gap-1 text-xs text-warning">
+                  <AlertCircle className="h-3 w-3" />
+                  Required
+                </span>
+              )}
+              {completed && completedTask && (
+                <span className="text-xs text-success">
+                  Done at {new Date(completedTask.completedAt).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Camera button — stop propagation so it doesn't toggle task */}
+          <button
+            onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+            disabled={uploading || uploadPhoto.isPending}
+            className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${
+              uploading || uploadPhoto.isPending
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+            title="Attach photo(s)"
+          >
+            {uploading || uploadPhoto.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            className="hidden"
+            onChange={handleFilesSelected}
+          />
+        </div>
+
+        {/* Photo thumbnail strip */}
+        {photoUrls.length > 0 && (
+          <div className="px-3 pb-3 flex flex-wrap gap-2">
+            {photoUrls.map((url, i) => (
+              <div key={i} className="relative group">
+                <img
+                  src={url}
+                  alt={`Photo ${i + 1}`}
+                  className="h-16 w-16 object-cover rounded-lg border border-border cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); setLightboxUrl(url); }}
+                />
+                {/* Zoom hint */}
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); setLightboxUrl(url); }}
+                >
+                  <ZoomIn className="h-4 w-4 text-white" />
+                </div>
+                {/* Remove button */}
+                <button
+                  onClick={(e) => handleRemovePhoto(url, e)}
+                  className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remove photo"
+                >
+                  <X className="h-2.5 w-2.5 text-destructive-foreground" />
+                </button>
+              </div>
+            ))}
+            {/* Add more photos button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+              disabled={uploading || uploadPhoto.isPending}
+              className="h-16 w-16 rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              title="Add more photos"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 }
 

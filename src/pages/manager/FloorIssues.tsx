@@ -21,6 +21,7 @@ import {
   type MaintenanceCategory,
 } from '@/hooks/useMaintenanceTasks';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -60,38 +61,26 @@ const QUICK_CATEGORIES: QuickCategory[] = [
 
 function statusBadge(status: string) {
   switch (status) {
-    case 'open':
-      return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] font-bold uppercase">● OPEN</span>;
-    case 'in_progress':
-      return <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[10px] font-bold uppercase">● NOTED</span>;
-    case 'done':
-      return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-bold uppercase">● RESOLVED</span>;
-    default:
-      return null;
+    case 'open':        return <Badge variant="danger">● OPEN</Badge>;
+    case 'in_progress': return <Badge variant="warning">● NOTED</Badge>;
+    case 'done':        return <Badge variant="positive">● RESOLVED</Badge>;
+    default:            return null;
   }
 }
 
+const CATEGORY_TAG_MAP: Record<string, { label: string; variant: 'warning' | 'danger' | 'neutral' | 'brand' }> = {
+  equipment:  { label: 'TECHNICAL ISSUE', variant: 'warning' },
+  safety:     { label: 'SECURITY ISSUE',  variant: 'danger'  },
+  electrical: { label: 'ELECTRICAL',      variant: 'warning' },
+  plumbing:   { label: 'PLUMBING',        variant: 'neutral' },
+  structural: { label: 'STRUCTURAL',      variant: 'neutral' },
+  aesthetic:  { label: 'AESTHETIC',       variant: 'neutral' },
+  other:      { label: 'NOTE',            variant: 'brand'   },
+};
+
 function categoryTag(category: MaintenanceCategory) {
-  const map: Record<string, string> = {
-    equipment: 'TECHNICAL ISSUE',
-    safety: 'SECURITY ISSUE',
-    electrical: 'ELECTRICAL',
-    plumbing: 'PLUMBING',
-    structural: 'STRUCTURAL',
-    aesthetic: 'AESTHETIC',
-    other: 'NOTE',
-  };
-  const colors: Record<string, string> = {
-    equipment: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
-    safety: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
-    other: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-  };
-  const color = colors[category] ?? 'bg-muted text-muted-foreground';
-  return (
-    <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${color}`}>
-      {map[category] ?? category.toUpperCase()}
-    </span>
-  );
+  const cfg = CATEGORY_TAG_MAP[category] ?? { label: category.toUpperCase(), variant: 'neutral' as const };
+  return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
 }
 
 // ─── Log Issue Dialog ─────────────────────────────────────────────────────────

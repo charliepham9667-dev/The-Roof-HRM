@@ -1,10 +1,16 @@
 import { useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import { addDays, format, isSameDay, startOfMonth, startOfWeek } from "date-fns"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { cn } from "@/lib/utils"
 import { useContentCalendar, type ContentPost } from "@/hooks/useContentCalendar"
 import { useGoogleSheetsSync } from "@/hooks/useGoogleSheetsSync"
+import { Badge } from "@/components/ui/badge"
+import type { BadgeProps } from "@/components/ui/badge"
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — lucide deprecated brand icons still ship in the package
+import { Facebook, Instagram, Music2 } from "lucide-react"
 
 type ViewMode = "monthly" | "weekly"
 type PillarKey = "all" | "events_djs" | "atmosphere" | "drinks" | "community" | "reels" | "announcements" | "holidays"
@@ -122,11 +128,11 @@ function statusLabel(status: ContentPost["status"]) {
   return "Pending"
 }
 
-function statusClass(status: ContentPost["status"]) {
-  if (status === "scheduled") return "st-scheduled"
-  if (status === "cancelled") return "st-cancelled"
-  if (status === "published") return "st-approved"
-  return "st-pending"
+function statusVariant(status: ContentPost["status"]): BadgeProps["variant"] {
+  if (status === "published")  return "positive"
+  if (status === "scheduled")  return "brand"
+  if (status === "cancelled")  return "danger"
+  return "warning"  // draft / pending
 }
 
 function channelsForPost(post: ContentPost): Array<"ig" | "fb" | "tiktok"> {
@@ -174,6 +180,8 @@ export default function ContentCalendar() {
   const [fMediaUrl, setFMediaUrl] = useState("")
   const [fStatus, setFStatus] = useState<ContentPost["status"]>("draft")
   const [overviewTab, setOverviewTab] = useState<"kanban" | "list">("kanban")
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   // ── List filters ──────────────────────────────────────────────────────────
   const [filterStatus, setFilterStatus]   = useState<"all" | ContentPost["status"]>("all")
@@ -217,6 +225,7 @@ export default function ContentCalendar() {
   }, [filteredPosts])
 
   const openPostModal = (post?: ContentPost, date?: Date) => {
+    setSaveError(null)
     if (post) {
       setEditingPost(post)
       setFTitle(getNoteField(post.notes, "title") || postTitle(post))
@@ -246,28 +255,37 @@ export default function ContentCalendar() {
   const handleSave = async () => {
     if (!fScheduledDate) return
 
-    const baseNotes = editingPost?.notes ?? null
-    const withPillar = upsertNoteField(baseNotes, "pillar", fPillar)
-    const withTitle = upsertNoteField(withPillar, "title", fTitle.trim() || "New post")
+    setSaveError(null)
+    setIsSaving(true)
 
-    const payload: Partial<ContentPost> = {
-      scheduled_date: fScheduledDate,
-      scheduled_time: fScheduledTime ? `${fScheduledTime}:00` : null,
-      platform: fPlatform,
-      content_type: fContentType,
-      caption: fCaption.trim() || null,
-      media_url: fMediaUrl.trim() || null,
-      status: fStatus,
-      notes: withTitle,
+    try {
+      const baseNotes = editingPost?.notes ?? null
+      const withPillar = upsertNoteField(baseNotes, "pillar", fPillar)
+      const withTitle = upsertNoteField(withPillar, "title", fTitle.trim() || "New post")
+
+      const payload: Partial<ContentPost> = {
+        scheduled_date: fScheduledDate,
+        scheduled_time: fScheduledTime ? `${fScheduledTime}:00` : null,
+        platform: fPlatform,
+        content_type: fContentType,
+        caption: fCaption.trim() || null,
+        media_url: fMediaUrl.trim() || null,
+        status: fStatus,
+        notes: withTitle,
+      }
+
+      if (editingPost) {
+        await updatePost.mutateAsync({ id: editingPost.id, ...payload })
+      } else {
+        await createPost.mutateAsync(payload)
+      }
+
+      setModalOpen(false)
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save. You may not have permission to edit this post.")
+    } finally {
+      setIsSaving(false)
     }
-
-    if (editingPost) {
-      await updatePost.mutateAsync({ id: editingPost.id, ...payload })
-    } else {
-      await createPost.mutateAsync(payload)
-    }
-
-    setModalOpen(false)
   }
 
   const handleDelete = async () => {
@@ -297,12 +315,21 @@ export default function ContentCalendar() {
   const awaitingCount = postOverview.toBeApproved.length
 
   return (
-    <div className="w-full rounded-card overflow-hidden border border-border bg-background shadow-card">
+    <div className="w-full rounded-card border border-border bg-background shadow-card">
       {/* HEADER */}
       <div className="sticky top-0 z-30 border-b border-border bg-background/97 backdrop-blur-[12px] shadow-card">
-        <div className="px-4 md:px-6 py-3.5">
-          <h1 className="text-[28px] font-bold leading-tight text-foreground">Content Calendar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Schedule and manage social media content</p>
+        <div className="px-4 md:px-6 py-3.5 flex items-start justify-between gap-4 min-w-0">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[28px] font-bold leading-tight text-foreground">Content Calendar</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Schedule and manage social media content</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => openPostModal()}
+            className="shrink-0 whitespace-nowrap px-4 py-[7px] rounded-sm bg-primary text-card text-xs tracking-wider uppercase hover:brightness-95 transition-all"
+          >
+            + Create post
+          </button>
         </div>
 
         {/* TOOLBAR */}
@@ -400,13 +427,6 @@ export default function ContentCalendar() {
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => openPostModal()}
-                className="px-4 py-[7px] rounded-sm bg-primary text-card text-xs tracking-wider uppercase hover:brightness-95 transition-all"
-              >
-                + Create post
-              </button>
             </div>
           </div>
         </div>
@@ -448,7 +468,7 @@ export default function ContentCalendar() {
             </div>
           ) : null}
           {view === "monthly" ? (
-            <div className="flex flex-col min-w-[600px]">
+            <div className="flex flex-col min-w-[700px]">
               {/* Month header row */}
               <div className="grid grid-cols-7 border-b border-border bg-secondary">
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
@@ -537,7 +557,7 @@ export default function ContentCalendar() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col min-w-[840px]">
+            <div className="flex flex-col min-w-[900px]">
               {/* Week header row */}
               <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary">
                 <div className="border-r border-border" />
@@ -630,9 +650,9 @@ export default function ContentCalendar() {
                             {/* Time + status */}
                             <div className="flex items-center justify-between gap-1 mb-0.5">
                               <span className="text-[10px] font-mono text-muted-foreground leading-none">{t}</span>
-                              <span className={cn("text-[9px] tracking-wide uppercase px-1 py-px rounded-sm border leading-none shrink-0", statusClass(p.status))}>
+                              <Badge variant={statusVariant(p.status)} className="shrink-0 leading-none">
                                 {statusLabel(p.status)}
-                              </span>
+                              </Badge>
                             </div>
                             {/* Pillar */}
                             <div className="text-[9px] tracking-widest uppercase font-medium leading-none mb-0.5" style={{ color: PILLARS[pillar].color }}>
@@ -641,10 +661,10 @@ export default function ContentCalendar() {
                             {/* Title */}
                             <div className="text-[11px] text-foreground leading-snug line-clamp-2">{postTitle(p)}</div>
                             {/* Platforms */}
-                            <div className="mt-0.5 flex gap-[2px]">
-                              {channelsForPost(p).includes("ig") && <span className="text-[9px]">📸</span>}
-                              {channelsForPost(p).includes("tiktok") && <span className="text-[9px]">🎵</span>}
-                              {channelsForPost(p).includes("fb") && <span className="text-[9px]">📘</span>}
+                            <div className="mt-0.5 flex items-center gap-[3px]">
+                              {channelsForPost(p).includes("ig") && <Instagram className="h-2.5 w-2.5 text-muted-foreground" />}
+                              {channelsForPost(p).includes("tiktok") && <Music2 className="h-2.5 w-2.5 text-muted-foreground" />}
+                              {channelsForPost(p).includes("fb") && <Facebook className="h-2.5 w-2.5 text-muted-foreground" />}
                             </div>
                           </button>
                         )
@@ -906,9 +926,9 @@ export default function ContentCalendar() {
 
                         {/* Status */}
                         <div className="px-3 py-3 flex items-start">
-                          <span className={cn("text-xs px-2 py-0.5 rounded-sm border", statusClass(p.status))}>
+                          <Badge variant={statusVariant(p.status)}>
                             {statusLabel(p.status)}
-                          </span>
+                          </Badge>
                         </div>
                       </button>
                     )
@@ -954,8 +974,8 @@ export default function ContentCalendar() {
         </div>
       </div>
 
-      {/* POST DETAIL MODAL (styled like reference) */}
-      {modalOpen ? (
+      {/* POST DETAIL MODAL (rendered via portal to escape overflow-y-auto clipping) */}
+      {modalOpen ? createPortal(
         <div
           role="button"
           tabIndex={0}
@@ -1146,12 +1166,12 @@ export default function ContentCalendar() {
               <div>
                 <div className="text-xs tracking-widest text-muted-foreground uppercase">Approval status</div>
                 <div className="mt-1 flex gap-2">
-                  {[
-                    { label: "✓ Approved", value: "published" as const, cls: "selected-approved" },
-                    { label: "◷ Scheduled", value: "scheduled" as const, cls: "selected-scheduled" },
-                    { label: "⋯ Pending", value: "draft" as const, cls: "selected-pending" },
-                    { label: "✕ Cancelled", value: "cancelled" as const, cls: "selected-cancelled" },
-                  ].map((s) => (
+                  {([
+                    { label: "✓ Approved", value: "published" as const, variant: "positive" },
+                    { label: "◷ Scheduled", value: "scheduled" as const, variant: "brand" },
+                    { label: "⋯ Pending", value: "draft" as const, variant: "warning" },
+                    { label: "✕ Cancelled", value: "cancelled" as const, variant: "danger" },
+                  ] as const).map((s) => (
                     <button
                       key={s.value}
                       type="button"
@@ -1159,7 +1179,12 @@ export default function ContentCalendar() {
                       className={cn(
                         "flex-1 rounded-sm border border-border bg-secondary px-2 py-2 text-xs tracking-wide uppercase text-muted-foreground transition-colors",
                         "hover:border-border/80",
-                        fStatus === s.value && s.cls,
+                        fStatus === s.value && {
+                          positive:  "bg-success/10 border-success/25 text-success",
+                          brand:     "bg-primary/10 border-primary/25 text-primary",
+                          warning:   "bg-warning/10 border-warning/25 text-warning",
+                          danger:    "bg-error/10 border-error/25 text-error",
+                        }[s.variant],
                       )}
                     >
                       {s.label}
@@ -1170,52 +1195,48 @@ export default function ContentCalendar() {
             </div>
 
             {/* footer */}
-            <div className="px-5 py-3 border-t border-border bg-secondary flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-muted-foreground hover:text-secondary-foreground hover:border-border/80"
-              >
-                Close
-              </button>
-              <div className="flex items-center gap-2">
-                {editingPost ? (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    className="px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-error hover:border-border/80"
-                  >
-                    Delete
-                  </button>
-                ) : null}
+            <div className="px-5 py-3 border-t border-border bg-secondary flex flex-col gap-2">
+              {saveError && (
+                <div className="rounded-sm border border-error/30 bg-error/8 px-3 py-2 text-xs text-error">
+                  {saveError}
+                </div>
+              )}
+              <div className="flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={handleSave}
-                  disabled={!fScheduledDate}
-                  className={cn(
-                    "px-4 py-2 rounded-sm text-xs tracking-wider uppercase",
-                    "bg-success text-white hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed",
-                  )}
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-muted-foreground hover:text-secondary-foreground hover:border-border/80"
                 >
-                  {fStatus === "published" ? "✓ Approved" : "Approve post"}
+                  Close
                 </button>
+                <div className="flex items-center gap-2">
+                  {editingPost ? (
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      className="px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-error hover:border-border/80"
+                    >
+                      Delete
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!fScheduledDate || isSaving}
+                    className={cn(
+                      "px-4 py-2 rounded-sm text-xs tracking-wider uppercase",
+                      "bg-success text-white hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed",
+                    )}
+                  >
+                    {isSaving ? "Saving…" : fStatus === "published" ? "✓ Approved" : "Approve post"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      ) : null}
+      , document.body) : null}
 
-      {/* tiny status styles for week cards to match reference */}
-      <style>{`
-        .st-approved { color: rgb(var(--success)); border-color: rgba(46,122,82,0.25); background: rgba(46,122,82,0.08); }
-        .st-scheduled { color: rgb(var(--info)); border-color: rgba(44,95,158,0.25); background: rgba(44,95,158,0.08); }
-        .st-pending { color: rgb(var(--warning)); border-color: rgba(160,104,32,0.25); background: rgba(160,104,32,0.08); }
-        .st-cancelled { color: rgb(var(--error)); border-color: rgba(184,50,50,0.25); background: rgba(184,50,50,0.08); }
-        .selected-approved { background: rgba(46,122,82,0.08); border-color: rgba(46,122,82,0.3); color: rgb(var(--success)); }
-        .selected-scheduled { background: rgba(44,95,158,0.08); border-color: rgba(44,95,158,0.3); color: rgb(var(--info)); }
-        .selected-pending { background: rgba(160,104,32,0.08); border-color: rgba(160,104,32,0.3); color: rgb(var(--warning)); }
-        .selected-cancelled { background: rgba(184,50,50,0.08); border-color: rgba(184,50,50,0.3); color: rgb(var(--error)); }
-      `}</style>
     </div>
   )
 }

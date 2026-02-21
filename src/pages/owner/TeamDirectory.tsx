@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -243,8 +244,8 @@ export function TeamDirectory() {
   return (
     <div>
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex items-start justify-between gap-4 min-w-0">
+        <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
           <div>
             <h1 className="text-[28px] font-bold leading-tight text-foreground">Team Overview</h1>
             <p className="mt-1 text-sm text-muted-foreground">View your organisation and manage employee profiles</p>
@@ -297,14 +298,14 @@ export function TeamDirectory() {
             </button>
           </div>
         </div>
-        <button
+        <Button
           type="button"
           onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-[#78350F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#6b2d0b] transition-colors"
+          className="shrink-0 whitespace-nowrap"
         >
           <Plus size={14} />
           + Add Employee
-        </button>
+        </Button>
       </div>
 
       {/* ── Stats strip ─────────────────────────────────────────────────── */}
@@ -400,8 +401,22 @@ export function TeamDirectory() {
           {/* ── Content ─────────────────────────────────────────────────── */}
           <div style={{ padding: "20px 24px" }}>
             {isLoading ? (
-              <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
-                <Loader2 className="animate-spin" size={24} color="#A89E8C" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} style={{ background: "#FDFAF5", border: "1px solid #E0D8C8", borderRadius: 12, padding: 14 }}>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                      <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                      <div style={{ flex: 1 }} className="space-y-2">
+                        <Skeleton className="h-3.5 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                      <Skeleton className="h-14 rounded-md" />
+                      <Skeleton className="h-14 rounded-md" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredStaff.length === 0 ? (
               <div style={{ textAlign: "center", padding: 40, color: "#A89E8C", fontSize: 13 }}>

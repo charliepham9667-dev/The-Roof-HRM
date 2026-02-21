@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { insertNotifications } from './useNotifications'
 
 export interface ChatMessage {
   id: string
@@ -111,6 +112,22 @@ export function useSendChatMessage() {
         if (prev.some((m) => m.id === newMsg.id)) return prev
         return [...prev, newMsg]
       })
+
+      // Notify DM recipient (channel_id starts with '@' for DMs)
+      if (newMsg.channel_id.startsWith('@')) {
+        const recipientId = newMsg.channel_id.slice(1)
+        if (recipientId && recipientId !== newMsg.author_id) {
+          const senderName = (newMsg.author as any)?.full_name || 'Someone'
+          insertNotifications([{
+            userId: recipientId,
+            title: `New message from ${senderName}`,
+            body: newMsg.body.length > 80 ? `${newMsg.body.slice(0, 80)}…` : newMsg.body,
+            notificationType: 'announcement',
+            relatedType: 'chat_dm',
+            relatedId: newMsg.id,
+          }])
+        }
+      }
     },
   })
 }

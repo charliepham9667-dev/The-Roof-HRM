@@ -17,6 +17,7 @@ import {
 import type { DelegationTask, TaskStatus, TaskPriority, CreateDelegationTaskInput } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -301,7 +302,7 @@ export function StaffMyTasks() {
       {/* Page header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">My Tasks</h1>
+          <h1 className="text-[28px] font-semibold text-foreground">My Tasks</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {today} · {activeTasks.length} pending · {doneToday.length} completed today
           </p>
@@ -320,23 +321,27 @@ export function StaffMyTasks() {
       </div>
 
       {/* Filter tabs + Add button */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex overflow-x-auto pb-1 scrollbar-none gap-2">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-foreground text-background'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="relative flex-1 min-w-0">
+          <div className="flex overflow-x-auto pb-1 scrollbar-none gap-2">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-foreground text-background'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {/* Right-edge fade hint */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent" />
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+        <Button size="sm" className="shrink-0 gap-1.5" onClick={() => setAddOpen(true)}>
           <Plus className="h-3.5 w-3.5" />
           Add Task
         </Button>
@@ -352,7 +357,21 @@ export function StaffMyTasks() {
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">Loading tasks…</div>
+          <div className="px-4 divide-y divide-border/50">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start gap-3 py-3 px-1">
+                <Skeleton className="mt-0.5 h-4 w-4 rounded shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-3.5 w-10 rounded" />
+                    <Skeleton className="h-3.5 w-16 rounded" />
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-10 rounded-md shrink-0" />
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="px-4">
             {/* Pending group */}

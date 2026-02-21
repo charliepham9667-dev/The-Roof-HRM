@@ -20,6 +20,7 @@ const typeConfig: Record<NotificationType, { label: string; color: string }> = {
   clock_reminder: { label: 'Clock', color: 'text-cyan-400' },
   meeting_reminder: { label: 'Meeting', color: 'text-pink-400' },
   general: { label: 'General', color: 'text-muted-foreground' },
+  content_approval: { label: 'Approval', color: 'text-violet-400' },
 };
 
 export function NotificationBell() {

@@ -24,6 +24,7 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'owner/announcements':  ['Common',    'Announcements'],
   'owner/schedule':       ['Team',      'Schedule'],
   'owner/checklists':     ['Owner',     'Checklists'],
+  'owner/company':        ['Company',   'Company Profile'],
   'weekly-focus':         ['Owner',     'Weekly Focus'],
   // Finance
   'finance/summary':      ['Finance',   'Financial Summary'],
@@ -119,12 +120,12 @@ export function Header({ onMenuClick }: HeaderProps) {
           <SidebarTrigger className="lg:hidden shrink-0" onClick={onMenuClick} />
           
           {/* Breadcrumb - hidden on mobile, visible on md+ */}
-          <div className="hidden md:flex items-center gap-2 text-sm">
-            <Home className="h-4 w-4 text-muted-foreground" />
+          <div className="hidden md:flex items-center gap-2 text-sm whitespace-nowrap">
+            <Home className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-muted-foreground">Home</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="hidden lg:inline text-muted-foreground">{sectionLabel}</span>
-            <ChevronRight className="hidden lg:inline h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="hidden lg:inline h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-foreground">{pageLabel}</span>
           </div>
           

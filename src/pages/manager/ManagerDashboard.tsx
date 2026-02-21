@@ -2,10 +2,16 @@ import { useEffect, useMemo, useState } from "react"
 import {
   AlertTriangle,
   Activity,
+  ArrowUpRight,
   CalendarClock,
-  Trash2,
+  CalendarDays,
+  MapPin,
   Plus,
   ShieldAlert,
+  Tag,
+  Trash2,
+  User,
+  Zap,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useAuthStore } from "@/stores/authStore"
@@ -816,14 +822,13 @@ export function ManagerDashboard() {
         <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />} className="min-w-0 overflow-hidden">
           <div className="flex flex-col sm:flex-row items-stretch gap-0">
             <div className="min-w-0 sm:min-w-[200px] sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Da Nang · Weather</div>
-              <div className="mt-2 flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <div className="text-[32px]">🌤</div>
                 <div className="font-display text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
               </div>
               <div className="mt-2 text-xs text-secondary-foreground tracking-wide">Broken Clouds · Humidity 78%</div>
               <div className="mt-3 flex items-center gap-1.5 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
-                <span>⚡</span> Rain expected Saturday — prep covers & heaters by 13:00
+                <Zap className="h-3.5 w-3.5 shrink-0" /> Rain expected Saturday — prep covers & heaters by 13:00
               </div>
             </div>
             <div className="flex flex-1 items-center sm:pl-5 pt-4 sm:pt-0 overflow-x-auto">
@@ -1028,7 +1033,7 @@ export function ManagerDashboard() {
                           isDone ? "border-success bg-success text-success-foreground" : "border-border bg-background"
                         )}
                       >
-                        {isDone && <span className="flex h-full items-center justify-center text-[8px] text-white">✓</span>}
+                        {isDone && <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                       </button>
                       <div className="flex-1 min-w-0">
                         <div className={cn("text-xs leading-snug", isDone ? "line-through text-muted-foreground" : "text-foreground")}>
@@ -1047,9 +1052,9 @@ export function ManagerDashboard() {
                         <button
                           type="button"
                           onClick={() => updateTask.mutateAsync({ id: task.id, status: "blocked" })}
-                          className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-destructive hover:text-destructive transition-colors mt-0.5"
+                          className="shrink-0 flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-destructive hover:text-destructive transition-colors mt-0.5"
                         >
-                          ↑ Escalate
+                          <ArrowUpRight className="h-3 w-3" /> Escalate
                         </button>
                       )}
                     </div>
@@ -1322,19 +1327,19 @@ export function ManagerDashboard() {
                     const isDone = task.status === "done"
                     const accentCls = isDone ? "border-l-[#10b981]" : isOverdue ? "border-l-[#ef4444]" : isFresh ? "border-l-[#3b82f6]" : "border-l-border"
                     const badge = isDone
-                      ? { label: "✓ Done", cls: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]" }
+                      ? { label: "Done", cls: "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]" }
                       : isOverdue
-                        ? { label: `↑ Overdue ${Math.round((new Date(todayIso).getTime() - new Date(task.dueDate!).getTime()) / 86400000)}d`, cls: "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]" }
+                        ? { label: `Overdue ${Math.round((new Date(todayIso).getTime() - new Date(task.dueDate!).getTime()) / 86400000)}d`, cls: "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]" }
                         : task.dueDate === todayIso
-                          ? { label: "🔥 Today", cls: "border-primary/30 bg-primary/10 text-primary" }
+                          ? { label: "Today", cls: "border-primary/30 bg-primary/10 text-primary" }
                           : isFresh
-                            ? { label: "↑ Today", cls: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]" }
+                            ? { label: "Today", cls: "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]" }
                             : { label: "This Week", cls: "border-border bg-secondary text-muted-foreground" }
                     return (
                       <button key={task.id} type="button" onClick={() => openTask(task)}
                         className={cn("w-full text-left flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 border-l-[3px] transition-colors hover:bg-secondary/40", accentCls, isDone && "opacity-60")}>
                         <div className={cn("shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center", isDone ? "border-[#10b981] bg-[#10b981]" : "border-border")}>
-                          {isDone && <span className="text-white text-[10px]">✓</span>}
+                          {isDone && <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className={cn("text-sm font-medium leading-snug truncate", isDone ? "line-through text-muted-foreground" : "text-foreground")}>{task.title}</div>
@@ -1379,9 +1384,9 @@ export function ManagerDashboard() {
                     const isOverdue = task.dueDate && task.dueDate < todayIso && task.status !== "done"
                     const accentCls = isOverdue ? "border-l-[#ef4444]" : task.dueDate === todayIso ? "border-l-primary" : "border-l-[#3b82f6]"
                     const badge = isOverdue
-                      ? { label: `↑ Overdue ${Math.round((new Date(todayIso).getTime() - new Date(task.dueDate!).getTime()) / 86400000)}d`, cls: "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]" }
+                      ? { label: `Overdue ${Math.round((new Date(todayIso).getTime() - new Date(task.dueDate!).getTime()) / 86400000)}d`, cls: "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]" }
                       : task.dueDate === todayIso
-                        ? { label: "🔥 Today", cls: "border-primary/30 bg-primary/10 text-primary" }
+                        ? { label: "Today", cls: "border-primary/30 bg-primary/10 text-primary" }
                         : task.dueDate
                           ? { label: formatDue(task.dueDate), cls: "border-border bg-secondary text-muted-foreground" }
                           : { label: "No due date", cls: "border-border bg-secondary text-muted-foreground" }
@@ -1455,7 +1460,7 @@ export function ManagerDashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-foreground leading-snug">{issue.title}</div>
                         {issue.location && (
-                          <div className="mt-0.5 text-xs text-muted-foreground">📍 {issue.location}</div>
+                          <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" /> {issue.location}</div>
                         )}
                         <div className="mt-1 text-xs text-muted-foreground">
                           Logged {new Date(issue.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} · Unresolved
@@ -1464,9 +1469,9 @@ export function ManagerDashboard() {
                       <button
                         type="button"
                         onClick={() => navigate("/owner/wishlist")}
-                        className="shrink-0 rounded-sm border border-border px-2 py-1 text-[10px] tracking-wider text-muted-foreground uppercase hover:border-primary/30 hover:text-primary transition-colors whitespace-nowrap"
+                        className="shrink-0 flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-[10px] tracking-wider text-muted-foreground uppercase hover:border-primary/30 hover:text-primary transition-colors whitespace-nowrap"
                       >
-                        ↑ Escalate
+                        <ArrowUpRight className="h-3 w-3" /> Escalate
                       </button>
                     </div>
                   )
@@ -1756,7 +1761,7 @@ export function ManagerDashboard() {
                   </div>
                   {/* Due date */}
                   <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
-                    <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><span>📅</span> Day</div>
+                    <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5 shrink-0" /> Day</div>
                     <div className="flex-1 flex items-center gap-3">
                       <input type="date" className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
                         value={editDraft.dueDate} onChange={(e) => setEditDraft((s) => ({ ...s, dueDate: e.target.value }))} />
@@ -1764,7 +1769,7 @@ export function ManagerDashboard() {
                   </div>
                   {/* Category */}
                   <div className="flex items-start min-h-[40px] px-4 py-2 hover:bg-secondary/40 transition-colors">
-                    <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground pt-1"><span>🏷️</span> Category</div>
+                    <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground pt-1"><Tag className="h-3.5 w-3.5 shrink-0" /> Category</div>
                     <div className="flex-1 flex flex-wrap gap-1.5">
                       {CATEGORY_OPTIONS.map((o) => (
                         <button key={o.value} type="button" onClick={() => setEditDraft((d) => ({ ...d, category: o.value }))}
@@ -1777,7 +1782,7 @@ export function ManagerDashboard() {
                   </div>
                   {/* Assigned to */}
                   <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
-                    <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><span>👤</span> Assigned to</div>
+                    <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><User className="h-3.5 w-3.5 shrink-0" /> Assigned to</div>
                     <div className="flex-1">
                       <select className="w-full bg-transparent text-sm text-foreground outline-none cursor-pointer"
                         value={editDraft.assignedTo} onChange={(e) => setEditDraft((s) => ({ ...s, assignedTo: e.target.value }))}>
@@ -1890,7 +1895,7 @@ export function ManagerDashboard() {
               </div>
               {/* Due date */}
               <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
-                <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><span>📅</span> Day</div>
+                <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5 shrink-0" /> Day</div>
                 <div className="flex-1">
                   <input type="date" className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
                     value={createDraft.dueDate || ""}
@@ -1899,7 +1904,7 @@ export function ManagerDashboard() {
               </div>
               {/* Category */}
               <div className="flex items-start min-h-[40px] px-4 py-2 hover:bg-secondary/40 transition-colors">
-                <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground pt-1"><span>🏷️</span> Category</div>
+                <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground pt-1"><Tag className="h-3.5 w-3.5 shrink-0" /> Category</div>
                 <div className="flex-1 flex flex-wrap gap-1.5">
                   {CATEGORY_OPTIONS.map((o) => (
                     <button key={o.value} type="button" onClick={() => setCreateDraft((d) => ({ ...d, category: o.value }))}
@@ -1912,7 +1917,7 @@ export function ManagerDashboard() {
               </div>
               {/* Assigned to */}
               <div className="flex items-center min-h-[40px] px-4 hover:bg-secondary/40 transition-colors">
-                <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><span>👤</span> Assigned to</div>
+                <div className="w-32 shrink-0 flex items-center gap-2 text-xs text-muted-foreground"><User className="h-3.5 w-3.5 shrink-0" /> Assigned to</div>
                 <div className="flex-1">
                   <select className="w-full bg-transparent text-sm text-foreground outline-none cursor-pointer"
                     value={createDraft.assignedTo}

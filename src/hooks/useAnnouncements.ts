@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { Announcement, AnnouncementReply, CreateAnnouncementInput } from '../types';
+import { insertNotifications } from './useNotifications';
 
 // Get all active announcements
 export function useAnnouncements() {
@@ -138,8 +139,48 @@ export function useCreateAnnouncement() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (announcement) => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
+
+      // Fan-out: notify all active users who are in the target audience (best-effort)
+      try {
+        const audience = announcement.audience as string;
+        let profileQuery = supabase
+          .from('profiles')
+          .select('id, role, job_role')
+          .eq('is_active', true)
+          .eq('status', 'active')
+          .neq('id', announcement.author_id);
+
+        if (audience === 'managers') {
+          profileQuery = profileQuery.eq('role', 'manager');
+        } else if (audience === 'bartenders') {
+          profileQuery = profileQuery.in('job_role', ['bartender', 'head_bartender']);
+        } else if (audience === 'service') {
+          profileQuery = profileQuery.in('job_role', ['service', 'waiter', 'supervisor']);
+        } else if (audience === 'hosts') {
+          profileQuery = profileQuery.in('job_role', ['host', 'receptionist']);
+        } else if (audience === 'cashiers') {
+          profileQuery = profileQuery.eq('job_role', 'accountant');
+        }
+        // 'all' — no additional filter
+
+        const { data: recipients } = await profileQuery;
+        if (recipients && recipients.length > 0) {
+          await insertNotifications(
+            recipients.map((r: any) => ({
+              userId: r.id,
+              title: announcement.title,
+              body: announcement.body || undefined,
+              notificationType: 'announcement' as const,
+              relatedType: 'announcement',
+              relatedId: announcement.id,
+            }))
+          );
+        }
+      } catch {
+        // notifications are best-effort
+      }
     },
   });
 }

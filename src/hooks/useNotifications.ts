@@ -1,7 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
-import type { Notification } from '../types';
+import type { Notification, NotificationType } from '../types';
+
+export interface CreateNotificationInput {
+  userId: string;
+  title: string;
+  body?: string;
+  notificationType: NotificationType;
+  relatedType?: string;
+  relatedId?: string;
+  scheduledFor?: string;
+}
 
 // Get user's notifications
 export function useNotifications(limit: number = 20) {
@@ -69,6 +79,46 @@ export function useMarkNotificationRead() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
+}
+
+// Create a notification (used by various triggers)
+export function useCreateNotification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateNotificationInput) => {
+      const { error } = await supabase.from('notifications').insert({
+        user_id: input.userId,
+        title: input.title,
+        body: input.body,
+        notification_type: input.notificationType,
+        related_type: input.relatedType,
+        related_id: input.relatedId,
+        scheduled_for: input.scheduledFor,
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+// Create multiple notifications at once (fan-out)
+export async function insertNotifications(inputs: CreateNotificationInput[]) {
+  if (inputs.length === 0) return;
+  const rows = inputs.map((input) => ({
+    user_id: input.userId,
+    title: input.title,
+    body: input.body,
+    notification_type: input.notificationType,
+    related_type: input.relatedType,
+    related_id: input.relatedId,
+    scheduled_for: input.scheduledFor,
+    created_at: new Date().toISOString(),
+  }));
+  await supabase.from('notifications').insert(rows);
 }
 
 // Mark all as read

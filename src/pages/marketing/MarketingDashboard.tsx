@@ -1,6 +1,10 @@
 import { useMemo, useState, useRef, useEffect } from "react"
 import { addDays, format, isSameDay, startOfWeek, differenceInDays } from "date-fns"
 import { cn } from "@/lib/utils"
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — lucide deprecated brand icons still ship
+import { Facebook, Instagram, Music2 } from "lucide-react"
+import { AlertTriangle, ExternalLink, Link2, Search, TrendingDown, TrendingUp } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { SectionTitle } from "@/components/ui/section-title"
 import { useContentCalendar } from "@/hooks/useContentCalendar"
@@ -13,20 +17,66 @@ import type { CalendarEvent, EventChecklistItem, EventMarketingStatus } from "@/
    Static data
    ──────────────────────────────────────────────────────────── */
 
-const CHANNELS = [
+/* ────────────────────────────────────────────────────────────
+   Shared SocialCard types & data
+   ──────────────────────────────────────────────────────────── */
+
+type HealthStatus = "Growing" | "Flat" | "Needs Attn"
+type StatDir = "up" | "down" | "flat" | "alert"
+
+interface ChannelStat {
+  label: string
+  value: string
+  delta?: string
+  dir: StatDir
+}
+
+interface ChannelAction {
+  message: string
+  href: string
+  label: string
+}
+
+interface Channel {
+  key: string
+  name: string
+  Icon: React.ElementType
+  health: HealthStatus
+  /** Primary metric value, e.g. "4,820" */
+  primaryValue: string
+  /** Label under primary metric, e.g. "Followers" */
+  primaryLabel: string
+  gradient: string
+  /** 2–4 secondary stats rendered in a 2-col grid */
+  stats: ChannelStat[]
+  /** Bottom-row link-clicks count */
+  linkClicks: string
+  /** 7-bar sparkline data (0–100). Empty = no sparkline. */
+  spark: number[]
+  /** Optional CTA shown when health === "Needs Attn" or any alert state */
+  action?: ChannelAction
+}
+
+function healthClass(h: HealthStatus) {
+  if (h === "Growing")    return "border-success/25 bg-success/10 text-success"
+  if (h === "Flat")       return "border-warning/25 bg-warning/10 text-warning"
+  return "border-error/25 bg-error/10 text-error"
+}
+
+const CHANNELS: Channel[] = [
   {
     key: "ig",
     name: "Instagram",
-    icon: "📸",
-    health: "Growing" as const,
-    followers: "4,820",
-    followersLabel: "Followers",
+    Icon: Instagram,
+    health: "Growing",
+    primaryValue: "4,820",
+    primaryLabel: "Followers",
     gradient: "from-[#c13584] via-[#e1306c] via-[#f77737] to-transparent",
     stats: [
-      { label: "Engagement", value: "6.2%", delta: "↑", dir: "up" as const },
-      { label: "Reach", value: "12.4K", delta: "+18%", dir: "up" as const },
-      { label: "New Followers", value: "+142", delta: "↑", dir: "up" as const },
-      { label: "Profile Visits", value: "840", delta: "", dir: "flat" as const },
+      { label: "Engagement",    value: "6.2%",  dir: "up"   },
+      { label: "Reach",         value: "12.4K", delta: "+18%", dir: "up"   },
+      { label: "New Followers", value: "+142",  dir: "up"   },
+      { label: "Profile Visits",value: "840",   dir: "flat" },
     ],
     linkClicks: "420",
     spark: [40, 55, 45, 70, 60, 80, 100],
@@ -34,16 +84,16 @@ const CHANNELS = [
   {
     key: "tiktok",
     name: "TikTok",
-    icon: "🎵",
-    health: "Growing" as const,
-    followers: "2,310",
-    followersLabel: "Followers",
+    Icon: Music2,
+    health: "Growing",
+    primaryValue: "2,310",
+    primaryLabel: "Followers",
     gradient: "from-[#2a7a6e] via-[#69c9d0] to-transparent",
     stats: [
-      { label: "Avg Views", value: "3.8K", delta: "+32%", dir: "up" as const },
-      { label: "Engagement", value: "8.4%", delta: "↑", dir: "up" as const },
-      { label: "New Followers", value: "+54", delta: "↑", dir: "up" as const },
-      { label: "Videos Posted", value: "3", delta: "", dir: "flat" as const },
+      { label: "Avg Views",     value: "3.8K", delta: "+32%", dir: "up"   },
+      { label: "Engagement",    value: "8.4%",  dir: "up"   },
+      { label: "New Followers", value: "+54",   dir: "up"   },
+      { label: "Videos Posted", value: "3",     dir: "flat" },
     ],
     linkClicks: "180",
     spark: [30, 50, 90, 40, 65, 55, 85],
@@ -51,16 +101,16 @@ const CHANNELS = [
   {
     key: "fb",
     name: "Facebook",
-    icon: "📘",
-    health: "Flat" as const,
-    followers: "3,640",
-    followersLabel: "Page Likes",
+    Icon: Facebook,
+    health: "Flat",
+    primaryValue: "3,640",
+    primaryLabel: "Page Likes",
     gradient: "from-[#1877f2] to-transparent",
     stats: [
-      { label: "Reach", value: "4.2K", delta: "→", dir: "flat" as const },
-      { label: "Engagement", value: "2.1%", delta: "↓", dir: "down" as const },
-      { label: "New Likes", value: "+14", delta: "", dir: "flat" as const },
-      { label: "Posts", value: "5", delta: "", dir: "flat" as const },
+      { label: "Reach",       value: "4.2K", dir: "flat" },
+      { label: "Engagement",  value: "2.1%", dir: "down" },
+      { label: "New Likes",   value: "+14",  dir: "flat" },
+      { label: "Posts",       value: "5",    dir: "flat" },
     ],
     linkClicks: "380",
     spark: [60, 55, 50, 58, 45, 52, 48],
@@ -68,21 +118,155 @@ const CHANNELS = [
   {
     key: "google",
     name: "Google",
-    icon: "🔍",
-    health: "Needs Attn" as const,
-    followers: "4.7",
-    followersLabel: "★ Star Rating · 142 Reviews",
+    Icon: Search,
+    health: "Needs Attn",
+    primaryValue: "4.7 ★",
+    primaryLabel: "Star Rating · 142 Reviews",
     gradient: "from-[#4285f4] via-[#34a853] via-[#fbbc05] via-[#ea4335] to-transparent",
     stats: [
-      { label: "New Reviews", value: "2", delta: "!", dir: "alert" as const },
-      { label: "Unanswered", value: "2", delta: "", dir: "alert" as const },
-      { label: "Searches", value: "1.8K", delta: "", dir: "flat" as const },
-      { label: "Direction Reqs", value: "94", delta: "", dir: "flat" as const },
+      { label: "New Reviews",   value: "2",    delta: "!", dir: "alert" },
+      { label: "Unanswered",    value: "2",    dir: "alert" },
+      { label: "Searches",      value: "1.8K", dir: "flat"  },
+      { label: "Direction Reqs",value: "94",   dir: "flat"  },
     ],
     linkClicks: "260",
-    spark: [],
+    spark: [72, 68, 75, 70, 65, 71, 69],
+    action: {
+      message: "2 unanswered reviews need a reply",
+      href: "https://business.google.com/reviews",
+      label: "Open Google Business",
+    },
   },
 ]
+
+/* ────────────────────────────────────────────────────────────
+   SocialCard — shared component
+   ──────────────────────────────────────────────────────────── */
+
+function StatCell({ stat }: { stat: ChannelStat }) {
+  const valueColor =
+    stat.dir === "alert" ? "text-error" :
+    stat.dir === "up"    ? "text-success" :
+    stat.dir === "down"  ? "text-error" :
+    "text-foreground"
+
+  return (
+    <div className="rounded-sm bg-secondary/60 px-2 py-1.5">
+      <div className="text-[9px] tracking-wider text-muted-foreground uppercase mb-0.5 truncate">{stat.label}</div>
+      <div className="flex items-center gap-1 text-xs font-semibold">
+        <span className={valueColor}>{stat.value}</span>
+        {stat.dir === "alert" && stat.delta && (
+          <AlertTriangle className="h-3 w-3 text-error animate-pulse" />
+        )}
+        {stat.dir !== "alert" && stat.delta && (
+          <span className={cn("text-[10px]", stat.dir === "up" ? "text-success" : stat.dir === "down" ? "text-error" : "text-muted-foreground")}>
+            {stat.delta}
+          </span>
+        )}
+        {stat.dir !== "alert" && !stat.delta && stat.dir === "up" && (
+          <TrendingUp className="h-3 w-3 text-success" />
+        )}
+        {stat.dir !== "alert" && !stat.delta && stat.dir === "down" && (
+          <TrendingDown className="h-3 w-3 text-error" />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SocialCard({ ch }: { ch: Channel }) {
+  const isAlert = ch.health === "Needs Attn"
+
+  return (
+    <div className={cn(
+      "group relative flex flex-col overflow-hidden rounded-card border bg-card shadow-card transition-all hover:shadow-card-hover",
+      isAlert ? "border-error/30" : "border-border",
+    )}>
+      {/* Top colour bar */}
+      <div className={cn("absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r", ch.gradient)} />
+
+      <div className="flex flex-col flex-1 p-[18px_20px] pt-5 gap-3">
+
+        {/* ① Header: icon + name + status badge */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+              isAlert ? "bg-error/10 text-error" : "bg-secondary text-muted-foreground",
+            )}>
+              <ch.Icon className="h-4 w-4" />
+            </div>
+            <span className="text-[11px] font-semibold tracking-widest text-foreground uppercase truncate">{ch.name}</span>
+          </div>
+          <span className={cn(
+            "shrink-0 rounded-sm border px-1.5 py-[2px] text-[10px] font-semibold tracking-wide uppercase whitespace-nowrap",
+            healthClass(ch.health),
+          )}>
+            {ch.health}
+          </span>
+        </div>
+
+        {/* ② Primary metric */}
+        <div>
+          <div className={cn(
+            "font-display leading-none tracking-[2px]",
+            isAlert ? "text-[32px] text-error" : "text-[38px] text-foreground",
+          )}>
+            {ch.primaryValue}
+          </div>
+          <div className="text-[11px] tracking-wide text-muted-foreground mt-1">{ch.primaryLabel}</div>
+        </div>
+
+        {/* ③ Secondary stats 2-col grid */}
+        <div className="grid grid-cols-2 gap-1.5">
+          {ch.stats.map((s) => <StatCell key={s.label} stat={s} />)}
+        </div>
+
+        {/* ④ Sparkline */}
+        {ch.spark.length > 0 && (
+          <div className="flex items-end gap-[2px] h-[16px]">
+            {ch.spark.map((h, i) => (
+              <div
+                key={i}
+                className={cn("flex-1 rounded-[1px]", i === ch.spark.length - 1 ? "bg-primary" : "bg-primary/15")}
+                style={{ height: `${h}%` }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ⑤ Action CTA — only rendered when present */}
+        {ch.action && (
+          <div className="flex items-center justify-between gap-2 rounded-sm border border-error/20 bg-error/[0.06] px-2.5 py-[7px] -mx-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <AlertTriangle className="h-3 w-3 text-error shrink-0" />
+              <span className="text-[11px] text-error truncate">{ch.action.message}</span>
+            </div>
+            <a
+              href={ch.action.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-error hover:text-error/80 transition-colors whitespace-nowrap"
+            >
+              {ch.action.label}
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          </div>
+        )}
+
+        {/* ⑥ Bottom row: link clicks */}
+        <div className="flex items-center justify-between border-t border-border pt-2 mt-auto">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Link2 className="h-3 w-3 shrink-0" />
+            Link clicks this week
+          </div>
+          <span className="text-[12px] font-semibold text-foreground tabular-nums">{ch.linkClicks}</span>
+        </div>
+
+      </div>
+    </div>
+  )
+}
 
 
 type PartnerStatus = "Active" | "Negotiating" | "Follow Up" | "Inactive"
@@ -247,14 +431,6 @@ export default function MarketingDashboard() {
     return platform.toUpperCase()
   }
 
-  const healthClass = (h: string) => {
-    switch (h) {
-      case "Growing":    return "border-success/25 bg-success/8 text-success"
-      case "Flat":       return "border-warning/25 bg-warning/8 text-warning"
-      default:           return "border-error/25 bg-error/8 text-error"
-    }
-  }
-
   const statusClass = (s: string) => {
     switch (s) {
       case "Active":      return "border-success/25 bg-success/8 text-success"
@@ -353,72 +529,7 @@ export default function MarketingDashboard() {
       <div className="space-y-3">
         <SectionTitle label="Social Media Performance — Week of Feb 11–17" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {CHANNELS.map((ch) => (
-            <div
-              key={ch.key}
-              className="group relative overflow-hidden rounded-card border border-border bg-card p-[18px_20px] shadow-card transition-all hover:shadow-card-hover"
-            >
-              <div className={cn("absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r", ch.gradient)} />
-              <div className="flex items-center justify-between mb-3.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{ch.icon}</span>
-                  <span className="text-sm tracking-wider text-foreground uppercase">{ch.name}</span>
-                </div>
-                <span className={cn("rounded-sm border px-[7px] py-[2px] text-[10px] tracking-wide uppercase", healthClass(ch.health))}>
-                  {ch.health}
-                </span>
-              </div>
-              <div className="font-display text-[38px] leading-none tracking-[2px] text-foreground">{ch.followers}</div>
-              <div className="text-xs tracking-wide text-muted-foreground mt-0.5 mb-3">{ch.followersLabel}</div>
-              <div className="grid grid-cols-2 gap-2">
-                {ch.stats.map((s) => (
-                  <div key={s.label} className="rounded-sm bg-secondary/50 px-2 py-1.5">
-                    <div className="text-[9px] tracking-wider text-muted-foreground uppercase mb-0.5">{s.label}</div>
-                    <div className="flex items-center gap-[5px] text-xs font-semibold">
-                      {s.dir === "alert" ? (
-                        <span className="text-error">{s.value} {s.delta && <span className="animate-pulse">!</span>}</span>
-                      ) : (
-                        <>
-                          <span className={cn(s.dir === "up" ? "text-success" : s.dir === "down" ? "text-error" : "text-foreground")}>{s.value}</span>
-                          {s.delta && (
-                            <span className={cn("text-[10px]", s.dir === "up" ? "text-success" : s.dir === "down" ? "text-error" : "text-muted-foreground")}>
-                              {s.delta}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {ch.key === "google" && (
-                <div className="mt-2.5 flex items-center justify-between rounded-sm border border-error/15 bg-error/[0.07] px-2.5 py-[7px]">
-                  <span className="text-xs text-error">⚠ Respond to 2 reviews now</span>
-                  <a
-                    href="https://business.google.com/reviews"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-error hover:underline"
-                  >→ Open Google Business</a>
-                </div>
-              )}
-              <div className="mt-2.5 flex items-center justify-between border-t border-border pt-2.5">
-                <span className="text-[11px] text-muted-foreground">🔗 Link clicks this week</span>
-                <span className="text-[12px] font-semibold text-foreground tabular-nums">{ch.linkClicks}</span>
-              </div>
-              {ch.spark.length > 0 && (
-                <div className="mt-2 flex items-end gap-[2px] h-[18px]">
-                  {ch.spark.map((h, i) => (
-                    <div
-                      key={i}
-                      className={cn("flex-1 rounded-[1px]", i === ch.spark.length - 1 ? "bg-primary" : "bg-primary/15")}
-                      style={{ height: `${h}%` }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+          {CHANNELS.map((ch) => <SocialCard key={ch.key} ch={ch} />)}
         </div>
       </div>
 

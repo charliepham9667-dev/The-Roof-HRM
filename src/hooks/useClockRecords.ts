@@ -99,14 +99,41 @@ export function useClockRecords(startDate: string, endDate: string, staffId?: st
   });
 }
 
+async function uploadClockPhoto(
+  staffId: string,
+  clockType: 'in' | 'out',
+  photoBlob: Blob,
+): Promise<string | undefined> {
+  if (photoBlob.size === 0) return undefined;
+  const timestamp = Date.now();
+  const path = `${staffId}/${clockType}_${timestamp}.jpg`;
+  const { error } = await supabase.storage
+    .from('clock-in-photos')
+    .upload(path, photoBlob, { contentType: 'image/jpeg', upsert: false });
+  if (error) {
+    console.warn('Photo upload failed (non-fatal):', error.message);
+    return undefined;
+  }
+  const { data: signed } = await supabase.storage
+    .from('clock-in-photos')
+    .createSignedUrl(path, 60 * 60 * 24 * 365); // 1-year signed URL
+  return signed?.signedUrl;
+}
+
 // Clock in mutation
 export function useClockIn() {
   const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);
 
   return useMutation({
-    mutationFn: async ({ shiftId }: { shiftId?: string } = {}) => {
+    mutationFn: async ({ shiftId, photoBlob }: { shiftId?: string; photoBlob?: Blob } = {}) => {
       if (!profile?.id) throw new Error('Not authenticated');
+
+      // Upload photo first (best-effort, non-blocking on failure)
+      let photoUrl: string | undefined;
+      if (photoBlob && photoBlob.size > 0) {
+        photoUrl = await uploadClockPhoto(profile.id, 'in', photoBlob);
+      }
 
       // Get current location
       let latitude: number | undefined;
@@ -149,6 +176,7 @@ export function useClockIn() {
           is_within_geofence: isWithinGeofence,
           distance_from_venue: distanceFromVenue,
           device_info: navigator.userAgent,
+          photo_url: photoUrl || null,
         })
         .select()
         .single();
@@ -179,8 +207,14 @@ export function useClockOut() {
   const profile = useAuthStore((s) => s.profile);
 
   return useMutation({
-    mutationFn: async ({ shiftId }: { shiftId?: string } = {}) => {
+    mutationFn: async ({ shiftId, photoBlob }: { shiftId?: string; photoBlob?: Blob } = {}) => {
       if (!profile?.id) throw new Error('Not authenticated');
+
+      // Upload photo first (best-effort, non-blocking on failure)
+      let photoUrl: string | undefined;
+      if (photoBlob && photoBlob.size > 0) {
+        photoUrl = await uploadClockPhoto(profile.id, 'out', photoBlob);
+      }
 
       // Get current location
       let latitude: number | undefined;
@@ -222,6 +256,7 @@ export function useClockOut() {
           is_within_geofence: isWithinGeofence,
           distance_from_venue: distanceFromVenue,
           device_info: navigator.userAgent,
+          photo_url: photoUrl || null,
         })
         .select()
         .single();
@@ -366,6 +401,7 @@ function mapClockRecord(row: any): ClockRecord {
     ipAddress: row.ip_address,
     notes: row.notes,
     overrideBy: row.override_by,
+    photoUrl: row.photo_url || undefined,
     createdAt: row.created_at,
   };
 }

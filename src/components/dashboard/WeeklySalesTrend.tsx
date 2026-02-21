@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { useWeeklySales, useRevenueVelocity } from '../../hooks/useDashboardData';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   ChartContainer,
@@ -118,17 +119,32 @@ export function WeeklySalesTrend({ noContainer = false }: WeeklySalesTrendProps)
   const periodLabel = timeRange === '7d' ? 'last 7 days' : 'last 30 days';
 
   if (isLoading) {
+    const skeletonContent = (
+      <div className="space-y-3 w-full p-4">
+        <Skeleton className="h-4 w-36" />
+        <div className="flex items-end gap-1 h-[220px] md:h-[320px] pt-2">
+          {[60, 80, 45, 90, 70, 55, 85].map((h, i) => (
+            <Skeleton key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%` }} />
+          ))}
+        </div>
+        <div className="flex gap-4 pt-1">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </div>
+    );
+
     if (noContainer) {
       return (
-        <div className="min-h-[280px] md:min-h-[380px] w-full flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="min-h-[280px] md:min-h-[380px] w-full">
+          {skeletonContent}
         </div>
       );
     }
 
     return (
-      <div className="rounded-card border border-border bg-card p-4 md:p-6 min-h-[280px] md:min-h-[380px] w-full shadow-card flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="rounded-card border border-border bg-card min-h-[280px] md:min-h-[380px] w-full shadow-card">
+        {skeletonContent}
       </div>
     );
   }

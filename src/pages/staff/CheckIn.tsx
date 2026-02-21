@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../../stores/authStore';
 import { useShifts } from '../../hooks/useShifts';
 import { useClockIn, useClockOut, useMyAttendanceHistory } from '../../hooks/useClockRecords';
+import { CameraModal } from '../../components/common/CameraModal';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -90,17 +92,23 @@ export function CheckIn() {
   const netMs = Math.max(0, elapsedMs - totalBreakMsLive);
   const isOvertime = netMs > 8 * 3600000;
 
-  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [toast, setToast] = useState('');
+
+  // Camera modal state
+  const [cameraAction, setCameraAction] = useState<'CHECK IN' | 'CHECK OUT' | null>(null);
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(''), 4000);
   }
 
-  async function handleCheckIn() {
+  function handleCheckIn() {
+    setCameraAction('CHECK IN');
+  }
+
+  async function performCheckIn(photoBlob?: Blob) {
     try {
-      await clockInMut.mutateAsync({});
+      await clockInMut.mutateAsync({ photoBlob });
       setCheckedIn(true);
       setCheckInTime(new Date());
       setTotalBreakMs(0);
@@ -123,9 +131,13 @@ export function CheckIn() {
     }
   }
 
-  async function handleCheckOut() {
+  function handleCheckOut() {
+    setCameraAction('CHECK OUT');
+  }
+
+  async function performCheckOut(photoBlob?: Blob) {
     try {
-      await clockOutMut.mutateAsync({});
+      await clockOutMut.mutateAsync({ photoBlob });
       const outTime = new Date();
       if (onBreak && breakStart) {
         setTotalBreakMs((p) => p + (outTime.getTime() - breakStart.getTime()));
@@ -135,11 +147,23 @@ export function CheckIn() {
       setCheckedIn(false);
       setShiftDone(true);
       setCheckOutTime(outTime);
-      setShowCheckoutConfirm(false);
     } catch (e: any) {
       showToast(e.message || 'Failed to clock out');
-      setShowCheckoutConfirm(false);
     }
+  }
+
+  async function handleCameraConfirm(blob: Blob) {
+    const action = cameraAction;
+    setCameraAction(null);
+    if (action === 'CHECK IN') {
+      await performCheckIn(blob.size > 0 ? blob : undefined);
+    } else if (action === 'CHECK OUT') {
+      await performCheckOut(blob.size > 0 ? blob : undefined);
+    }
+  }
+
+  function handleCameraClose() {
+    setCameraAction(null);
   }
 
   // ── attendance history ───────────────────────────────────────────────────
@@ -203,26 +227,36 @@ export function CheckIn() {
   return (
     <div className="flex flex-col gap-5">
 
-      <h1 className="text-[28px] font-bold text-foreground">Check In / Out</h1>
+      {/* Camera modal — shown before check-in/out to capture selfie */}
+      {cameraAction && (
+        <CameraModal
+          staffName={profile?.fullName || 'Staff'}
+          action={cameraAction}
+          onConfirm={handleCameraConfirm}
+          onClose={handleCameraClose}
+        />
+      )}
+
+      <h1 className="text-[28px] font-semibold text-foreground">Check In / Out</h1>
 
       {/* ── ACTIVE SHIFT PANEL ─────────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
 
         {/* Panel header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <span className="text-sm font-semibold text-foreground">Today's Shift</span>
-          <div className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-all ${statusClass}`}>
-            <span className={`h-[7px] w-[7px] rounded-full ${dotClass} ${checkedIn && !onBreak ? 'animate-pulse' : ''}`} />
+        <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4 min-w-0">
+          <span className="text-sm font-semibold text-foreground shrink-0">Today's Shift</span>
+          <div className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-all shrink-0 whitespace-nowrap ${statusClass}`}>
+            <span className={`h-[7px] w-[7px] rounded-full shrink-0 ${dotClass} ${checkedIn && !onBreak ? 'animate-pulse' : ''}`} />
             {statusLabel}
           </div>
         </div>
 
-        {/* 4-stat row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border px-3 md:px-6 py-5">
+        {/* 4-stat grid — 2×2 on phone/tablet, 4-across on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-border px-4 sm:px-6 py-5 gap-y-5">
           {/* Check In */}
-          <div className="px-3 md:px-0 md:pr-6 border-b md:border-b-0 pb-4 md:pb-0">
+          <div className="border-b lg:border-b-0 lg:border-r pb-5 lg:pb-0 lg:pr-6 min-w-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Check In</div>
-            <div className="font-mono text-[22px] font-medium leading-none text-foreground">
+            <div className="font-mono text-[20px] sm:text-[22px] font-medium leading-none text-foreground">
               {checkInTime ? fmtHHMM(checkInTime) : '—'}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -233,10 +267,10 @@ export function CheckIn() {
           </div>
 
           {/* Time on Shift */}
-          <div className="px-3 md:px-6 border-b md:border-b-0 pb-4 md:pb-0">
+          <div className="border-b lg:border-b-0 lg:border-r pb-5 lg:pb-0 px-4 sm:px-6 min-w-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Time on Shift</div>
-            <div className={`font-mono text-[22px] md:text-[28px] font-medium leading-none ${checkedIn ? 'text-green-600' : 'text-foreground'}`}>
-              {fmtHHMMSS(shiftDone ? elapsedMs : elapsedMs)}
+            <div className={`font-mono text-[18px] sm:text-[22px] font-medium leading-none tracking-tight ${checkedIn ? 'text-green-600' : 'text-foreground'}`}>
+              {fmtHHMMSS(elapsedMs)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
               {checkedIn ? 'Time running' : shiftDone ? 'Final time' : 'Waiting to start'}
@@ -244,9 +278,9 @@ export function CheckIn() {
           </div>
 
           {/* Break Time */}
-          <div className="px-3 md:px-6 pt-4 md:pt-0">
+          <div className="lg:border-r lg:px-6 min-w-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Break Time</div>
-            <div className={`font-mono text-[22px] md:text-[28px] font-medium leading-none ${totalBreakMsLive > 0 ? 'text-amber-600' : 'text-foreground'}`}>
+            <div className={`font-mono text-[20px] sm:text-[22px] font-medium leading-none ${totalBreakMsLive > 0 ? 'text-amber-600' : 'text-foreground'}`}>
               {fmtBreakMs(totalBreakMsLive)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -255,9 +289,9 @@ export function CheckIn() {
           </div>
 
           {/* Net Hours */}
-          <div className="px-3 md:px-0 md:pl-6 pt-4 md:pt-0">
+          <div className="px-4 sm:px-0 lg:pl-6 min-w-0">
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Net Hours</div>
-            <div className={`font-mono text-[22px] md:text-[28px] font-medium leading-none ${isOvertime ? 'text-red-600' : 'text-foreground'}`}>
+            <div className={`font-mono text-[20px] sm:text-[22px] font-medium leading-none ${isOvertime ? 'text-red-600' : 'text-foreground'}`}>
               {fmtNetHours(netMs)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -275,47 +309,46 @@ export function CheckIn() {
           )}
 
           {/* Pre check-in */}
-          {!checkedIn && !shiftDone && !showCheckoutConfirm && (
-            <button
+          {!checkedIn && !shiftDone && (
+            <Button
               onClick={handleCheckIn}
               disabled={clkPending}
-              className="flex items-center gap-2 rounded-lg bg-foreground px-6 py-3 text-sm font-semibold text-background transition-opacity hover:opacity-80 disabled:opacity-60"
+              className="px-6 py-3 text-sm font-semibold h-auto"
             >
-              {clkPending ? <Loader2 className="h-4 w-4 animate-spin" /> : '→'}
+              {clkPending ? <Loader2 className="h-4 w-4 animate-spin" /> : '📷'}
               Check In
-            </button>
+            </Button>
           )}
 
           {/* Shift done */}
           {shiftDone && (
-            <button
-              disabled
-              className="flex items-center gap-2 rounded-lg bg-foreground/40 px-6 py-3 text-sm font-semibold text-background cursor-default opacity-60"
-            >
+            <Button disabled className="px-6 py-3 text-sm font-semibold h-auto">
               ✓ Shift Ended
-            </button>
+            </Button>
           )}
 
           {/* Post check-in buttons */}
-          {checkedIn && !showCheckoutConfirm && (
+          {checkedIn && (
             <>
-              <button
-                onClick={() => setShowCheckoutConfirm(true)}
+              <Button
+                variant="destructive"
+                onClick={handleCheckOut}
                 disabled={clkPending}
-                className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-60"
+                className="px-5 py-3 text-sm font-semibold h-auto"
               >
-                ✕ Check Out
-              </button>
-              <button
+                📷 Check Out
+              </Button>
+              <Button
+                variant="outline"
                 onClick={handleToggleBreak}
-                className={`rounded-lg border px-5 py-3 text-sm font-medium transition-colors ${
+                className={`px-5 py-3 text-sm font-medium h-auto ${
                   onBreak
-                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                    : 'border-border bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800'
+                    : ''
                 }`}
               >
                 {onBreak ? '▶ End Break' : '☕ Take Break'}
-              </button>
+              </Button>
               {shiftTimeLabel && (
                 <span className="ml-auto text-xs text-muted-foreground">
                   Scheduled: <strong className="text-foreground">{shiftTimeLabel}</strong>
@@ -324,25 +357,6 @@ export function CheckIn() {
             </>
           )}
 
-          {/* Checkout confirm strip */}
-          {showCheckoutConfirm && (
-            <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
-              <span className="flex-1 text-sm text-red-700">End your shift? This will record your clock-out time.</span>
-              <button
-                onClick={handleCheckOut}
-                disabled={clkPending}
-                className="rounded-md bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {clkPending ? <Loader2 className="h-3 w-3 animate-spin inline" /> : 'Yes, Clock Out'}
-              </button>
-              <button
-                onClick={() => setShowCheckoutConfirm(false)}
-                className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

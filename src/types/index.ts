@@ -346,6 +346,7 @@ export interface ClockRecord {
   ipAddress?: string;
   notes?: string;
   overrideBy?: string;
+  photoUrl?: string;
   createdAt: string;
 }
 
@@ -470,6 +471,7 @@ export interface CompletedTaskItem {
   taskName: string;
   completedAt: string;
   notes?: string;
+  photoUrls?: string[];
 }
 
 export interface TaskCompletion {
@@ -640,7 +642,8 @@ export type NotificationType =
   | 'compliance_alert' 
   | 'clock_reminder' 
   | 'meeting_reminder' 
-  | 'general';
+  | 'general'
+  | 'content_approval';
 
 export interface Notification {
   id: string;
