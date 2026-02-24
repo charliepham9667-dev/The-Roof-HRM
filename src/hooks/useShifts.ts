@@ -27,6 +27,57 @@ export interface CreateShiftInput {
   notes?: string;
 }
 
+const ICT_TZ = 'Asia/Ho_Chi_Minh';
+
+/**
+ * Returns true if the current time (in venue TZ) falls within the shift window.
+ * Handles overnight shifts (e.g. 17:30–01:30).
+ */
+export function isOnShiftNow(
+  shiftDate: string,
+  startTime: string,
+  endTime: string,
+  now: Date = new Date()
+): boolean {
+  const st = (startTime || '').slice(0, 5);
+  const et = (endTime || '').slice(0, 5);
+  if (!st || !et) return false;
+
+  const [sh, sm] = st.split(':').map(Number);
+  const [eh, em] = et.split(':').map(Number);
+
+  const startMins = sh * 60 + sm;
+  const endMins = eh * 60 + em;
+  const overnight = endMins <= startMins;
+
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ICT_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '0';
+  const ymd = `${get('year')}-${get('month')}-${get('day')}`;
+  const hm = parseInt(get('hour'), 10) * 60 + parseInt(get('minute'), 10);
+
+  if (shiftDate !== ymd) {
+    if (!overnight) return false;
+    const yesterday = new Date(now.getTime() - 86400 * 1000);
+    const yParts = fmt.formatToParts(yesterday);
+    const yGet = (t: string) => yParts.find((p) => p.type === t)?.value ?? '0';
+    const yYmd = `${yGet('year')}-${yGet('month')}-${yGet('day')}`;
+    if (shiftDate === yYmd) return hm < endMins;
+    return false;
+  }
+
+  if (overnight) return hm >= startMins || hm < endMins;
+  return hm >= startMins && hm < endMins;
+}
+
 // Get week's shifts
 export function useShifts(weekDate: Date) {
   const weekStart = getWeekStart(weekDate);

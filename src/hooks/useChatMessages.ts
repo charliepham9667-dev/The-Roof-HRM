@@ -48,7 +48,7 @@ export function useChatMessages(channelId: string) {
   useEffect(() => {
     if (!channelId) return
 
-    const subscription = supabase
+    const channel = supabase
       .channel(`chat_messages:${channelId}`)
       .on(
         'postgres_changes',
@@ -80,7 +80,7 @@ export function useChatMessages(channelId: string) {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(subscription)
+      channel.unsubscribe()
     }
   }, [channelId, queryClient])
 

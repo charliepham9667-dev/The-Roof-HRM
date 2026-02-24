@@ -34,7 +34,7 @@ import { KanbanBoard, COLUMNS } from "@/components/dashboard/KanbanBoard"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SectionTitle } from "@/components/ui/section-title"
-import { useStaffList, useTodayShifts } from "@/hooks/useShifts"
+import { useStaffList, useTodayShifts, isOnShiftNow } from "@/hooks/useShifts"
 import { useGoogleReviews, useKPISummary, useRevenueVelocity } from "@/hooks/useDashboardData"
 import {
   useExecutiveDashboardDailyInput,
@@ -774,7 +774,7 @@ export default function OwnerDashboardPage() {
                           {shifts.map((shift) => {
                             const initials = (shift.staffName || "?")
                               .split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()
-                            const isActive = shift.status === "in_progress"
+                            const isActive = isOnShiftNow(shift.shiftDate, shift.startTime, shift.endTime, tick)
                             return (
                               <div key={shift.id} className="flex items-center justify-between py-2 border-b border-border last:border-0"
                                 style={{ borderLeft: `2px solid ${theme.accent}22`, marginLeft: '4px', paddingLeft: '10px' }}>

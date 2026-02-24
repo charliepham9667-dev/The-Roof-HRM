@@ -13,6 +13,7 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- RLS: staff can upload their own photos (path must start with their user id)
+DROP POLICY IF EXISTS "Staff can upload own clock photos" ON storage.objects;
 CREATE POLICY "Staff can upload own clock photos"
 ON storage.objects FOR INSERT
 TO authenticated
@@ -22,6 +23,7 @@ WITH CHECK (
 );
 
 -- RLS: staff can read their own photos
+DROP POLICY IF EXISTS "Staff can read own clock photos" ON storage.objects;
 CREATE POLICY "Staff can read own clock photos"
 ON storage.objects FOR SELECT
 TO authenticated
@@ -31,6 +33,7 @@ USING (
 );
 
 -- RLS: managers and owners can read all clock photos
+DROP POLICY IF EXISTS "Managers can read all clock photos" ON storage.objects;
 CREATE POLICY "Managers can read all clock photos"
 ON storage.objects FOR SELECT
 TO authenticated
@@ -45,6 +48,7 @@ USING (
 );
 
 -- RLS: staff can delete their own photos (for cleanup support)
+DROP POLICY IF EXISTS "Staff can delete own clock photos" ON storage.objects;
 CREATE POLICY "Staff can delete own clock photos"
 ON storage.objects FOR DELETE
 TO authenticated

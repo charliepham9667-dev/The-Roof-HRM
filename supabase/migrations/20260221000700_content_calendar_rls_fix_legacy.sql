@@ -10,10 +10,12 @@ DROP POLICY IF EXISTS "Anyone can view content_calendar" ON content_calendar;
 DROP POLICY IF EXISTS "Owners/managers can manage content_calendar" ON content_calendar;
 
 -- SELECT: any authenticated user can read
+DROP POLICY IF EXISTS "content_calendar_select" ON content_calendar;
 CREATE POLICY "content_calendar_select" ON content_calendar
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- INSERT: owners and managers only
+DROP POLICY IF EXISTS "content_calendar_insert" ON content_calendar;
 CREATE POLICY "content_calendar_insert" ON content_calendar
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -22,6 +24,7 @@ CREATE POLICY "content_calendar_insert" ON content_calendar
   );
 
 -- UPDATE: owners and managers only
+DROP POLICY IF EXISTS "content_calendar_update" ON content_calendar;
 CREATE POLICY "content_calendar_update" ON content_calendar
   FOR UPDATE
   USING (
@@ -36,6 +39,7 @@ CREATE POLICY "content_calendar_update" ON content_calendar
   );
 
 -- DELETE: owners and managers only
+DROP POLICY IF EXISTS "content_calendar_delete" ON content_calendar;
 CREATE POLICY "content_calendar_delete" ON content_calendar
   FOR DELETE USING (
     EXISTS (

@@ -9,6 +9,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Staff can upload their own photos
+DROP POLICY IF EXISTS "Staff can upload own task photos" ON storage.objects;
 CREATE POLICY "Staff can upload own task photos"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -18,6 +19,7 @@ CREATE POLICY "Staff can upload own task photos"
   );
 
 -- Staff can read their own photos
+DROP POLICY IF EXISTS "Staff can read own task photos" ON storage.objects;
 CREATE POLICY "Staff can read own task photos"
   ON storage.objects FOR SELECT
   TO authenticated
@@ -27,6 +29,7 @@ CREATE POLICY "Staff can read own task photos"
   );
 
 -- Staff can delete their own photos
+DROP POLICY IF EXISTS "Staff can delete own task photos" ON storage.objects;
 CREATE POLICY "Staff can delete own task photos"
   ON storage.objects FOR DELETE
   TO authenticated
@@ -36,6 +39,7 @@ CREATE POLICY "Staff can delete own task photos"
   );
 
 -- Managers and owners can read all task photos
+DROP POLICY IF EXISTS "Managers can read all task photos" ON storage.objects;
 CREATE POLICY "Managers can read all task photos"
   ON storage.objects FOR SELECT
   TO authenticated

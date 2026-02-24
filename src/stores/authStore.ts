@@ -158,12 +158,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (import.meta.env.DEV) {
           console.warn('DEV MODE: Using fallback profile');
           const fallbackProfile = createFallbackProfile(user);
-          set({ profile: fallbackProfile });
+          set({ profile: fallbackProfile, isLoading: false });
           return;
         }
         
         // In production, set error but don't crash
-        set({ error: 'Failed to load profile. Please try again.' });
+        set({ error: 'Failed to load profile. Please try again.', isLoading: false });
         return;
       }
 
@@ -186,7 +186,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           createdAt: data.created_at,
           updatedAt: data.updated_at,
         };
-        set({ profile, error: null });
+        set({ profile, error: null, isLoading: false });
       }
     } catch (error) {
       console.error('Fetch profile error:', error);
@@ -197,12 +197,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { user: u } = get();
         if (u) {
           const fallbackProfile = createFallbackProfile(u);
-          set({ profile: fallbackProfile });
+          set({ profile: fallbackProfile, isLoading: false });
         }
         return;
       }
       
-      set({ error: 'Failed to load profile. Please try again.' });
+      set({ error: 'Failed to load profile. Please try again.', isLoading: false });
     }
   },
 

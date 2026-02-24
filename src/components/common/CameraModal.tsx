@@ -70,6 +70,8 @@ export function CameraModal({ staffName, action, onConfirm, onClose }: CameraMod
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
 
+  const CAMERA_TIMEOUT_MS = 15_000;
+
   const stopStream = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -77,16 +79,49 @@ export function CameraModal({ staffName, action, onConfirm, onClose }: CameraMod
     }
   }, []);
 
+  function getUserMediaErrorMessage(err: unknown): string {
+    const name = (err as { name?: string })?.name;
+    switch (name) {
+      case 'NotAllowedError':
+      case 'PermissionDeniedError':
+        return 'Camera permission denied. Please allow camera access and try again.';
+      case 'NotFoundError':
+        return 'No camera found. Please connect a camera and try again.';
+      case 'NotReadableError':
+      case 'DevicesNotFoundError':
+        return 'Camera is in use by another app. Please close other apps using the camera and try again.';
+      case 'OverconstrainedError':
+        return 'Camera does not support the requested settings. Please try again.';
+      case 'SecurityError':
+        return 'Camera access is blocked for security reasons.';
+      case 'AbortError':
+        return 'Camera request was cancelled or timed out. Please try again.';
+      default:
+        return 'Could not start camera. Your device may not support this feature.';
+    }
+  }
+
   // Start camera on mount
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const streamPromise = navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new DOMException('Camera request timed out.', 'AbortError'));
+          }, CAMERA_TIMEOUT_MS);
+        });
+
+        const stream = await Promise.race([streamPromise, timeoutPromise]);
+        if (timeoutId) clearTimeout(timeoutId);
+
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -97,13 +132,10 @@ export function CameraModal({ staffName, action, onConfirm, onClose }: CameraMod
           await videoRef.current.play();
         }
         setState('preview');
-      } catch (err: any) {
+      } catch (err) {
+        if (timeoutId) clearTimeout(timeoutId);
         if (!cancelled) {
-          setErrorMsg(
-            err?.name === 'NotAllowedError'
-              ? 'Camera permission denied. Please allow camera access and try again.'
-              : 'Could not start camera. Your device may not support this feature.',
-          );
+          setErrorMsg(getUserMediaErrorMessage(err));
           setState('error');
         }
       }
@@ -112,6 +144,7 @@ export function CameraModal({ staffName, action, onConfirm, onClose }: CameraMod
     startCamera();
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
       stopStream();
     };
   }, [stopStream]);
@@ -151,26 +184,34 @@ export function CameraModal({ staffName, action, onConfirm, onClose }: CameraMod
     );
   }
 
-  function handleRetake() {
+  async function handleRetake() {
     setCapturedBlob(null);
     setCapturedDataUrl(null);
     setState('starting');
 
-    // Restart camera
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
-      .then((stream) => {
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-        setState('preview');
-      })
-      .catch(() => {
-        setErrorMsg('Could not restart camera.');
-        setState('error');
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const streamPromise = navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
       });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new DOMException('Camera request timed out.', 'AbortError')), CAMERA_TIMEOUT_MS);
+      });
+      const stream = await Promise.race([streamPromise, timeoutPromise]);
+      if (timeoutId) clearTimeout(timeoutId);
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setState('preview');
+    } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
+      setErrorMsg(getUserMediaErrorMessage(err));
+      setState('error');
+    }
   }
 
   function handleConfirm() {

@@ -16,12 +16,12 @@ import {
 import { useNavigate } from "react-router-dom"
 import { useAuthStore } from "@/stores/authStore"
 import {
-  useManagerTasks,
+  useAllDelegationTasks,
   useCreateDelegationTask,
   useDeleteDelegationTask,
   useUpdateDelegationTask,
 } from "@/hooks/useDelegationTasks"
-import { useStaffList, useTodayShifts } from "@/hooks/useShifts"
+import { useStaffList, useTodayShifts, isOnShiftNow } from "@/hooks/useShifts"
 import {
   useKPISummary,
   useRevenueVelocity,
@@ -471,9 +471,9 @@ export function ManagerDashboard() {
   const todayPromos = promosByDay[ict.weekday] ?? promosByDay["Monday"]
 
   // ── Task board ───────────────────────────────────────────────────────────────
-  // useManagerTasks only fetches tasks assigned TO this user, keeping it
-  // separate from the owner dashboard which uses useAllDelegationTasks
-  const { data: allTasks = [], isLoading: tasksLoading } = useManagerTasks([
+  // useAllDelegationTasks fetches tasks assigned TO or delegated BY this user,
+  // so both "Delegated to me" and "Delegated — Follow Up" panels get data
+  const { data: allTasks = [], isLoading: tasksLoading } = useAllDelegationTasks([
     "todo", "in_progress", "blocked", "done",
   ])
 
@@ -896,7 +896,7 @@ export function ManagerDashboard() {
                             {shifts.map((shift) => {
                               const initials = (shift.staffName || "?")
                                 .split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()
-                              const isActive = shift.status === "in_progress"
+                              const isActive = isOnShiftNow(shift.shiftDate, shift.startTime, shift.endTime, tick)
                               return (
                                 <div key={shift.id} className="flex items-center gap-2 py-1.5 pl-3 border-b border-border last:border-0" style={{ borderLeft: `2px solid ${theme.accent}22`, marginLeft: '3px', paddingLeft: '8px' }}>
                                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white" style={{ background: theme.accent }}>

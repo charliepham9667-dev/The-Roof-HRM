@@ -18,8 +18,10 @@ INSERT INTO dj_rate_config (event_type, multiplier, base_rate_vnd, notes) VALUES
 ON CONFLICT (event_type) DO NOTHING;
 
 ALTER TABLE dj_rate_config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Authenticated users can read dj_rate_config" ON dj_rate_config;
 CREATE POLICY "Authenticated users can read dj_rate_config"
   ON dj_rate_config FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Owners and managers can manage dj_rate_config" ON dj_rate_config;
 CREATE POLICY "Owners and managers can manage dj_rate_config"
   ON dj_rate_config FOR ALL USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('owner', 'manager'))
@@ -59,8 +61,10 @@ CREATE INDEX IF NOT EXISTS idx_dj_payments_date ON dj_payments (date);
 CREATE INDEX IF NOT EXISTS idx_dj_payments_sync_key ON dj_payments (sync_key);
 
 ALTER TABLE dj_payments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Authenticated users can read dj_payments" ON dj_payments;
 CREATE POLICY "Authenticated users can read dj_payments"
   ON dj_payments FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Owners and managers can manage dj_payments" ON dj_payments;
 CREATE POLICY "Owners and managers can manage dj_payments"
   ON dj_payments FOR ALL USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('owner', 'manager'))

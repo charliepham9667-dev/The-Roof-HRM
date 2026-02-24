@@ -15,10 +15,12 @@ ALTER TABLE chat_messages REPLICA IDENTITY FULL;
 
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "authenticated users can read chat messages" ON chat_messages;
 CREATE POLICY "authenticated users can read chat messages"
   ON chat_messages FOR SELECT
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "authenticated users can insert own chat messages" ON chat_messages;
 CREATE POLICY "authenticated users can insert own chat messages"
   ON chat_messages FOR INSERT
   WITH CHECK (auth.uid() = author_id);

@@ -26,19 +26,23 @@ CREATE TABLE IF NOT EXISTS notes (
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
 
 -- Users can only see their own notes
+DROP POLICY IF EXISTS "Users can view own notes" ON notes;
 CREATE POLICY "Users can view own notes" ON notes
   FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create own notes" ON notes;
 CREATE POLICY "Users can create own notes" ON notes
   FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own notes" ON notes;
 CREATE POLICY "Users can update own notes" ON notes
   FOR UPDATE TO authenticated
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete own notes" ON notes;
 CREATE POLICY "Users can delete own notes" ON notes
   FOR DELETE TO authenticated
   USING (user_id = auth.uid());

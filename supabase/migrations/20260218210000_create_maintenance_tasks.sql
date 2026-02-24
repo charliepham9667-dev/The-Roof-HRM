@@ -16,14 +16,18 @@ create table if not exists maintenance_tasks (
 -- Enable RLS
 alter table maintenance_tasks enable row level security;
 
+drop policy if exists "maintenance_tasks_select" on maintenance_tasks;
 create policy "maintenance_tasks_select" on maintenance_tasks
   for select using (auth.role() = 'authenticated');
 
+drop policy if exists "maintenance_tasks_insert" on maintenance_tasks;
 create policy "maintenance_tasks_insert" on maintenance_tasks
   for insert with check (auth.role() = 'authenticated');
 
+drop policy if exists "maintenance_tasks_update" on maintenance_tasks;
 create policy "maintenance_tasks_update" on maintenance_tasks
   for update using (auth.role() = 'authenticated');
 
+drop policy if exists "maintenance_tasks_delete" on maintenance_tasks;
 create policy "maintenance_tasks_delete" on maintenance_tasks
   for delete using (auth.role() = 'authenticated');

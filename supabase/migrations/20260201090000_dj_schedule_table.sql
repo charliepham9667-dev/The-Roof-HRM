@@ -18,9 +18,11 @@ CREATE TABLE IF NOT EXISTS dj_schedule (
 
 ALTER TABLE dj_schedule ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view dj_schedule" ON dj_schedule;
 CREATE POLICY "Anyone can view dj_schedule" ON dj_schedule
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Owners/managers can manage dj_schedule" ON dj_schedule;
 CREATE POLICY "Owners/managers can manage dj_schedule" ON dj_schedule
   FOR ALL USING (EXISTS (
     SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('owner', 'manager')

@@ -20,19 +20,23 @@ CREATE TABLE IF NOT EXISTS projects (
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 
 -- Policy: All authenticated users can view projects
+DROP POLICY IF EXISTS "Users can view projects" ON projects;
 CREATE POLICY "Users can view projects" ON projects
   FOR SELECT TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can create projects" ON projects;
 CREATE POLICY "Authenticated users can create projects" ON projects
   FOR INSERT TO authenticated
   WITH CHECK (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Project owners and managers can update" ON projects;
 CREATE POLICY "Project owners and managers can update" ON projects
   FOR UPDATE TO authenticated
   USING (owner_id = auth.uid() OR is_manager_or_owner())
   WITH CHECK (owner_id = auth.uid() OR is_manager_or_owner());
 
+DROP POLICY IF EXISTS "Project owners and managers can delete" ON projects;
 CREATE POLICY "Project owners and managers can delete" ON projects
   FOR DELETE TO authenticated
   USING (owner_id = auth.uid() OR is_owner());

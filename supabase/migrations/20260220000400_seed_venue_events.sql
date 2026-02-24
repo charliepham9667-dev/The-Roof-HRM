@@ -1,6 +1,13 @@
 -- Seed recurring venue events for The Roof, Da Nang
 -- Covers Feb–Jun 2026. Idempotent: skips rows with the same title + start_date.
 
+-- Extend event_type to include venue types (club_night, lounge, themed) required by this seed
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_event_type_check;
+ALTER TABLE events ADD CONSTRAINT events_event_type_check CHECK (event_type IN (
+  'meeting', 'holiday', 'birthday', 'team_building', 'training', 'promotion', 'special_event',
+  'club_night', 'lounge', 'themed', 'other'
+));
+
 DO $$
 DECLARE
   d DATE;

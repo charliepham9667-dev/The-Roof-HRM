@@ -16,17 +16,21 @@ create table if not exists wishlist_items (
 alter table wishlist_items enable row level security;
 
 -- All authenticated users can view
+drop policy if exists "wishlist_items_select" on wishlist_items;
 create policy "wishlist_items_select" on wishlist_items
   for select using (auth.role() = 'authenticated');
 
 -- Authenticated users can insert
+drop policy if exists "wishlist_items_insert" on wishlist_items;
 create policy "wishlist_items_insert" on wishlist_items
   for insert with check (auth.role() = 'authenticated');
 
 -- Authenticated users can update
+drop policy if exists "wishlist_items_update" on wishlist_items;
 create policy "wishlist_items_update" on wishlist_items
   for update using (auth.role() = 'authenticated');
 
 -- Authenticated users can delete
+drop policy if exists "wishlist_items_delete" on wishlist_items;
 create policy "wishlist_items_delete" on wishlist_items
   for delete using (auth.role() = 'authenticated');

@@ -16,6 +16,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 
 import { supabase } from "@/lib/supabase"
+import { isOnShiftNow } from "@/hooks/useShifts"
 import { cn } from "@/lib/utils"
 import { AddShiftModal } from "@/components/schedule/AddShiftModal"
 import {
@@ -519,16 +520,14 @@ export function ScheduleBuilder() {
   const todayYmd = toYmd(today)
 
   const onShiftNowCount = useMemo(() => {
-    const nowMins = today.getHours() * 60 + today.getMinutes()
+    const now = new Date()
     const onNowIds = new Set<string>()
     for (const s of shifts) {
-      if (s.date !== todayYmd) continue
       if (!s.employee_id) continue
-      if (isShiftActiveNow(s.start_time, s.end_time, nowMins)) onNowIds.add(s.employee_id)
+      if (isOnShiftNow(s.date, s.start_time, s.end_time, now)) onNowIds.add(s.employee_id)
     }
     return onNowIds.size
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shifts, todayYmd])
+  }, [shifts])
 
   const totalWeekHours = useMemo(
     () => shifts.reduce((sum, s) => sum + hoursBetween(s.start_time, s.end_time), 0),
@@ -769,10 +768,10 @@ export function ScheduleBuilder() {
                             const maxHrs = 40
                             const hrsPct = Math.min(100, Math.round((weekHrs / maxHrs) * 100))
                             const hrsBarColor = hrsPct > 90 ? "#8B3030" : hrsPct > 70 ? "#2E7D52" : "#B8922A"
-                            const nowMins = today.getHours() * 60 + today.getMinutes()
+                            const now = new Date()
                             const isOnNow = shifts.some((s) => {
-                              if (s.date !== todayYmd || s.employee_id !== e.id) return false
-                              return isShiftActiveNow(s.start_time, s.end_time, nowMins)
+                              if (s.employee_id !== e.id) return false
+                              return isOnShiftNow(s.date, s.start_time, s.end_time, now)
                             })
                             return (
                               <div
@@ -1133,19 +1132,6 @@ function parseTimeToMinutes(t: string) {
 
 // Returns true if the current time falls within a shift's hours.
 // Supports post-midnight end times stored as "25:30" (=01:30 next day).
-function isShiftActiveNow(startTime: string, endTime: string, nowMins: number): boolean {
-  const s = parseTimeToMinutes(startTime)
-  let e = parseTimeToMinutes(endTime)
-  // Stored as post-midnight value (e.g. 25:30 = 1530 mins)
-  if (e > 24 * 60) {
-    // nowMins is always 0–1439; shift spans midnight so check both sides
-    return nowMins >= s || nowMins <= e - 24 * 60
-  }
-  // Normal overnight stored as e.g. start=22:00 end=02:00 (e < s)
-  if (e < s) return nowMins >= s || nowMins <= e
-  return nowMins >= s && nowMins <= e
-}
-
 function hoursBetween(start: string, end: string) {
   const s = parseTimeToMinutes(start)
   let e = parseTimeToMinutes(end)
@@ -1260,10 +1246,9 @@ function ShiftCardInline({ shift, isGhost, onEdit, onDuplicate, onDelete, dept, 
   const theme = DEPT_THEME[dept?.toLowerCase() || ""] || DEPT_THEME.other
   const isCancelled = shift.status === "cancelled"
 
-  // Determine if this shift is happening right now
+  // Determine if this shift is happening right now (venue TZ: ICT)
   const now = new Date()
-  const nowMins = now.getHours() * 60 + now.getMinutes()
-  const onNow = isToday && !isCancelled && isShiftActiveNow(shift.start_time, shift.end_time, nowMins)
+  const onNow = isToday && !isCancelled && isOnShiftNow(shift.date, shift.start_time, shift.end_time, now)
 
   const durationHrs = hoursBetween(shift.start_time, shift.end_time).toFixed(1)
   // Trim HH:mm:ss → HH:mm for display

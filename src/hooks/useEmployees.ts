@@ -19,6 +19,10 @@ export type EmployeeProfile = {
   manager_type: string | null
   reports_to: string | null
   is_active: boolean
+  date_of_birth: string | null
+  address: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
   created_at?: string
   updated_at?: string
 }
@@ -57,7 +61,7 @@ export function useEmployeeProfile(userId: string | undefined) {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, created_at, updated_at",
+          "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, date_of_birth, address, emergency_contact_name, emergency_contact_phone, created_at, updated_at",
         )
         .eq("id", userId)
         .single()
@@ -84,6 +88,10 @@ export function useUpdateEmployeeProfile(userId: string) {
           | "employment_type"
           | "reports_to"
           | "is_active"
+          | "date_of_birth"
+          | "address"
+          | "emergency_contact_name"
+          | "emergency_contact_phone"
         >
       >,
     ) => {
@@ -92,7 +100,7 @@ export function useUpdateEmployeeProfile(userId: string) {
         .update({ ...patch, updated_at: new Date().toISOString() })
         .eq("id", userId)
         .select(
-          "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, created_at, updated_at",
+          "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, date_of_birth, address, emergency_contact_name, emergency_contact_phone, created_at, updated_at",
         )
         .single()
 
@@ -159,6 +167,62 @@ export function useAddEmploymentHistory(userId: string) {
 
       if (error) throw error
       return data as EmploymentHistoryRow
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["employment-history", userId] })
+    },
+  })
+}
+
+export function useUpdateEmploymentHistory(userId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...input
+    }: {
+      id: string
+      job_title?: string
+      industry_job_title?: string | null
+      start_date?: string
+      end_date?: string | null
+      employment_type?: EmploymentType
+      team?: string | null
+      notes?: string | null
+    }) => {
+      const { data, error } = await supabase
+        .from("employment_history")
+        .update({
+          ...input,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("employee_id", userId)
+        .select(
+          "id, employee_id, job_title, industry_job_title, start_date, end_date, employment_type, team, notes, created_at, updated_at",
+        )
+        .single()
+
+      if (error) throw error
+      return data as EmploymentHistoryRow
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["employment-history", userId] })
+    },
+  })
+}
+
+export function useDeleteEmploymentHistory(userId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("employment_history")
+        .delete()
+        .eq("id", id)
+        .eq("employee_id", userId)
+
+      if (error) throw error
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employment-history", userId] })

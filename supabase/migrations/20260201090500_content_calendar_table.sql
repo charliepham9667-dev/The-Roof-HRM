@@ -20,9 +20,11 @@ CREATE TABLE IF NOT EXISTS content_calendar (
 
 ALTER TABLE content_calendar ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view content_calendar" ON content_calendar;
 CREATE POLICY "Anyone can view content_calendar" ON content_calendar
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Owners/managers can manage content_calendar" ON content_calendar;
 CREATE POLICY "Owners/managers can manage content_calendar" ON content_calendar
   FOR ALL USING (EXISTS (
     SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('owner', 'manager')

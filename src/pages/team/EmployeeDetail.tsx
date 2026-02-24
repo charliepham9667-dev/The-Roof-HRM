@@ -18,17 +18,39 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 
-import { supabase } from "@/lib/supabase"
 import {
   type EmploymentType,
   type LeaveType,
   useAddEmploymentHistory,
+  useDeleteEmploymentHistory,
   useEmployeeProfile,
   useEmploymentHistory,
   useLeaveBalances,
   useUpdateEmployeeProfile,
+  useUpdateEmploymentHistory,
   useUpsertLeaveBalance,
 } from "@/hooks/useEmployees"
+import {
+  useAddManagementNote,
+  useDeleteManagementNote,
+  useEmployeeManagementNotes,
+} from "@/hooks/useManagementNotes"
+import {
+  getDocumentDownloadUrl,
+  type DocumentCategory,
+  useDeleteEmployeeDocument,
+  useEmployeeDocuments,
+  useUploadEmployeeDocument,
+} from "@/hooks/useEmployeeDocuments"
+import {
+  useAddEmployeeBenefit,
+  useDeleteEmployeeBenefit,
+  useEmployeeBenefits,
+  useEmployeeBanking,
+  useEmployeePayDetails,
+  useAddEmployeePayDetail,
+  useUpsertEmployeeBanking,
+} from "@/hooks/useEmployeePayments"
 import { useStaffList } from "@/hooks/useShifts"
 import { cn } from "@/lib/utils"
 
@@ -307,12 +329,12 @@ function OverviewTab({ userId }: { userId?: string }) {
       <div className="grid gap-4 md:grid-cols-2">
         <InfoRow label="Full name" value={profile.full_name || "—"} />
         <InfoRow label="Employee ID" value={profile.id || "—"} />
-        <InfoRow label="Date of birth" value={"—"} />
-        <InfoRow label="Address" value={"—"} />
+        <InfoRow label="Date of birth" value={profile.date_of_birth ? new Date(profile.date_of_birth + "T12:00:00").toLocaleDateString("en-GB") : "—"} />
+        <InfoRow label="Address" value={profile.address || "—"} />
         <InfoRow label="Phone number" value={profile.phone || "—"} />
         <InfoRow label="Email" value={profile.email || "—"} />
-        <InfoRow label="Emergency contact name" value={"—"} />
-        <InfoRow label="Emergency contact phone" value={"—"} />
+        <InfoRow label="Emergency contact name" value={profile.emergency_contact_name || "—"} />
+        <InfoRow label="Emergency contact phone" value={profile.emergency_contact_phone || "—"} />
         <InfoRow label="Date of hire" value={profile.hire_date || "—"} />
         <InfoRow label="Position" value={profile.job_role || "—"} />
         <InfoRow label="Department" value={profile.department || "—"} />
@@ -336,6 +358,10 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
     department: "",
     employment_type: "full_time" as EmploymentType,
     reports_to: "",
+    date_of_birth: "",
+    address: "",
+    emergency_contact_name: "",
+    emergency_contact_phone: "",
   })
 
   useEffect(() => {
@@ -348,6 +374,10 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
       department: profile.department || "",
       employment_type: (profile.employment_type as EmploymentType) || "full_time",
       reports_to: profile.reports_to || "",
+      date_of_birth: profile.date_of_birth ? profile.date_of_birth.split("T")[0] : "",
+      address: profile.address || "",
+      emergency_contact_name: profile.emergency_contact_name || "",
+      emergency_contact_phone: profile.emergency_contact_phone || "",
     })
   }, [profile?.id])
 
@@ -383,6 +413,10 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
               department: draft.department || null,
               employment_type: draft.employment_type || null,
               reports_to: draft.reports_to || null,
+              date_of_birth: draft.date_of_birth || null,
+              address: draft.address || null,
+              emergency_contact_name: draft.emergency_contact_name || null,
+              emergency_contact_phone: draft.emergency_contact_phone || null,
             })
           }
           className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -470,19 +504,19 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
 
         <div className="grid gap-2">
           <Label>Date of birth</Label>
-          <Input value="" placeholder="—" disabled />
+          <Input type="date" value={draft.date_of_birth} onChange={(e) => setDraft((s) => ({ ...s, date_of_birth: e.target.value }))} placeholder="—" />
         </div>
         <div className="grid gap-2">
           <Label>Address</Label>
-          <Input value="" placeholder="—" disabled />
+          <Input value={draft.address} onChange={(e) => setDraft((s) => ({ ...s, address: e.target.value }))} placeholder="—" />
         </div>
         <div className="grid gap-2">
           <Label>Emergency contact name</Label>
-          <Input value="" placeholder="—" disabled />
+          <Input value={draft.emergency_contact_name} onChange={(e) => setDraft((s) => ({ ...s, emergency_contact_name: e.target.value }))} placeholder="—" />
         </div>
         <div className="grid gap-2">
           <Label>Emergency contact phone</Label>
-          <Input value="" placeholder="—" disabled />
+          <Input value={draft.emergency_contact_phone} onChange={(e) => setDraft((s) => ({ ...s, emergency_contact_phone: e.target.value }))} placeholder="—" />
         </div>
       </div>
 
@@ -498,8 +532,11 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
 function EmploymentHistoryTab({ userId }: { userId?: string }) {
   const { data: rows = [], isLoading } = useEmploymentHistory(userId)
   const addMut = useAddEmploymentHistory(userId || "")
+  const updateMut = useUpdateEmploymentHistory(userId || "")
+  const deleteMut = useDeleteEmploymentHistory(userId || "")
 
   const [open, setOpen] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState({
     job_title: "",
     industry_job_title: "",
@@ -523,30 +560,7 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
       </div>
       <Separator className="my-4" />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-          <div className="text-xs text-muted-foreground">Promotion / Transfer history</div>
-          <div className="mt-1 text-sm text-foreground">Became general manager in July.</div>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-          <div className="text-xs text-muted-foreground">Evaluation history</div>
-          <div className="mt-1 text-sm text-foreground">—</div>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 md:col-span-2">
-          <div className="text-xs text-muted-foreground">Salary history</div>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">
-            <li>01.01.2025 - 01.03.2025 Probation bartender</li>
-            <li>01.03.2025 - 01.03.2026 Junior Bartender</li>
-            <li>Review contract and etc.</li>
-          </ul>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 md:col-span-2">
-          <div className="text-xs text-muted-foreground">Disciplinary action history</div>
-          <div className="mt-1 text-sm text-foreground">—</div>
-        </div>
-      </div>
-
-      <Separator className="my-6" />
+      <Separator className="my-4" />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-10">
@@ -554,8 +568,10 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
         </div>
       ) : rows.length === 0 ? (
         <div className="space-y-2 text-sm">
-          <div className="font-medium text-foreground">Previous positions in company (if applicable)</div>
-          <div className="text-muted-foreground">Finance Director</div>
+          <div className="font-medium text-foreground">Previous positions in company</div>
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center text-muted-foreground">
+            No employment history yet. Click <strong>Add</strong> to record a position.
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -563,19 +579,49 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
           <div className="overflow-hidden rounded-lg border border-border">
             <div className="grid grid-cols-12 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
               <div className="col-span-5">Job title</div>
-              <div className="col-span-3">Employment type</div>
+              <div className="col-span-2">Employment type</div>
               <div className="col-span-2">Start date</div>
               <div className="col-span-2">End date</div>
+              <div className="col-span-1 text-right">Actions</div>
             </div>
             {rows.map((r) => (
-              <div key={r.id} className="grid grid-cols-12 px-4 py-3 text-sm border-t border-border">
+              <div key={r.id} className="grid grid-cols-12 items-center px-4 py-3 text-sm border-t border-border gap-2">
                 <div className="col-span-5">
                   <div className="font-medium">{r.job_title}</div>
                   {r.team && <div className="text-xs text-muted-foreground">{r.team}</div>}
                 </div>
-                <div className="col-span-3 text-muted-foreground">{titleCaseEmploymentType(r.employment_type)}</div>
+                <div className="col-span-2 text-muted-foreground">{titleCaseEmploymentType(r.employment_type)}</div>
                 <div className="col-span-2 text-muted-foreground">{r.start_date}</div>
                 <div className="col-span-2 text-muted-foreground">{r.end_date || "—"}</div>
+                <div className="col-span-1 flex justify-end gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setEditId(r.id)
+                      setForm({
+                        job_title: r.job_title,
+                        industry_job_title: r.industry_job_title || "",
+                        start_date: r.start_date,
+                        end_date: r.end_date || "",
+                        employment_type: r.employment_type,
+                        team: r.team || "",
+                      })
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                    onClick={() => deleteMut.mutate(r.id)}
+                    disabled={deleteMut.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -673,6 +719,98 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
                   </>
                 ) : (
                   "Create"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editId} onOpenChange={(o) => !o && setEditId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Job</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Job title</Label>
+              <Input value={form.job_title} onChange={(e) => setForm((s) => ({ ...s, job_title: e.target.value }))} placeholder="Type here to search for job titles" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Industry standard job title</Label>
+              <Input value={form.industry_job_title} onChange={(e) => setForm((s) => ({ ...s, industry_job_title: e.target.value }))} placeholder="Type here to search for standard job titles" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label>Start date</Label>
+                <Input type="date" value={form.start_date} onChange={(e) => setForm((s) => ({ ...s, start_date: e.target.value }))} />
+              </div>
+              <div className="grid gap-2">
+                <Label>End date (Optional)</Label>
+                <Input type="date" value={form.end_date} onChange={(e) => setForm((s) => ({ ...s, end_date: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Employment type</Label>
+              <Select
+                value={form.employment_type}
+                onValueChange={(v) => setForm((s) => ({ ...s, employment_type: v as EmploymentType }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an employment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full_time">Full-time</SelectItem>
+                  <SelectItem value="part_time">Part-time</SelectItem>
+                  <SelectItem value="casual">Casual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Team</Label>
+              <Input value={form.team} onChange={(e) => setForm((s) => ({ ...s, team: e.target.value }))} placeholder="Finance" />
+            </div>
+
+            {updateMut.error && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {(updateMut.error as Error).message}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setEditId(null)}
+                disabled={updateMut.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                disabled={updateMut.isPending || !form.job_title || !form.start_date || !editId}
+                onClick={async () => {
+                  if (!editId) return
+                  await updateMut.mutateAsync({
+                    id: editId,
+                    job_title: form.job_title,
+                    industry_job_title: form.industry_job_title || null,
+                    start_date: form.start_date,
+                    end_date: form.end_date || null,
+                    employment_type: form.employment_type,
+                    team: form.team || null,
+                  })
+                  setEditId(null)
+                }}
+              >
+                {updateMut.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
                 )}
               </Button>
             </div>
@@ -847,9 +985,9 @@ function DraftCallout({ children }: { children: string }) {
 }
 
 function ManagementNotesTab({ userId }: { userId?: string }) {
-  const [notes, setNotes] = useState<Array<{ id: string; content: string; createdAt: string }>>([
-    { id: "seed-1", content: "Draft: coaching note example. Replace with real notes once DB is wired.", createdAt: "Today" },
-  ])
+  const { data: notes = [], isLoading } = useEmployeeManagementNotes(userId)
+  const addMut = useAddManagementNote(userId || "")
+  const deleteMut = useDeleteManagementNote(userId || "")
   const [draft, setDraft] = useState("")
 
   return (
@@ -858,27 +996,31 @@ function ManagementNotesTab({ userId }: { userId?: string }) {
         <h3 className="text-lg font-semibold">Management notes</h3>
         <Button
           className="bg-purple-600 hover:bg-purple-700 text-white"
-          onClick={() => {
-            if (!draft.trim()) return
-            setNotes((s) => [
-              { id: String(Date.now()), content: draft.trim(), createdAt: "Just now" },
-              ...s,
-            ])
-            setDraft("")
+          onClick={async () => {
+            if (!draft.trim() || !userId) return
+            try {
+              await addMut.mutateAsync(draft.trim())
+              setDraft("")
+            } catch {}
           }}
-          disabled={!userId || !draft.trim()}
+          disabled={!userId || !draft.trim() || addMut.isPending}
         >
-          <Save className="mr-2 h-4 w-4" />
-          Save note
+          {addMut.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save note
+            </>
+          )}
         </Button>
       </div>
       <Separator className="my-4" />
 
-      <DraftCallout>
-        Draft UI only: management notes aren’t connected to a database table yet.
-      </DraftCallout>
-
-      <div className="mt-4 grid gap-2">
+      <div className="grid gap-2">
         <Label>Add a note</Label>
         <Input
           value={draft}
@@ -887,14 +1029,46 @@ function ManagementNotesTab({ userId }: { userId?: string }) {
         />
       </div>
 
-      <div className="mt-5 space-y-3">
-        {notes.map((n) => (
-          <div key={n.id} className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-            <div className="text-xs text-muted-foreground">{n.createdAt}</div>
-            <div className="mt-1 text-sm text-foreground">{n.content}</div>
-          </div>
-        ))}
-      </div>
+      {addMut.error && (
+        <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          {(addMut.error as Error).message}
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="mt-6 flex justify-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="mt-5 space-y-3">
+          {notes.map((n) => (
+            <div key={n.id} className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-muted-foreground">
+                  {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  {n.author?.full_name && ` · ${n.author.full_name}`}
+                </div>
+                <div className="mt-1 text-sm text-foreground">{n.content}</div>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => deleteMut.mutate(n.id)}
+                disabled={deleteMut.isPending}
+                aria-label="Delete note"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          {notes.length === 0 && (
+            <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+              No notes yet. Add a note above to get started.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -937,20 +1111,6 @@ function AdditionalInformationTab({ userId }: { userId?: string }) {
   )
 }
 
-type DocumentCategory = "hr" | "medical" | "certification"
-
-type DriveDoc = {
-  id: string
-  name: string
-  mimeType: string
-  createdTime: string
-  modifiedTime: string
-  webViewLink: string
-  webContentLink: string
-  size: number | null
-  iconLink: string
-}
-
 function formatBytes(n: number | null) {
   if (!n || n <= 0) return "—"
   const units = ["B", "KB", "MB", "GB"]
@@ -961,18 +1121,6 @@ function formatBytes(n: number | null) {
     i++
   }
   return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
-}
-
-async function fileToBase64(file: File): Promise<string> {
-  const buf = await file.arrayBuffer()
-  const bytes = new Uint8Array(buf)
-  // btoa expects binary string; chunk to avoid call stack issues
-  let binary = ""
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
-  }
-  return btoa(binary)
 }
 
 function DocumentsTab({
@@ -987,60 +1135,27 @@ function DocumentsTab({
   const [open, setOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [rename, setRename] = useState("")
-  const [busy, setBusy] = useState(false)
 
-  const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [needsConnect, setNeedsConnect] = useState(false)
-  const [docs, setDocs] = useState<DriveDoc[]>([])
+  const { data: docs = [], isLoading: loading, error: loadError, refetch } = useEmployeeDocuments(userId, category)
+  const uploadMut = useUploadEmployeeDocument(userId || "")
+  const deleteMut = useDeleteEmployeeDocument(userId || "")
 
-  const driveAuthUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive-auth`
-
-  async function load() {
-    if (!userId) return
-    setLoading(true)
-    setErr(null)
+  async function handleOpenDoc(d: { file_path: string }) {
     try {
-      const { data, error } = await supabase.functions.invoke("employee-documents-drive", {
-        body: { action: "list", employeeId: userId, category },
-      })
-      if (error) throw error
-      if (!data?.success) throw new Error(data?.error || "Failed to load documents")
-      setDocs((data.files || []) as DriveDoc[])
-      setNeedsConnect(false)
-    } catch (e) {
-      const msg = (e as Error)?.message || "Failed to load documents"
-      setErr(msg)
-      setDocs([])
-      setNeedsConnect(msg.toLowerCase().includes("not connected"))
-    } finally {
-      setLoading(false)
-    }
+      const { data } = await getDocumentDownloadUrl(d.file_path)
+      if (data?.signedUrl) window.open(data.signedUrl, "_blank")
+    } catch {}
   }
-
-  useEffect(() => {
-    void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, category])
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">{title}</h3>
         <div className="flex items-center gap-2">
-          {needsConnect && (
-            <Button
-              variant="outline"
-              className="border-purple-600/30 text-purple-700 hover:bg-purple-600/10"
-              onClick={() => window.open(driveAuthUrl, "_blank")}
-            >
-              Connect Google Drive
-            </Button>
-          )}
           <Button
             variant="outline"
             className="border-border"
-            onClick={() => void load()}
+            onClick={() => refetch()}
             disabled={!userId || loading}
           >
             <RefreshCcw className="mr-2 h-4 w-4" />
@@ -1049,7 +1164,7 @@ function DocumentsTab({
           <Button
             onClick={() => setOpen(true)}
             className="bg-purple-600 hover:bg-purple-700 text-white"
-            disabled={!userId || needsConnect}
+            disabled={!userId}
           >
             <Plus className="mr-2 h-4 w-4" />
             Upload
@@ -1058,9 +1173,15 @@ function DocumentsTab({
       </div>
       <Separator className="my-4" />
 
-      {err && (
+      {loadError && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {err}
+          {(loadError as Error).message}
+        </div>
+      )}
+
+      {uploadMut.error && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {(uploadMut.error as Error).message}
         </div>
       )}
 
@@ -1072,9 +1193,7 @@ function DocumentsTab({
         <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-center">
           <div className="text-sm font-medium text-foreground">No documents yet</div>
           <div className="mt-1 text-xs text-muted-foreground">
-            {needsConnect
-              ? "Connect Google Drive to list and upload employee documents."
-              : "Upload a document to keep it on this profile."}
+            Upload a document to keep it on this profile.
           </div>
         </div>
       ) : (
@@ -1082,29 +1201,26 @@ function DocumentsTab({
           <div className="grid grid-cols-12 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
             <div className="col-span-7">File</div>
             <div className="col-span-2">Size</div>
-            <div className="col-span-2">Updated</div>
+            <div className="col-span-2">Uploaded</div>
             <div className="col-span-1 text-right">Actions</div>
           </div>
           {docs.map((d) => (
             <div key={d.id} className="grid grid-cols-12 items-center px-4 py-3 text-sm border-t border-border">
               <div className="col-span-7 min-w-0">
-                <div className="truncate font-medium text-foreground">{d.name}</div>
-                <div className="truncate text-xs text-muted-foreground">{d.mimeType}</div>
+                <div className="truncate font-medium text-foreground">{d.file_name}</div>
+                <div className="truncate text-xs text-muted-foreground">{d.mime_type || "—"}</div>
               </div>
-              <div className="col-span-2 text-muted-foreground">{formatBytes(d.size)}</div>
+              <div className="col-span-2 text-muted-foreground">{formatBytes(d.size_bytes)}</div>
               <div className="col-span-2 text-muted-foreground">
-                {d.modifiedTime ? new Date(d.modifiedTime).toLocaleDateString("en-US") : "—"}
+                {d.created_at ? new Date(d.created_at).toLocaleDateString("en-US") : "—"}
               </div>
               <div className="col-span-1 flex justify-end gap-2">
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8"
-                  onClick={() => {
-                    const url = d.webViewLink || d.webContentLink
-                    if (url) window.open(url, "_blank")
-                  }}
-                  aria-label="Open in Google Drive"
+                  onClick={() => handleOpenDoc(d)}
+                  aria-label="Open document"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </Button>
@@ -1112,22 +1228,8 @@ function DocumentsTab({
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={async () => {
-                    setBusy(true)
-                    try {
-                      const { data, error } = await supabase.functions.invoke("employee-documents-drive", {
-                        body: { action: "delete", employeeId: userId, category, fileId: d.id },
-                      })
-                      if (error) throw error
-                      if (!data?.success) throw new Error(data?.error || "Failed to delete")
-                      await load()
-                    } catch (e) {
-                      setErr((e as Error)?.message || "Failed to delete")
-                    } finally {
-                      setBusy(false)
-                    }
-                  }}
-                  disabled={busy}
+                  onClick={() => deleteMut.mutate({ id: d.id, file_path: d.file_path, category })}
+                  disabled={deleteMut.isPending}
                   aria-label="Delete"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -1170,46 +1272,35 @@ function DocumentsTab({
                   setFile(null)
                   setRename("")
                 }}
-                disabled={busy}
+                disabled={uploadMut.isPending}
               >
                 Cancel
               </Button>
               <Button
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                disabled={!file || busy || !userId || needsConnect}
+                disabled={!file || !userId || uploadMut.isPending}
                 onClick={async () => {
                   if (!file || !userId) return
-                  setBusy(true)
-                  setErr(null)
                   try {
-                    const contentBase64 = await fileToBase64(file)
-                    const fileName = (rename || file.name).trim() || file.name
-                    const { data, error } = await supabase.functions.invoke("employee-documents-drive", {
-                      body: {
-                        action: "upload",
-                        employeeId: userId,
-                        category,
-                        fileName,
-                        mimeType: file.type || "application/octet-stream",
-                        contentBase64,
-                      },
+                    await uploadMut.mutateAsync({
+                      category,
+                      file,
+                      fileName: (rename || file.name).trim() || file.name,
                     })
-                    if (error) throw error
-                    if (!data?.success) throw new Error(data?.error || "Upload failed")
                     setOpen(false)
                     setFile(null)
                     setRename("")
-                    await load()
-                  } catch (e) {
-                    const msg = (e as Error)?.message || "Upload failed"
-                    setErr(msg)
-                    setNeedsConnect(msg.toLowerCase().includes("not connected"))
-                  } finally {
-                    setBusy(false)
-                  }
+                  } catch {}
                 }}
               >
-                {busy ? "Uploading…" : "Upload"}
+                {uploadMut.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading…
+                  </>
+                ) : (
+                  "Upload"
+                )}
               </Button>
             </div>
           </div>
@@ -1220,37 +1311,99 @@ function DocumentsTab({
 }
 
 function PaymentsBankingTab({ userId }: { userId?: string }) {
+  const { data: banking, isLoading } = useEmployeeBanking(userId)
+  const upsertMut = useUpsertEmployeeBanking(userId || "")
+
+  const [bankName, setBankName] = useState("")
+  const [accountName, setAccountName] = useState("")
+  const [accountNumber, setAccountNumber] = useState("")
+  const [bsbSwift, setBsbSwift] = useState("")
+
+  useEffect(() => {
+    if (banking) {
+      setBankName(banking.bank_name ?? "")
+      setAccountName(banking.account_name ?? "")
+      setAccountNumber(banking.account_number ?? "")
+      setBsbSwift(banking.bsb_swift ?? "")
+    }
+  }, [banking])
+
+  async function handleSave() {
+    if (!userId) return
+    upsertMut.mutate(
+      { bank_name: bankName, account_name: accountName, account_number: accountNumber, bsb_swift: bsbSwift },
+      { onError: () => {} }
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center rounded-card border border-border bg-card p-12 shadow-card">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">Banking Details</h3>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white" disabled>
-          <Save className="mr-2 h-4 w-4" />
-          Save
+        <Button
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+          disabled={!userId || upsertMut.isPending}
+          onClick={handleSave}
+        >
+          {upsertMut.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save
+            </>
+          )}
         </Button>
       </div>
       <Separator className="my-4" />
 
-      <DraftCallout>
-        Draft UI only: recommended to store banking details in a dedicated table with strict RLS (owner-only by default).
-      </DraftCallout>
-
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
           <Label>Bank name</Label>
-          <Input disabled={!userId} placeholder="—" />
+          <Input
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+            disabled={!userId}
+            placeholder="—"
+          />
         </div>
         <div className="grid gap-2">
           <Label>Account name</Label>
-          <Input disabled={!userId} placeholder="—" />
+          <Input
+            value={accountName}
+            onChange={(e) => setAccountName(e.target.value)}
+            disabled={!userId}
+            placeholder="—"
+          />
         </div>
         <div className="grid gap-2">
           <Label>Account number</Label>
-          <Input disabled={!userId} placeholder="—" />
+          <Input
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+            disabled={!userId}
+            placeholder="—"
+          />
         </div>
         <div className="grid gap-2">
           <Label>BSB / SWIFT</Label>
-          <Input disabled={!userId} placeholder="—" />
+          <Input
+            value={bsbSwift}
+            onChange={(e) => setBsbSwift(e.target.value)}
+            disabled={!userId}
+            placeholder="—"
+          />
         </div>
       </div>
     </div>
@@ -1258,26 +1411,50 @@ function PaymentsBankingTab({ userId }: { userId?: string }) {
 }
 
 function PaymentsPayTab({ userId }: { userId?: string }) {
+  const { data: payHistory = [], isLoading } = useEmployeePayDetails(userId)
+  const addMut = useAddEmployeePayDetail(userId || "")
+
   const [payType, setPayType] = useState<"hourly" | "salary">("hourly")
+  const [rateValue, setRateValue] = useState("")
+  const [currency, setCurrency] = useState("VND")
+  const [effectiveDate, setEffectiveDate] = useState("")
+  const [notes, setNotes] = useState("")
+
+  async function handleAdd() {
+    if (!userId) return
+    const rate = parseFloat(rateValue)
+    if (isNaN(rate) || rate < 0 || !effectiveDate) return
+    addMut.mutate(
+      { pay_type: payType, rate_value: rate, currency, effective_date: effectiveDate, notes: notes || undefined },
+      {
+        onSuccess: () => {
+          setRateValue("")
+          setEffectiveDate("")
+          setNotes("")
+        },
+      }
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center rounded-card border border-border bg-card p-12 shadow-card">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">Pay Details</h3>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white" disabled>
-          <Save className="mr-2 h-4 w-4" />
-          Save
-        </Button>
       </div>
       <Separator className="my-4" />
 
-      <DraftCallout>
-        Draft UI only: recommended to support effective-dated pay history (not just a single current value).
-      </DraftCallout>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="mb-6 grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
           <Label>Pay type</Label>
-          <Select value={payType} onValueChange={(v) => setPayType(v as any)} disabled={!userId}>
+          <Select value={payType} onValueChange={(v) => setPayType(v as "hourly" | "salary")} disabled={!userId}>
             <SelectTrigger>
               <SelectValue placeholder="Select pay type" />
             </SelectTrigger>
@@ -1289,51 +1466,208 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
         </div>
         <div className="grid gap-2">
           <Label>{payType === "hourly" ? "Hourly rate" : "Salary (annual)"}</Label>
-          <Input disabled={!userId} placeholder="—" />
+          <Input
+            type="number"
+            min={0}
+            step={0.01}
+            value={rateValue}
+            onChange={(e) => setRateValue(e.target.value)}
+            disabled={!userId}
+            placeholder="—"
+          />
         </div>
         <div className="grid gap-2">
           <Label>Currency</Label>
-          <Input disabled={!userId} placeholder="VND" />
+          <Input value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={!userId} placeholder="VND" />
         </div>
         <div className="grid gap-2">
           <Label>Effective date</Label>
-          <Input type="date" disabled={!userId} />
+          <Input
+            type="date"
+            value={effectiveDate}
+            onChange={(e) => setEffectiveDate(e.target.value)}
+            disabled={!userId}
+          />
         </div>
         <div className="grid gap-2 md:col-span-2">
           <Label>Notes</Label>
-          <Input disabled={!userId} placeholder="—" />
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!userId} placeholder="—" />
+        </div>
+        <div className="md:col-span-2">
+          <Button
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+            disabled={!userId || addMut.isPending}
+            onClick={handleAdd}
+          >
+            {addMut.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Add pay rate
+              </>
+            )}
+          </Button>
         </div>
       </div>
+
+      {payHistory.length > 0 && (
+        <>
+          <h4 className="text-sm font-medium text-muted-foreground">Pay history</h4>
+          <div className="mt-2 space-y-2">
+            {payHistory.map((p) => (
+              <div
+                key={p.id}
+                className="rounded-lg border border-border bg-muted/30 px-4 py-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">
+                    {p.pay_type === "hourly" ? "Hourly" : "Salary"}: {p.rate_value.toLocaleString()} {p.currency}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    Effective {new Date(p.effective_date).toLocaleDateString()}
+                  </span>
+                </div>
+                {p.notes && <div className="mt-1 text-sm text-muted-foreground">{p.notes}</div>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
 function PaymentsBenefitsTab({ userId }: { userId?: string }) {
+  const { data: benefits = [], isLoading } = useEmployeeBenefits(userId)
+  const addMut = useAddEmployeeBenefit(userId || "")
+  const deleteMut = useDeleteEmployeeBenefit(userId || "")
+
+  const [benefitType, setBenefitType] = useState("")
+  const [benefitAmount, setBenefitAmount] = useState("")
+  const [benefitNotes, setBenefitNotes] = useState("")
+  const [addOpen, setAddOpen] = useState(false)
+
+  async function handleAdd() {
+    if (!userId) return
+    const trimmed = benefitType.trim()
+    if (!trimmed) return
+    const amount = benefitAmount.trim() ? parseFloat(benefitAmount) : null
+    addMut.mutate(
+      { benefit_type: trimmed, amount: amount ?? null, notes: benefitNotes.trim() || null },
+      {
+        onSuccess: () => {
+          setBenefitType("")
+          setBenefitAmount("")
+          setBenefitNotes("")
+          setAddOpen(false)
+        },
+      }
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center rounded-card border border-border bg-card p-12 shadow-card">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">Employee Benefits</h3>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white" disabled>
-          <Save className="mr-2 h-4 w-4" />
-          Save
+        <Button variant="outline" disabled={!userId} onClick={() => setAddOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add benefit
         </Button>
       </div>
       <Separator className="my-4" />
 
-      <DraftCallout>
-        Draft UI only: recommended to store benefits as a list (0:n) so benefits can be added/removed over time.
-      </DraftCallout>
-
-      <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/20 p-6 text-center">
-        <div className="text-sm font-medium text-foreground">No benefits added</div>
-        <div className="mt-1 text-xs text-muted-foreground">Add items like meals, transport, allowance, insurance, etc.</div>
-        <div className="mt-4">
-          <Button variant="outline" disabled={!userId}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add benefit (draft)
-          </Button>
+      {benefits.length === 0 ? (
+        <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/20 p-6 text-center">
+          <div className="text-sm font-medium text-foreground">No benefits added</div>
+          <div className="mt-1 text-xs text-muted-foreground">Add items like meals, transport, allowance, insurance, etc.</div>
+          <div className="mt-4">
+            <Button variant="outline" disabled={!userId} onClick={() => setAddOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add benefit
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mt-4 space-y-2">
+          {benefits.map((b) => (
+            <div key={b.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+              <div>
+                <div className="font-medium">{b.benefit_type}</div>
+                {b.amount != null && (
+                  <div className="text-sm text-muted-foreground">{b.amount.toLocaleString()}</div>
+                )}
+                {b.notes && <div className="text-sm text-muted-foreground">{b.notes}</div>}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:bg-destructive/10"
+                disabled={!userId || deleteMut.isPending}
+                onClick={() => deleteMut.mutate(b.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add benefit</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Benefit type</Label>
+              <Input
+                value={benefitType}
+                onChange={(e) => setBenefitType(e.target.value)}
+                placeholder="e.g. Meals, Transport, Insurance"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Amount (optional)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={benefitAmount}
+                onChange={(e) => setBenefitAmount(e.target.value)}
+                placeholder="—"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Notes (optional)</Label>
+              <Input value={benefitNotes} onChange={(e) => setBenefitNotes(e.target.value)} placeholder="—" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={!benefitType.trim() || addMut.isPending}
+              onClick={handleAdd}
+            >
+              {addMut.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Add
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
