@@ -60,7 +60,6 @@ type TabKey =
   | "employment-history"
   | "leave-details"
   | "management-notes"
-  | "additional-information"
   | "documents-hr"
   | "documents-assets"
   | "documents-certifications"
@@ -90,8 +89,6 @@ const sidebarItems: SidebarItem[] = [
   { type: "tab", key: "payments-banking", label: "Banking Details" },
   { type: "tab", key: "payments-pay", label: "Pay Details" },
   { type: "tab", key: "payments-benefits", label: "Employee Benefits" },
-
-  { type: "tab", key: "additional-information", label: "Additional information" },
 ]
 
 function initials(name: string) {
@@ -253,7 +250,6 @@ export function EmployeeDetail() {
           {tab === "employment-history" && <EmploymentHistoryTab userId={userId} />}
           {tab === "leave-details" && <LeaveDetailsTab userId={userId} />}
           {tab === "management-notes" && <ManagementNotesTab userId={userId} />}
-          {tab === "additional-information" && <AdditionalInformationTab userId={userId} />}
           {tab === "documents-hr" && (
             <DocumentsTab userId={userId} title="HR Documents" category="hr" />
           )}
@@ -272,7 +268,6 @@ export function EmployeeDetail() {
             tab !== "employment-history" &&
             tab !== "leave-details" &&
             tab !== "management-notes" &&
-            tab !== "additional-information" &&
             tab !== "documents-hr" &&
             tab !== "documents-medical" &&
             tab !== "documents-certifications" &&
@@ -976,14 +971,6 @@ function ComingSoonTab({ label }: { label: string }) {
   )
 }
 
-function DraftCallout({ children }: { children: string }) {
-  return (
-    <div className="rounded-lg border border-purple-600/20 bg-purple-600/5 px-4 py-3 text-sm text-purple-900">
-      {children}
-    </div>
-  )
-}
-
 function ManagementNotesTab({ userId }: { userId?: string }) {
   const { data: notes = [], isLoading } = useEmployeeManagementNotes(userId)
   const addMut = useAddManagementNote(userId || "")
@@ -1069,44 +1056,6 @@ function ManagementNotesTab({ userId }: { userId?: string }) {
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-function AdditionalInformationTab({ userId }: { userId?: string }) {
-  return (
-    <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold">Additional information</h3>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white" disabled>
-          <Save className="mr-2 h-4 w-4" />
-          Save
-        </Button>
-      </div>
-      <Separator className="my-4" />
-
-      <DraftCallout>
-        Draft UI only: these fields aren’t stored yet (suggestion: add columns to `profiles` or create an `employee_additional_info` table).
-      </DraftCallout>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div className="grid gap-2">
-          <Label>Date of birth</Label>
-          <Input type="date" disabled={!userId} placeholder="—" />
-        </div>
-        <div className="grid gap-2">
-          <Label>Address</Label>
-          <Input disabled={!userId} placeholder="—" />
-        </div>
-        <div className="grid gap-2">
-          <Label>Emergency contact name</Label>
-          <Input disabled={!userId} placeholder="—" />
-        </div>
-        <div className="grid gap-2">
-          <Label>Emergency contact phone</Label>
-          <Input disabled={!userId} placeholder="—" />
-        </div>
-      </div>
     </div>
   )
 }
@@ -1496,7 +1445,7 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
         <div className="md:col-span-2">
           <Button
             className="bg-purple-600 hover:bg-purple-700 text-white"
-            disabled={!userId || addMut.isPending}
+            disabled={!userId || addMut.isPending || !rateValue.trim() || !effectiveDate}
             onClick={handleAdd}
           >
             {addMut.isPending ? (
@@ -1506,8 +1455,8 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
               </>
             ) : (
               <>
-                <Plus className="mr-2 h-4 w-4" />
-                Add pay rate
+                <Save className="mr-2 h-4 w-4" />
+                Save pay rate
               </>
             )}
           </Button>
