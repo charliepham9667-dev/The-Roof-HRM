@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
-import { ExternalLink, Loader2, Pencil, Plus, RefreshCcw, Save, Trash2 } from "lucide-react"
+import { Copy, ExternalLink, Loader2, Pencil, Plus, RefreshCcw, Save, Trash2 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -49,6 +49,8 @@ import {
   useEmployeeBanking,
   useEmployeePayDetails,
   useAddEmployeePayDetail,
+  useUpdateEmployeePayDetail,
+  useDeleteEmployeePayDetail,
   useUpsertEmployeeBanking,
 } from "@/hooks/useEmployeePayments"
 import { useStaffList } from "@/hooks/useShifts"
@@ -1362,12 +1364,30 @@ function PaymentsBankingTab({ userId }: { userId?: string }) {
 function PaymentsPayTab({ userId }: { userId?: string }) {
   const { data: payHistory = [], isLoading } = useEmployeePayDetails(userId)
   const addMut = useAddEmployeePayDetail(userId || "")
+  const updateMut = useUpdateEmployeePayDetail(userId || "")
+  const deleteMut = useDeleteEmployeePayDetail(userId || "")
 
   const [payType, setPayType] = useState<"hourly" | "salary">("hourly")
   const [rateValue, setRateValue] = useState("")
   const [currency, setCurrency] = useState("VND")
   const [effectiveDate, setEffectiveDate] = useState("")
   const [notes, setNotes] = useState("")
+
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editPayType, setEditPayType] = useState<"hourly" | "salary">("hourly")
+  const [editRateValue, setEditRateValue] = useState("")
+  const [editCurrency, setEditCurrency] = useState("VND")
+  const [editEffectiveDate, setEditEffectiveDate] = useState("")
+  const [editNotes, setEditNotes] = useState("")
+
+  function openEdit(p: { id: string; pay_type: string; rate_value: number; currency: string; effective_date: string; notes: string | null }) {
+    setEditId(p.id)
+    setEditPayType((p.pay_type || "hourly") as "hourly" | "salary")
+    setEditRateValue(String(p.rate_value ?? ""))
+    setEditCurrency(p.currency || "VND")
+    setEditEffectiveDate(p.effective_date ? p.effective_date.slice(0, 10) : "")
+    setEditNotes(p.notes || "")
+  }
 
   async function handleAdd() {
     if (!userId) return
@@ -1383,6 +1403,21 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
         },
       }
     )
+  }
+
+  async function handleUpdate() {
+    if (!editId || !userId) return
+    const rate = parseFloat(editRateValue)
+    if (isNaN(rate) || rate < 0 || !editEffectiveDate) return
+    await updateMut.mutateAsync({
+      id: editId,
+      pay_type: editPayType,
+      rate_value: rate,
+      currency: editCurrency,
+      effective_date: editEffectiveDate,
+      notes: editNotes.trim() || null,
+    })
+    setEditId(null)
   }
 
   if (isLoading) {
@@ -1414,7 +1449,7 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label>{payType === "hourly" ? "Hourly rate" : "Salary (annual)"}</Label>
+          <Label>{payType === "hourly" ? "Hourly rate" : "Salary (monthly)"}</Label>
           <Input
             type="number"
             min={0}
@@ -1470,27 +1505,121 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
             {payHistory.map((p) => (
               <div
                 key={p.id}
-                className="rounded-lg border border-border bg-muted/30 px-4 py-3"
+                className="flex items-start justify-between rounded-lg border border-border bg-muted/30 px-4 py-3"
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">
-                    {p.pay_type === "hourly" ? "Hourly" : "Salary"}: {p.rate_value.toLocaleString()} {p.currency}
-                  </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {p.pay_type === "hourly" ? "Hourly" : "Salary"}: {p.rate_value.toLocaleString()} {p.currency}
+                    </span>
+                  </div>
                   <span className="text-sm text-muted-foreground">
                     Effective {new Date(p.effective_date).toLocaleDateString()}
                   </span>
+                  {p.notes && <div className="mt-1 text-sm text-muted-foreground">{p.notes}</div>}
                 </div>
-                {p.notes && <div className="mt-1 text-sm text-muted-foreground">{p.notes}</div>}
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-foreground"
+                    disabled={!userId || updateMut.isPending}
+                    onClick={() => openEdit(p)}
+                    aria-label="Edit pay rate"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:bg-destructive/10"
+                    disabled={!userId || deleteMut.isPending}
+                    onClick={() => deleteMut.mutate(p.id)}
+                    aria-label="Delete pay rate"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         </>
       )}
+
+      <Dialog open={!!editId} onOpenChange={(o) => !o && setEditId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit pay rate</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Pay type</Label>
+              <Select value={editPayType} onValueChange={(v) => setEditPayType(v as "hourly" | "salary")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="salary">Salary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>{editPayType === "hourly" ? "Hourly rate" : "Salary (monthly)"}</Label>
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={editRateValue}
+                onChange={(e) => setEditRateValue(e.target.value)}
+                placeholder="—"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Currency</Label>
+              <Input value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)} placeholder="VND" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Effective date</Label>
+              <Input
+                type="date"
+                value={editEffectiveDate}
+                onChange={(e) => setEditEffectiveDate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Notes</Label>
+              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="—" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditId(null)}>Cancel</Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={!editRateValue.trim() || !editEffectiveDate || updateMut.isPending}
+              onClick={handleUpdate}
+            >
+              {updateMut.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save changes
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 function PaymentsBenefitsTab({ userId }: { userId?: string }) {
+  const { data: staffList = [] } = useStaffList()
   const { data: benefits = [], isLoading } = useEmployeeBenefits(userId)
   const addMut = useAddEmployeeBenefit(userId || "")
   const deleteMut = useDeleteEmployeeBenefit(userId || "")
@@ -1499,6 +1628,11 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
   const [benefitAmount, setBenefitAmount] = useState("")
   const [benefitNotes, setBenefitNotes] = useState("")
   const [addOpen, setAddOpen] = useState(false)
+  const [copyFromOpen, setCopyFromOpen] = useState(false)
+  const [copyFromId, setCopyFromId] = useState<string>("")
+
+  const { data: sourceBenefits = [] } = useEmployeeBenefits(copyFromId || undefined)
+  const sourceStaff = staffList.filter((s: { id: string }) => s.id !== userId)
 
   async function handleAdd() {
     if (!userId) return
@@ -1518,6 +1652,19 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
     )
   }
 
+  async function handleCopyFromEmployee() {
+    if (!userId || !copyFromId || sourceBenefits.length === 0) return
+    for (const b of sourceBenefits) {
+      await addMut.mutateAsync({
+        benefit_type: b.benefit_type,
+        amount: b.amount,
+        notes: b.notes,
+      })
+    }
+    setCopyFromOpen(false)
+    setCopyFromId("")
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center rounded-card border border-border bg-card p-12 shadow-card">
@@ -1530,10 +1677,16 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">Employee Benefits</h3>
-        <Button variant="outline" disabled={!userId} onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add benefit
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" disabled={!userId || sourceStaff.length === 0} onClick={() => setCopyFromOpen(true)}>
+            <Copy className="mr-2 h-4 w-4" />
+            Copy from employee
+          </Button>
+          <Button variant="outline" disabled={!userId} onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add benefit
+          </Button>
+        </div>
       </div>
       <Separator className="my-4" />
 
@@ -1559,15 +1712,17 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
                 )}
                 {b.notes && <div className="text-sm text-muted-foreground">{b.notes}</div>}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:bg-destructive/10"
-                disabled={!userId || deleteMut.isPending}
-                onClick={() => deleteMut.mutate(b.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:bg-destructive/10"
+                  disabled={!userId || deleteMut.isPending}
+                  onClick={() => deleteMut.mutate(b.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -1613,6 +1768,58 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               Add
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={copyFromOpen} onOpenChange={(o) => { setCopyFromOpen(o); if (!o) setCopyFromId("") }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Copy benefits from employee</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Select employee to copy from</Label>
+              <Select value={copyFromId} onValueChange={setCopyFromId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an employee…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sourceStaff.map((s: { id: string; full_name?: string; email?: string }) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.full_name || s.email || s.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {copyFromId && (
+              <p className="text-sm text-muted-foreground">
+                {sourceBenefits.length} benefit{sourceBenefits.length !== 1 ? "s" : ""} to copy
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setCopyFromOpen(false); setCopyFromId("") }}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={!copyFromId || sourceBenefits.length === 0 || addMut.isPending}
+              onClick={handleCopyFromEmployee}
+            >
+              {addMut.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Copying…
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy {sourceBenefits.length} benefit{sourceBenefits.length !== 1 ? "s" : ""}
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
