@@ -88,6 +88,7 @@ export function ScheduleBuilder() {
       .from("profiles")
       .select("id, full_name, email, avatar_url, job_role, department, role")
       .eq("is_active", true)
+      .eq("status", "active")
       .neq("role", "owner")
       .order("full_name")
     if (empErr) throw empErr

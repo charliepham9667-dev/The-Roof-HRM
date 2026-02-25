@@ -303,10 +303,14 @@ export function AddShiftModal({
       return
     }
 
+    const employeeId = draft.employee_id === "open" || !draft.employee_id ? null : String(draft.employee_id).trim() || null
+    if (!employeeId && !editShift?.id) {
+      setError("Please select an employee.")
+      return
+    }
+
     setSaving(true)
     try {
-      const employeeId = draft.employee_id === "open" ? null : draft.employee_id
-
       const payloadCommon = {
         start_time: draft.start_time,
         end_time: toDbTime(draft.end_time), // convert 25:30 → 01:30 for DB
@@ -349,7 +353,7 @@ export function AddShiftModal({
 
         toast.success("Shift updated successfully")
       } else {
-        // INSERT
+        // INSERT - try new schema (employee_id, date) first, then fallback to old (staff_id, shift_date)
         const insertNew = await supabase
           .from("shifts")
           .insert({
@@ -364,15 +368,8 @@ export function AddShiftModal({
           .select("id")
           .single()
 
-        if (insertNew.error) {
-          // Fallback to old schema only if assigned (old schema requires staff_id NOT NULL)
-          if (!employeeId) {
-            throw new Error(
-              insertNew.error.message ||
-                "Open shifts require the new shifts schema (employee_id/date).",
-            )
-          }
-
+        if (insertNew.error && employeeId) {
+          // Fallback to old schema when new schema fails (e.g. DB has staff_id but not employee_id)
           const insertOld = await supabase
             .from("shifts")
             .insert({
@@ -388,6 +385,8 @@ export function AddShiftModal({
             .single()
 
           if (insertOld.error) throw insertOld.error
+        } else if (insertNew.error) {
+          throw insertNew.error
         }
 
         toast.success("Shift added successfully")
@@ -427,11 +426,13 @@ export function AddShiftModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="open">Leave unassigned (open shift)</SelectItem>
-                {employees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.full_name || e.email || e.id}
-                  </SelectItem>
-                ))}
+                {employees
+                  .filter((e) => e?.id)
+                  .map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.full_name || e.email || e.id}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
