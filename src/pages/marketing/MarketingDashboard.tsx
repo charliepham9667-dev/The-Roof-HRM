@@ -587,8 +587,7 @@ export default function MarketingDashboard() {
             </div>
 
             {/* grid */}
-            <div className="overflow-x-auto">
-            <div className="grid grid-cols-7 gap-2 min-w-[480px]">
+            <div className="grid grid-cols-1 sm:grid-cols-4 md:grid-cols-7 gap-2">
               {weekDays.map((day) => {
                 const iso = format(day, "yyyy-MM-dd")
                 const dayPosts = postsByDate.get(iso) ?? []
@@ -597,7 +596,7 @@ export default function MarketingDashboard() {
                   <div
                     key={iso}
                     className={cn(
-                      "rounded-md border overflow-hidden min-h-[130px]",
+                      "rounded-md border overflow-hidden min-h-[80px] md:min-h-[130px]",
                       isToday ? "border-primary" : "border-border bg-secondary/30",
                     )}
                   >
@@ -630,7 +629,6 @@ export default function MarketingDashboard() {
                   </div>
                 )
               })}
-            </div>
             </div>
           </div>
 
