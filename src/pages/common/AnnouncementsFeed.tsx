@@ -1019,10 +1019,20 @@ export function AnnouncementsFeed() {
 
   const canManage = profile?.role === "owner" || profile?.role === "manager"
 
+  // Compute chat unread badge — mirrors MobileBottomNav logic
+  const { data: _staffListForBadge = [] } = useStaffList()
+  const _peerIdsForBadge = _staffListForBadge
+    .filter((s) => s.id !== profile?.id)
+    .map((s) => s.id)
+  const { data: _dmMetadataForBadge = {} } = useDMListMetadata(profile?.id, _peerIdsForBadge)
+  const chatUnreadCount = Object.values(_dmMetadataForBadge).reduce(
+    (sum, m) => sum + ((m as { unread?: number }).unread || 0),
+    0,
+  )
+
   const pinned = announcements?.filter((a) => a.isPinned) || []
   const unpinned = announcements?.filter((a) => !a.isPinned) || []
   const unreadCount = announcements?.filter((a) => !a.isRead).length || 0
-  const chatUnreadCount = Object.values(dmMetadata).reduce((sum, m) => sum + (m.unread || 0), 0)
 
   function filterAnnouncements(list: Announcement[]) {
     return list.filter((a) => {
@@ -1062,7 +1072,7 @@ export function AnnouncementsFeed() {
       <div className="flex items-center border-b border-border bg-card shrink-0 min-w-0">
         {([
           {
-            id: "ann", label: "Announcements", badge: unreadCount,
+            id: "ann" as const, label: "Announcements", badge: unreadCount as number,
             icon: (
               <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 11l19-9-9 19-2-8-8-2z"/>
@@ -1070,14 +1080,14 @@ export function AnnouncementsFeed() {
             ),
           },
           {
-            id: "chat", label: "Chat", badge: chatUnreadCount,
+            id: "chat" as const, label: "Chat", badge: chatUnreadCount as number,
             icon: (
               <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
               </svg>
             ),
           },
-        ] as const).map((tab) => (
+        ]).map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
