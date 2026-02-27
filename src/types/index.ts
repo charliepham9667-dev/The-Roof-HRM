@@ -413,10 +413,17 @@ export type TaskCategory =
   | 'maintenance'
   | 'event';
 
+export interface SubTodo {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface DelegationTask {
   id: string;
   title: string;
   description?: string;
+  subTodos?: SubTodo[];
   assignedBy: string;
   assignedByProfile?: ProfileSummary;
   assignedTo: string;
@@ -746,6 +753,7 @@ export interface CreateReservationInput {
 export interface CreateDelegationTaskInput {
   title: string;
   description?: string;
+  subTodos?: SubTodo[];
   assignedTo: string;
   projectId?: string | null;
   dueDate?: string;

@@ -30,9 +30,29 @@ export function RoleGuard({
   const profile = useAuthStore((s) => s.profile);
   const viewAs = useAuthStore((s) => s.viewAs);
   const initialized = useAuthStore((s) => s.initialized);
+  const error = useAuthStore((s) => s.error);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const retryProfile = useAuthStore((s) => s.retryProfile);
+
+  // Profile fetch failed — show error with retry instead of infinite loading
+  if (initialized && !profile && error) {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button
+            onClick={() => retryProfile()}
+            disabled={isLoading}
+            className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60"
+          >
+            {isLoading ? 'Retrying…' : 'Try again'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading while profile is being fetched
-  // This prevents the blank screen issue
   if (!initialized || !profile) {
     return (
       <div className="flex min-h-[200px] items-center justify-center">

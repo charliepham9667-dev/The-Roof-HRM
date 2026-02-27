@@ -24,6 +24,7 @@ interface AuthState {
   signUp: (email: string, password: string, fullName: string, role: string) => Promise<void>;
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
+  retryProfile: () => Promise<void>;
   initialize: () => Promise<void>;
   clearError: () => void;
   
@@ -52,6 +53,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setViewAs: (viewAs) => set({ viewAs }),
   
   clearError: () => set({ error: null }),
+
+  retryProfile: async () => {
+    const { user } = get();
+    if (!user) return;
+    set({ error: null, isLoading: true });
+    await get().fetchProfile();
+  },
 
   // Get effective profile (with viewAs override for UI preview)
   getEffectiveProfile: () => {

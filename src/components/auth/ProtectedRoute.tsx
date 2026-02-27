@@ -14,8 +14,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
   const error = useAuthStore((s) => s.error);
   const initialize = useAuthStore((s) => s.initialize);
-  const fetchProfile = useAuthStore((s) => s.fetchProfile);
-  const clearError = useAuthStore((s) => s.clearError);
   const location = useLocation();
 
   useEffect(() => {
@@ -28,23 +26,20 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (user && !profile) {
     // Profile fetch failed — show error state with retry instead of endless spinner
+    const retryProfile = useAuthStore.getState().retryProfile;
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="flex max-w-sm flex-col items-center gap-4 text-center">
           <p className="text-sm text-muted-foreground">
             {error || 'Failed to load your profile.'}
           </p>
-            <Button
-              variant="outline"
-              disabled={isLoading}
-              onClick={async () => {
-                clearError();
-                useAuthStore.setState({ isLoading: true });
-                await fetchProfile();
-              }}
-            >
-              {isLoading ? 'Retrying…' : 'Try again'}
-            </Button>
+          <Button
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => retryProfile()}
+          >
+            {isLoading ? 'Retrying…' : 'Try again'}
+          </Button>
           <p className="text-xs text-muted-foreground/50">The Roof Workspace</p>
         </div>
       </div>

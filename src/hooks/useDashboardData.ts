@@ -85,6 +85,7 @@ export interface RevenueVelocityData {
 export function useRevenueVelocity() {
   return useQuery({
     queryKey: ['revenue-velocity'],
+    retry: 1,
     queryFn: async (): Promise<RevenueVelocityData> => {
       const now = new Date();
       const currentYear = now.getFullYear();
@@ -326,6 +327,7 @@ export interface KPISummary {
 export function useKPISummary() {
   return useQuery({
     queryKey: ['kpi-summary'],
+    retry: 1,
     queryFn: async (): Promise<KPISummary> => {
       // Get current year
       const now = new Date();

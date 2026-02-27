@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
-import { Copy, ExternalLink, Loader2, Pencil, Plus, RefreshCcw, Save, Trash2 } from "lucide-react"
+import { Copy, ExternalLink, Loader2, Pencil, Plus, RefreshCcw, Save, Shield, Trash2 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +35,7 @@ import {
   useDeleteManagementNote,
   useEmployeeManagementNotes,
 } from "@/hooks/useManagementNotes"
+import { EditAccessModal } from "@/components/team/EditAccessModal"
 import {
   getDocumentDownloadUrl,
   type DocumentCategory,
@@ -54,6 +55,7 @@ import {
   useUpsertEmployeeBanking,
 } from "@/hooks/useEmployeePayments"
 import { useStaffList } from "@/hooks/useShifts"
+import { useAuthStore } from "@/stores/authStore"
 import { cn } from "@/lib/utils"
 
 type TabKey =
@@ -122,9 +124,13 @@ export function EmployeeDetail() {
   const { userId } = useParams()
   const [sp, setSp] = useSearchParams()
   const tab = (sp.get("tab") as TabKey | null) || "overview"
+  const [accessEditOpen, setAccessEditOpen] = useState(false)
 
   const { data: profile, isLoading: profileLoading, error: profileError } =
     useEmployeeProfile(userId)
+
+  const isOwner = useAuthStore((s) => s.isOwner())
+  const canChangeAccess = isOwner && userId && profile && profile.role !== "owner"
 
   const displayName = profile?.full_name || "Employee"
   const displayEmail = profile?.email || ""
@@ -233,6 +239,16 @@ export function EmployeeDetail() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {canChangeAccess && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setAccessEditOpen(true)}
+                      className="border-purple-600/30 text-purple-700 hover:bg-purple-600/10"
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      Change access
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => setTab("details")}
@@ -245,6 +261,18 @@ export function EmployeeDetail() {
               </div>
             )}
           </div>
+
+          {/* Edit access modal */}
+          {canChangeAccess && profile && (
+            <EditAccessModal
+              isOpen={accessEditOpen}
+              onClose={() => setAccessEditOpen(false)}
+              employeeId={userId!}
+              employeeName={displayName}
+              currentRole={profile.role as "owner" | "manager" | "staff"}
+              currentManagerType={profile.manager_type as "bar" | "floor" | "marketing" | null}
+            />
+          )}
 
           {/* Content */}
           {tab === "overview" && <OverviewTab userId={userId} />}

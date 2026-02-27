@@ -92,6 +92,8 @@ export function useUpdateEmployeeProfile(userId: string) {
           | "address"
           | "emergency_contact_name"
           | "emergency_contact_phone"
+          | "role"
+          | "manager_type"
         >
       >,
     ) => {

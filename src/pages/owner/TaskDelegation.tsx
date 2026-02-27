@@ -23,6 +23,7 @@ import {
 } from '../../hooks/useDelegationTasks';
 import { useStaffList } from '../../hooks/useShifts';
 import type { DelegationTask, TaskStatus, TaskPriority, TaskCategory, CreateDelegationTaskInput } from '../../types';
+import { TaskDescriptionEditor, TaskDescriptionDisplay, SubTodoListEditor, SubTodoListDisplay } from '../../components/tasks';
 
 const statusConfig: Record<TaskStatus, { label: string; color: string; bg: string; icon: any }> = {
   todo: { label: 'To Do', color: 'text-muted-foreground', bg: 'bg-muted', icon: Circle },
@@ -52,6 +53,7 @@ const categoryOptions: { value: TaskCategory; label: string }[] = [
 export function TaskDelegation() {
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<'active' | 'done' | 'all'>('active');
+  const [viewTask, setViewTask] = useState<DelegationTask | null>(null);
   
   const statusFilter = filter === 'active' 
     ? ['todo', 'in_progress', 'blocked'] as TaskStatus[]
@@ -138,7 +140,7 @@ export function TaskDelegation() {
         ) : (
           <div className="divide-y divide-border">
             {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} onView={() => setViewTask(task)} />
             ))}
           </div>
         )}
@@ -148,11 +150,42 @@ export function TaskDelegation() {
       {showForm && (
         <TaskForm onClose={() => setShowForm(false)} />
       )}
+
+      {/* Task detail sheet */}
+      {viewTask && (
+        <div className="fixed inset-0 z-50">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setViewTask(null)} />
+          <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-card border-l border-border shadow-xl overflow-y-auto p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-lg font-semibold text-foreground">{viewTask.title}</h2>
+              <button
+                onClick={() => setViewTask(null)}
+                className="rounded p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {viewTask.description && (
+              <div className="mb-4">
+                <div className="text-xs text-muted-foreground mb-1">Description</div>
+                <TaskDescriptionDisplay description={viewTask.description} />
+              </div>
+            )}
+            {viewTask.subTodos && viewTask.subTodos.length > 0 && (
+              <SubTodoListDisplay
+                items={viewTask.subTodos}
+                onToggle={() => {}}
+                disabled
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function TaskCard({ task }: { task: DelegationTask }) {
+function TaskCard({ task, onView }: { task: DelegationTask; onView: () => void }) {
   const [showActions, setShowActions] = useState(false);
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteDelegationTask();
@@ -234,6 +267,13 @@ function TaskCard({ task }: { task: DelegationTask }) {
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowActions(false)} />
               <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-lg border border-border bg-card shadow-lg py-1">
+                <button
+                  onClick={() => { onView(); setShowActions(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-muted text-left"
+                >
+                  <ListTodo className="h-4 w-4" />
+                  View details
+                </button>
                 {task.status !== 'done' && (
                   <>
                     {task.status === 'todo' && (
@@ -285,6 +325,7 @@ function TaskForm({ onClose }: { onClose: () => void }) {
   const [formData, setFormData] = useState<CreateDelegationTaskInput>({
     title: '',
     description: '',
+    subTodos: [],
     assignedTo: '',
     dueDate: '',
     priority: 'medium',
@@ -354,14 +395,19 @@ function TaskForm({ onClose }: { onClose: () => void }) {
             <label className="block text-sm font-medium text-foreground mb-1">
               Description
             </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(f => ({ ...f, description: e.target.value }))}
+            <TaskDescriptionEditor
+              value={formData.description || ''}
+              onChange={(v) => setFormData(f => ({ ...f, description: v }))}
               placeholder="Additional details..."
-              rows={3}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none resize-none"
             />
           </div>
+
+          {/* Sub-tasks */}
+          <SubTodoListEditor
+            items={formData.subTodos ?? []}
+            onChange={(items) => setFormData(f => ({ ...f, subTodos: items }))}
+            disabled={createTask.isPending}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Assignee */}

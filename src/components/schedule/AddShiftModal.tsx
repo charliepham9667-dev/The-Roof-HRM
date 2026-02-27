@@ -353,42 +353,21 @@ export function AddShiftModal({
 
         toast.success("Shift updated successfully")
       } else {
-        // INSERT - try new schema (employee_id, date) first, then fallback to old (staff_id, shift_date)
-        const insertNew = await supabase
-          .from("shifts")
-          .insert({
-            employee_id: employeeId,
-            date: draft.date,
-            start_time: draft.start_time,
-            end_time: toDbTime(draft.end_time),
-            role: draft.role,
-            notes: draft.notes || null,
-            status: "scheduled",
-          })
-          .select("id")
-          .single()
-
-        if (insertNew.error && employeeId) {
-          // Fallback to old schema when new schema fails (e.g. DB has staff_id but not employee_id)
-          const insertOld = await supabase
-            .from("shifts")
-            .insert({
-              staff_id: employeeId,
-              shift_date: draft.date,
-              start_time: draft.start_time,
-              end_time: toDbTime(draft.end_time),
-              role: draft.role,
-              notes: draft.notes || null,
-              status: "scheduled",
-            } as any)
-            .select("id")
-            .single()
-
-          if (insertOld.error) throw insertOld.error
-        } else if (insertNew.error) {
-          throw insertNew.error
+        // INSERT - try old schema first (staff_id, shift_date), then new (employee_id, date)
+        const common = {
+          start_time: draft.start_time,
+          end_time: toDbTime(draft.end_time),
+          role: draft.role,
+          notes: draft.notes || null,
+          status: "scheduled",
         }
-
+        const payloadOld = { ...common, staff_id: employeeId, shift_date: draft.date, employee_id: employeeId, date: draft.date } as any
+        const insertResult = await supabase.from("shifts").insert(payloadOld).select("id").single()
+        if (insertResult.error) {
+          const payloadNew = { ...common, employee_id: employeeId, date: draft.date }
+          const insertNew = await supabase.from("shifts").insert(payloadNew).select("id").single()
+          if (insertNew.error) throw insertNew.error
+        }
         toast.success("Shift added successfully")
       }
 

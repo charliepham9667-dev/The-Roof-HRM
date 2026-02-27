@@ -1,5 +1,7 @@
+import { Suspense } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Eye, X } from 'lucide-react';
+import { Eye, Loader2, X } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Header } from './Header';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { RoleSidebar07 } from './RoleSidebar07';
@@ -79,7 +81,17 @@ export function DashboardLayout() {
         <Header />
         <ViewAsPreviewBanner />
         <main className="flex-1 min-w-0 overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6">
-          <Outlet />
+          <ErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="flex min-h-[200px] items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </SidebarInset>
     </SidebarProvider>

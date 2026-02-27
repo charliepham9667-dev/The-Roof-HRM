@@ -25,6 +25,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { TaskDescriptionDisplay, SubTodoListDisplay } from '@/components/tasks';
+import { useUpdateDelegationTask } from '@/hooks/useDelegationTasks';
 import {
   Select,
   SelectContent,
@@ -70,9 +73,10 @@ interface TaskRowProps {
   myId: string;
   onToggleDone: (task: DelegationTask) => void;
   onEdit: (task: DelegationTask) => void;
+  onView: (task: DelegationTask) => void;
 }
 
-function TaskRow({ task, myId, onToggleDone, onEdit }: TaskRowProps) {
+function TaskRow({ task, myId, onToggleDone, onEdit, onView }: TaskRowProps) {
   const isDone = task.status === 'done';
   const fromOther = task.assignedBy !== myId;
   const overdue = isOverdue(task);
@@ -93,12 +97,18 @@ function TaskRow({ task, myId, onToggleDone, onEdit }: TaskRowProps) {
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className={`text-sm font-medium leading-snug ${isDone ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-          {task.title}
-        </p>
-        {task.description && (
-          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
-        )}
+        <button
+          type="button"
+          onClick={() => onView(task)}
+          className="text-left w-full hover:opacity-80 transition-opacity"
+        >
+          <p className={`text-sm font-medium leading-snug ${isDone ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+            {task.title}
+          </p>
+          {task.description && (
+            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
+          )}
+        </button>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <span className={`text-[10px] font-bold tracking-wide ${priorityColor(task.priority)}`}>
             {task.priority.toUpperCase()}
@@ -242,10 +252,12 @@ export function StaffMyTasks() {
   const { data: activeTasks = [], isLoading } = useManagerTasks(['todo', 'in_progress', 'blocked']);
   const { data: completedTasks = [] } = useManagerCompletedTasks();
   const updateStatus = useUpdateTaskStatus();
+  const updateTask = useUpdateDelegationTask();
 
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [viewTask, setViewTask] = useState<DelegationTask | null>(null);
 
   const today = format(new Date(), 'EEEE, d MMM');
 
@@ -387,6 +399,7 @@ export function StaffMyTasks() {
                     myId={myId}
                     onToggleDone={handleToggleDone}
                     onEdit={() => {}}
+                    onView={(t) => setViewTask(t)}
                   />
                 ))}
               </>
@@ -410,6 +423,7 @@ export function StaffMyTasks() {
                       myId={myId}
                       onToggleDone={handleToggleDone}
                       onEdit={() => {}}
+                      onView={(t) => setViewTask(t)}
                     />
                   ))}
               </>
@@ -426,6 +440,36 @@ export function StaffMyTasks() {
 
       {/* Add task dialog */}
       <AddTaskDialog open={addOpen} onClose={() => setAddOpen(false)} myId={myId} />
+
+      {/* Task detail sheet */}
+      <Sheet open={!!viewTask} onOpenChange={(v) => !v && setViewTask(null)}>
+        <SheetContent side="right" className="sm:max-w-md">
+          {viewTask && (
+            <div className="space-y-4 py-2">
+              <h2 className="text-lg font-semibold text-foreground">{viewTask.title}</h2>
+              {viewTask.description && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Description</div>
+                  <TaskDescriptionDisplay description={viewTask.description} />
+                </div>
+              )}
+              {viewTask.subTodos && viewTask.subTodos.length > 0 && (
+                <SubTodoListDisplay
+                  items={viewTask.subTodos}
+                  disabled={updateTask.isPending}
+                  onToggle={(id, completed) => {
+                    const next = viewTask.subTodos!.map((t) =>
+                      t.id === id ? { ...t, completed } : t
+                    );
+                    setViewTask((t) => t ? { ...t, subTodos: next } : null);
+                    updateTask.mutate({ id: viewTask.id, subTodos: next });
+                  }}
+                />
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

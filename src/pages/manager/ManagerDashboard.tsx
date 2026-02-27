@@ -36,6 +36,7 @@ import {
 import { useTodayPaxConfirmed, useReservationsCsv } from "@/hooks/useReservationsCsv"
 import { useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
 import { useMaintenanceTasks, useCreateMaintenanceTask } from "@/hooks/useMaintenanceTasks"
+import { useClockIn, useClockOut, useClockStatus } from "@/hooks/useClockRecords"
 import { KanbanBoard, COLUMNS } from "@/components/dashboard/KanbanBoard"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -52,6 +53,7 @@ import type {
   TaskCategory,
   TaskStatus,
 } from "@/types"
+import { TaskDescriptionEditor, SubTodoListEditor } from "@/components/tasks"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -213,17 +215,74 @@ export function ManagerDashboard() {
   }, [])
 
   // ── Check-in / Break state ───────────────────────────────────────────────────
+  const clockInMut = useClockIn()
+  const clockOutMut = useClockOut()
+  const { isClockedIn, lastClockIn, isLoading: clockStatusLoading } = useClockStatus()
+
   const [checkedIn, setCheckedIn] = useState(false)
   const [onBreak, setOnBreak] = useState(false)
   const [checkInTime, setCheckInTime] = useState<Date | null>(null)
   const [shiftElapsed, setShiftElapsed] = useState(0)
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false)
+  const [toast, setToast] = useState<{ type: "success" | "warning" | "error"; msg: string } | null>(null)
 
   // Break tracking: current break start + log of past breaks
   const [breakStartTime, setBreakStartTime] = useState<Date | null>(null)
   const [breakElapsed, setBreakElapsed] = useState(0)
   interface BreakEntry { start: Date; end: Date; durationSecs: number }
   const [breakLog, setBreakLog] = useState<BreakEntry[]>([])
+
+  // Sync checkedIn state from DB when clock status loads (e.g. manager clocked in via /manager/check-in)
+  useEffect(() => {
+    if (clockStatusLoading) return
+    if (isClockedIn && lastClockIn) {
+      setCheckedIn(true)
+      setCheckInTime(new Date(lastClockIn.clockTime))
+    } else {
+      setCheckedIn(false)
+      setCheckInTime(null)
+    }
+  }, [clockStatusLoading, isClockedIn, lastClockIn])
+
+  const clkPending = clockInMut.isPending || clockOutMut.isPending
+
+  const handleClockIn = async () => {
+    try {
+      const r = await clockInMut.mutateAsync({})
+      setCheckedIn(true)
+      setCheckInTime(new Date())
+      setShiftElapsed(0)
+      setOnBreak(false)
+      setBreakLog([])
+      setToast({
+        type: r.isWithinGeofence ? "success" : "warning",
+        msg: r.isWithinGeofence ? "Clocked in successfully!" : `Clocked in — ${Math.round(r.distanceFromVenue || 0)}m from venue`,
+      })
+      setTimeout(() => setToast(null), 4000)
+    } catch (e: unknown) {
+      setToast({ type: "error", msg: (e as Error)?.message || "Failed to clock in" })
+      setTimeout(() => setToast(null), 4000)
+    }
+  }
+
+  const handleClockOut = async () => {
+    try {
+      await clockOutMut.mutateAsync({})
+      setCheckedIn(false)
+      setOnBreak(false)
+      setCheckInTime(null)
+      setShiftElapsed(0)
+      setBreakStartTime(null)
+      setBreakElapsed(0)
+      setBreakLog([])
+      setShowCheckoutConfirm(false)
+      setToast({ type: "success", msg: "Clocked out. See you next shift!" })
+      setTimeout(() => setToast(null), 4000)
+    } catch (e: unknown) {
+      setToast({ type: "error", msg: (e as Error)?.message || "Failed to clock out" })
+      setTimeout(() => setToast(null), 4000)
+    }
+  }
 
   // Tick shift elapsed every second
   useEffect(() => {
@@ -242,25 +301,6 @@ export function ManagerDashboard() {
     }, 1000)
     return () => window.clearInterval(id)
   }, [onBreak, breakStartTime])
-
-  function doCheckIn() {
-    setCheckedIn(true)
-    setCheckInTime(new Date())
-    setShiftElapsed(0)
-    setOnBreak(false)
-    setBreakLog([])
-  }
-
-  function doCheckOut() {
-    setCheckedIn(false)
-    setOnBreak(false)
-    setCheckInTime(null)
-    setShiftElapsed(0)
-    setBreakStartTime(null)
-    setBreakElapsed(0)
-    setBreakLog([])
-    setShowCheckoutConfirm(false)
-  }
 
   function toggleBreak() {
     if (!onBreak) {
@@ -561,7 +601,7 @@ export function ManagerDashboard() {
 
   const [taskError, setTaskError] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState({
-    title: "", description: "", notes: "",
+    title: "", description: "", subTodos: [] as import("@/types").SubTodo[], notes: "",
     timeStarted: "" as string,
     dueDate: "", dueTime: "",
     category: "operations" as TaskCategory,
@@ -576,6 +616,7 @@ export function ManagerDashboard() {
     setEditDraft({
       title: selectedTask.title || "",
       description: selectedTask.description || "",
+      subTodos: selectedTask.subTodos ?? [],
       notes: selectedTask.notes || "",
       timeStarted: selectedTask.timeStarted || "",
       dueDate: selectedTask.dueDate || "",
@@ -590,7 +631,7 @@ export function ManagerDashboard() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [createDraft, setCreateDraft] = useState<CreateDelegationTaskInput & { priority: string }>(() => ({
-    title: "", description: "", notes: "",
+    title: "", description: "", subTodos: [], notes: "",
     assignedTo: "", dueDate: "", dueTime: "",
     timeStarted: "", category: "operations",
     priority: "medium", status: "todo",
@@ -611,7 +652,7 @@ export function ManagerDashboard() {
           ? { status: "todo", dueDate: todayIso }
           : { status: "todo" }
     setCreateDraft({
-      title: "", description: "", notes: "",
+      title: "", description: "", subTodos: [], notes: "",
       assignedTo: defaultAssignee,
       dueDate: defaultsByColumn.dueDate || "",
       dueTime: "", timeStarted: defaultsByColumn.timeStarted || "",
@@ -680,6 +721,18 @@ export function ManagerDashboard() {
 
       {/* ── Check-In Strip ──────────────────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+        {toast && (
+          <div
+            className={cn(
+              "mx-5 mt-3 flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
+              toast.type === "success" && "border-success/25 bg-success/8 text-success",
+              toast.type === "warning" && "border-warning/25 bg-warning/8 text-warning",
+              toast.type === "error" && "border-destructive/25 bg-destructive/8 text-destructive"
+            )}
+          >
+            <span className="font-medium">{toast.msg}</span>
+          </div>
+        )}
         {/* Top row: identity + status + buttons */}
         <div className="flex items-center justify-between gap-4 flex-wrap px-5 py-3.5">
           {/* Left: avatar + name + status */}
@@ -710,10 +763,11 @@ export function ManagerDashboard() {
               <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
                 <span className="text-xs text-destructive">End your shift and submit EOD report?</span>
                 <button
-                  onClick={doCheckOut}
-                  className="rounded px-3 py-1 bg-destructive text-destructive-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+                  onClick={handleClockOut}
+                  disabled={clkPending}
+                  className="rounded px-3 py-1 bg-destructive text-destructive-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
                 >
-                  Yes, Check Out
+                  {clkPending ? "…" : "Yes, Check Out"}
                 </button>
                 <button
                   onClick={() => setShowCheckoutConfirm(false)}
@@ -742,19 +796,20 @@ export function ManagerDashboard() {
               <button
                 onClick={() => {
                   if (!checkedIn) {
-                    doCheckIn()
+                    handleClockIn()
                   } else {
                     setShowCheckoutConfirm(true)
                   }
                 }}
+                disabled={clkPending || clockStatusLoading || isOwnerPreviewing}
                 className={cn(
-                  "rounded-md px-4 py-1.5 text-xs font-semibold tracking-wide transition-colors",
+                  "rounded-md px-4 py-1.5 text-xs font-semibold tracking-wide transition-colors disabled:opacity-60",
                   checkedIn
                     ? "border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10"
                     : "bg-foreground text-background hover:opacity-80"
                 )}
               >
-                {checkedIn ? "→ Check Out" : "→ Check In"}
+                {clkPending ? "…" : checkedIn ? "→ Check Out" : "→ Check In"}
               </button>
             )}
           </div>
@@ -1773,12 +1828,17 @@ export function ManagerDashboard() {
                 {/* Description */}
                 <div className="space-y-1.5">
                   <div className="text-xs text-muted-foreground px-1">Description</div>
-                  <textarea rows={4}
-                    className="w-full resize-none rounded-sm border border-border bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-border/80"
-                    placeholder="Add a description…"
+                  <TaskDescriptionEditor
                     value={editDraft.description}
-                    onChange={(e) => setEditDraft((s) => ({ ...s, description: e.target.value }))} />
+                    onChange={(v) => setEditDraft((s) => ({ ...s, description: v }))}
+                  />
                 </div>
+                {/* Sub-tasks */}
+                <SubTodoListEditor
+                  items={editDraft.subTodos}
+                  onChange={(items) => setEditDraft((s) => ({ ...s, subTodos: items }))}
+                  disabled={updateTask.isPending}
+                />
               </div>
               {/* Footer */}
               <div className="shrink-0 border-t border-border px-8 py-4 flex items-center justify-between gap-3 bg-card">
@@ -1805,6 +1865,7 @@ export function ManagerDashboard() {
                           id: selectedTask.id,
                           title: editDraft.title.trim(),
                           description: editDraft.description.trim() || null,
+                          subTodos: editDraft.subTodos,
                           dueDate: editDraft.dueDate || null,
                           dueTime: editDraft.dueTime || null,
                           category: editDraft.category,
@@ -1909,12 +1970,17 @@ export function ManagerDashboard() {
             {/* Description */}
             <div className="space-y-1.5">
               <div className="text-xs text-muted-foreground px-1">Description</div>
-              <textarea rows={3}
-                className="w-full resize-none rounded-sm border border-border bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-border/80"
-                placeholder="Add a description…"
+              <TaskDescriptionEditor
                 value={createDraft.description || ""}
-                onChange={(e) => setCreateDraft((s) => ({ ...s, description: e.target.value }))} />
+                onChange={(v) => setCreateDraft((s) => ({ ...s, description: v }))}
+              />
             </div>
+            {/* Sub-tasks */}
+            <SubTodoListEditor
+              items={createDraft.subTodos ?? []}
+              onChange={(items) => setCreateDraft((s) => ({ ...s, subTodos: items }))}
+              disabled={createTask.isPending}
+            />
           </div>
           {/* Footer */}
           <div className="shrink-0 border-t border-border px-8 py-4 flex justify-end gap-2 bg-card">
@@ -1927,6 +1993,7 @@ export function ManagerDashboard() {
                   await createTask.mutateAsync({
                     title: createDraft.title.trim(),
                     description: createDraft.description || undefined,
+                    subTodos: createDraft.subTodos ?? [],
                     assignedTo: createDraft.assignedTo,
                     dueDate: createDraft.dueDate || undefined,
                     dueTime: createDraft.dueTime || undefined,

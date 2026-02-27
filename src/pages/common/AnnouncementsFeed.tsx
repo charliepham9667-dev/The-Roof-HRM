@@ -13,6 +13,7 @@ import {
   useAnnouncementReplies,
   useAnnouncement,
 } from "@/hooks/useAnnouncements"
+import { toast } from "sonner"
 import { useAuthStore } from "@/stores/authStore"
 import type { Announcement, AnnouncementAudience, CreateAnnouncementInput } from "@/types"
 import { useChatMessages, useSendChatMessage } from "@/hooks/useChatMessages"
@@ -654,13 +655,23 @@ function ChatPanel({ profile }: { profile: any }) {
   function sendMessage() {
     const trimmed = text.trim()
     if (!trimmed || !profile?.id) return
-    sendMutation.mutate({
-      channel_id: activeChannel,
-      author_id: profile.id,
-      body: trimmed,
-    })
-    setText("")
-    textareaRef.current?.focus()
+    if (sendMutation.isPending) return
+    sendMutation.mutate(
+      {
+        channel_id: activeChannel,
+        author_id: profile.id,
+        body: trimmed,
+      },
+      {
+        onSuccess: () => {
+          setText("")
+          textareaRef.current?.focus()
+        },
+        onError: (err) => {
+          toast.error((err as Error)?.message ?? "Failed to send message. Please try again.")
+        },
+      }
+    )
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -882,10 +893,10 @@ function ChatPanel({ profile }: { profile: any }) {
               ))}
               <Button
                 onClick={sendMessage}
-                disabled={!text.trim()}
+                disabled={!text.trim() || sendMutation.isPending}
                 className="ml-auto h-auto px-3 py-1.5 text-xs font-medium"
               >
-                Send
+                {sendMutation.isPending ? "…" : "Send"}
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                 </svg>

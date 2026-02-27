@@ -318,39 +318,33 @@ export function ScheduleBuilder() {
 
   const duplicateShift = useCallback(async (shift: Shift) => {
     try {
-      if (shiftSchema === "new") {
-        const { error } = await supabase
-          .from("shifts")
-          .insert({
-            employee_id: shift.employee_id,
-            date: shift.date,
-            start_time: shift.start_time,
-            end_time: shift.end_time,
-            role: shift.role,
-            notes: shift.notes,
-            status: "scheduled",
-          } as any)
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from("shifts")
-          .insert({
-            staff_id: shift.employee_id,
-            shift_date: shift.date,
-            start_time: shift.start_time,
-            end_time: shift.end_time,
-            role: shift.role,
-            notes: shift.notes,
-            status: "scheduled",
-          } as any)
-        if (error) throw error
+      if (!shift.employee_id) {
+        toast.error("Cannot duplicate open shift")
+        return
+      }
+      const common = {
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        role: shift.role,
+        notes: shift.notes,
+        status: "scheduled",
+      }
+      const payload = { ...common, staff_id: shift.employee_id, shift_date: shift.date, employee_id: shift.employee_id, date: shift.date } as any
+      const { error } = await supabase.from("shifts").insert(payload)
+      if (error) {
+        const { error: err2 } = await supabase.from("shifts").insert({
+          ...common,
+          employee_id: shift.employee_id,
+          date: shift.date,
+        })
+        if (err2) throw err2
       }
       toast.success("Shift duplicated")
       await reload(weekStart, true)
     } catch (e) {
       toast.error((e as Error)?.message || "Failed to duplicate shift")
     }
-  }, [shiftSchema, weekStart]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [weekStart]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function publishWeek() {
     setError(null)
@@ -475,28 +469,44 @@ export function ScheduleBuilder() {
         return
       }
 
-      // 3) Insert into next week
-      if (shiftSchema === "new") {
-        const chunks = chunk(toInsert, 500)
-        for (const c of chunks) {
+      // 3) Insert into next week (try both schemas for compatibility)
+      const filtered = toInsert.filter((r) => !!r.employee_id)
+      const payloadWithBoth = filtered.map((r) => ({
+        staff_id: r.employee_id!,
+        employee_id: r.employee_id!,
+        shift_date: r.date,
+        date: r.date,
+        start_time: r.start_time,
+        end_time: r.end_time,
+        role: r.role,
+        notes: r.notes,
+        status: r.status,
+      })) as any[]
+      const firstChunk = chunk(payloadWithBoth, 500)[0]
+      if (!firstChunk?.length) {
+        setDuplicating(false)
+        return
+      }
+      const firstIns = await supabase.from("shifts").insert(firstChunk)
+      if (firstIns.error) {
+        const payloadNew = filtered.map((r) => ({
+          employee_id: r.employee_id!,
+          date: r.date,
+          start_time: r.start_time,
+          end_time: r.end_time,
+          role: r.role,
+          notes: r.notes,
+          status: r.status,
+        }))
+        const chunksNew = chunk(payloadNew, 500)
+        for (const c of chunksNew) {
           const ins = await supabase.from("shifts").insert(c as any)
           if (ins.error) throw ins.error
         }
       } else {
-        const payloadOld = toInsert
-          .filter((r) => !!r.employee_id)
-          .map((r) => ({
-            staff_id: r.employee_id!,
-            shift_date: r.date,
-            start_time: r.start_time,
-            end_time: r.end_time,
-            role: r.role,
-            notes: r.notes,
-            status: r.status,
-          }))
-        const chunks = chunk(payloadOld, 500)
-        for (const c of chunks) {
-          const ins = await supabase.from("shifts").insert(c as any)
+        const allChunks = chunk(payloadWithBoth, 500)
+        for (let i = 1; i < allChunks.length; i++) {
+          const ins = await supabase.from("shifts").insert(allChunks[i])
           if (ins.error) throw ins.error
         }
       }

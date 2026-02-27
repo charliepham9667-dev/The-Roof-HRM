@@ -341,11 +341,17 @@ export function useCreateDelegationTask() {
     mutationFn: async (input: CreateDelegationTaskInput) => {
       if (!profile?.id) throw new Error('Not authenticated');
 
+      const subTodos = (input.subTodos ?? []).map((t) => ({
+        id: t.id,
+        text: t.text,
+        completed: t.completed,
+      }));
       const { data, error } = await supabase
         .from('delegation_tasks')
         .insert({
           title: input.title,
           description: input.description || null,
+          sub_todos: subTodos.length ? subTodos : [],
           assigned_by: profile.id,
           assigned_to: input.assignedTo,
           project_id: input.projectId ?? null,
@@ -435,6 +441,13 @@ export function useUpdateDelegationTask() {
 
       if (input.title !== undefined) updateData.title = input.title;
       if (input.description !== undefined) updateData.description = input.description;
+      if (input.subTodos !== undefined) {
+        updateData.sub_todos = input.subTodos.map((t) => ({
+          id: t.id,
+          text: t.text,
+          completed: t.completed,
+        }));
+      }
       if (input.assignedTo !== undefined) updateData.assigned_to = input.assignedTo;
       if (input.projectId !== undefined) updateData.project_id = input.projectId;
       if (input.dueDate !== undefined) updateData.due_date = input.dueDate;
@@ -520,10 +533,16 @@ export function useTaskStats() {
 
 // Helper mapper
 function mapDelegationTask(row: any): DelegationTask {
+  const subTodos = Array.isArray(row.sub_todos) ? row.sub_todos : [];
   return {
     id: row.id,
     title: row.title,
     description: row.description,
+    subTodos: subTodos.map((t: any) => ({
+      id: t.id ?? crypto.randomUUID(),
+      text: t.text ?? '',
+      completed: !!t.completed,
+    })),
     assignedBy: row.assigned_by,
     assignedTo: row.assigned_to,
     projectId: row.project_id,

@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, ListChecks, AlertTriangle, CloudSun, Zap } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, ListChecks, AlertTriangle, CloudSun, Zap, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../../stores/authStore';
 import { useShifts, useUpcomingShiftReminder } from '../../hooks/useShifts';
 import { useAnnouncements } from '../../hooks/useAnnouncements';
 import { useClockIn, useClockOut, useClockStatus } from '../../hooks/useClockRecords';
 import { useMyTaskTemplates, useTaskCompletion, useToggleTaskItem } from '../../hooks/useTasks';
-import type { TaskTemplate } from '../../types';
+import { useMyAssignedTasks } from '../../hooks/useDelegationTasks';
+import { cn } from '@/lib/utils';
+import type { TaskTemplate, DelegationTask } from '../../types';
 
 interface BreakEntry { start: Date; end: Date; durationSecs: number }
 
@@ -249,6 +251,7 @@ export function StaffDashboard() {
   const clockInMut = useClockIn();
   const clockOutMut = useClockOut();
   const { isLoading: clockStatusLoading } = useClockStatus();
+  const { data: delegatedTasks = [], isLoading: delegatedLoading } = useMyAssignedTasks();
 
   // ── local check-in / break state (mirrors manager dashboard) ──────────────
   const [checkedIn, setCheckedIn] = useState(false);
@@ -707,6 +710,70 @@ export function StaffDashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Delegated to me */}
+      <div className="space-y-2">
+        <SectionLabel>Delegated to me</SectionLabel>
+        <Panel>
+          <PanelHeader
+            title="Tasks from manager"
+            right={
+              delegatedTasks.length > 0 && (
+                <button
+                  onClick={() => navigate('/staff/tasks')}
+                  className="text-[11px] font-medium text-primary hover:underline"
+                >
+                  View all →
+                </button>
+              )
+            }
+          />
+          {delegatedLoading ? (
+            <div className="flex items-center justify-center py-8 text-[13px] text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Loading…
+            </div>
+          ) : delegatedTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+              <p className="text-[13px] text-muted-foreground">No tasks delegated to you yet</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Check back when your manager assigns tasks</p>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-border">
+                {delegatedTasks.slice(0, 5).map((task: DelegationTask) => (
+                  <div
+                    key={task.id}
+                    onClick={() => navigate('/staff/tasks')}
+                    className="flex items-start gap-2 px-4 py-3 hover:bg-muted/20 cursor-pointer transition-colors"
+                  >
+                    <CheckSquare className={cn("h-4 w-4 mt-0.5 shrink-0", task.status === 'done' ? 'text-success' : 'text-muted-foreground')} />
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("text-[13px] font-medium", task.status === 'done' ? 'line-through text-muted-foreground' : 'text-foreground')}>
+                        {task.title}
+                      </p>
+                      {task.assignedByProfile?.fullName && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">From {task.assignedByProfile.fullName}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {delegatedTasks.length > 5 && (
+                <div className="border-t border-border px-4 py-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/staff/tasks')}
+                    className="w-full h-auto py-2 text-[12px] font-medium"
+                  >
+                    View all {delegatedTasks.length} tasks
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </Panel>
       </div>
 
       {/* My Checklist & Announcements */}

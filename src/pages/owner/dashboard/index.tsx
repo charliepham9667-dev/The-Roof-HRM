@@ -46,6 +46,7 @@ import { useTodayPaxConfirmed, useReservationsCsv } from "@/hooks/useReservation
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
 import { useCreateMaintenanceTask } from "@/hooks/useMaintenanceTasks"
+import { TaskDescriptionEditor, SubTodoListEditor } from "@/components/tasks"
 
 const ICT_TZ = "Asia/Ho_Chi_Minh"
 
@@ -485,6 +486,7 @@ export default function OwnerDashboardPage() {
   const [editDraft, setEditDraft] = useState({
     title: "",
     description: "",
+    subTodos: [] as import("@/types").SubTodo[],
     notes: "",
     timeStarted: "" as string,
     dueDate: "",
@@ -501,6 +503,7 @@ export default function OwnerDashboardPage() {
     setEditDraft({
       title: selectedTask.title || "",
       description: selectedTask.description || "",
+      subTodos: selectedTask.subTodos ?? [],
       notes: selectedTask.notes || "",
       timeStarted: selectedTask.timeStarted || "",
       dueDate: selectedTask.dueDate || "",
@@ -518,6 +521,7 @@ export default function OwnerDashboardPage() {
   const [createDraft, setCreateDraft] = useState<CreateDelegationTaskInput>(() => ({
     title: "",
     description: "",
+    subTodos: [],
     notes: "",
     assignedTo: "",
     dueDate: "",
@@ -550,6 +554,7 @@ export default function OwnerDashboardPage() {
     setCreateDraft({
       title: "",
       description: "",
+      subTodos: [],
       notes: "",
       assignedTo: defaultAssignee,
       dueDate: defaultsByColumn.dueDate || "",
@@ -919,22 +924,29 @@ export default function OwnerDashboardPage() {
             const projectedEnd = velocity?.projectedMonthEnd ?? 0
             const gap = monthlyTarget - mtdRevenue
             const targetCleared = mtdRevenue >= monthlyTarget
+            const showStretchGoal = targetCleared && (velocity?.showStretchGoal ?? false)
+            const stretchGoal = velocity?.stretchGoal ?? monthlyTarget * 1.5
+            const requiredPaceForStretch = velocity?.requiredPaceForStretch ?? (remainingDays > 0 ? (stretchGoal - mtdRevenue) / remainingDays : 0)
+
+            // When target cleared, show stretch goal as the active target
+            const effectiveRequiredToday = showStretchGoal ? requiredPaceForStretch : requiredToday
             const mtdPct = monthlyTarget > 0 ? Math.round((mtdRevenue / monthlyTarget) * 100) : 0
+            const stretchPct = stretchGoal > 0 ? Math.round((mtdRevenue / stretchGoal) * 100) : 0
 
             // Momentum: is avg pace above or below what's required?
-            const paceVsRequired = requiredToday > 0 ? avgDailyRevenue / requiredToday : 1
+            const paceVsRequired = effectiveRequiredToday > 0 ? avgDailyRevenue / effectiveRequiredToday : 1
             const momentumGood = paceVsRequired >= 0.9
             const momentumCritical = paceVsRequired < 0.7
 
             // Tonight's entered number vs what's required
             const tonightHasInput = tonightsRevenue > 0
-            const tonightVsRequired = tonightHasInput && requiredToday > 0
-              ? tonightsRevenue / requiredToday
+            const tonightVsRequired = tonightHasInput && effectiveRequiredToday > 0
+              ? tonightsRevenue / effectiveRequiredToday
               : null
 
             // Status label
             const statusLabel = targetCleared
-              ? "Target cleared"
+              ? (showStretchGoal ? "Chasing stretch" : "Target cleared")
               : momentumCritical
                 ? "Behind pace"
                 : momentumGood
@@ -951,9 +963,7 @@ export default function OwnerDashboardPage() {
             // Smart insight sentence
             const insight = (() => {
               if (targetCleared) {
-                const stretchGap = (monthlyTarget * 1.5) - mtdRevenue
-                const stretchRequired = remainingDays > 0 ? stretchGap / remainingDays : 0
-                return `Monthly target cleared. Averaging ${formatCompactVnd(avgDailyRevenue)} đ/day — need ${formatCompactVnd(stretchRequired)} đ/day to reach stretch goal of ${formatCompactVnd(monthlyTarget * 1.5)} đ.`
+                return `Monthly target cleared. Averaging ${formatCompactVnd(avgDailyRevenue)} đ/day — need ${formatCompactVnd(requiredPaceForStretch)} đ/day to reach stretch goal of ${formatCompactVnd(stretchGoal)} đ.`
               }
               if (remainingDays <= 0) {
                 return gap > 0
@@ -977,13 +987,18 @@ export default function OwnerDashboardPage() {
                     <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-1">Today's Revenue Target</div>
                     <div className="flex items-baseline gap-3">
                       <div className="font-display text-[28px] sm:text-[38px] leading-none tracking-[2px] text-foreground">
-                        {velocityLoading ? "—" : formatCompactVnd(requiredToday)}
+                        {velocityLoading ? "—" : formatCompactVnd(effectiveRequiredToday)}
                         <span className="text-xl sm:text-2xl text-muted-foreground font-light"> đ</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">needed today</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {showStretchGoal ? "needed today (stretch)" : "needed today"}
+                      </div>
                     </div>
                     <div className="mt-1.5 text-xs text-muted-foreground">
-                      Day {velocity?.currentDay ?? "—"} of {daysInMonth} · {remainingDays} days left · Goal {formatCompactVnd(monthlyTarget)} đ/month
+                      Day {velocity?.currentDay ?? "—"} of {daysInMonth} · {remainingDays} days left
+                      {showStretchGoal
+                        ? ` · Stretch goal ${formatCompactVnd(stretchGoal)} đ (1.5× target)`
+                        : ` · Goal ${formatCompactVnd(monthlyTarget)} đ/month`}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-1 shrink-0">
@@ -1001,16 +1016,20 @@ export default function OwnerDashboardPage() {
                   </div>
                 </div>
 
-                {/* Progress bar: MTD vs target */}
+                {/* Progress bar: MTD vs target (or stretch when target cleared) */}
                 <div className="space-y-1 mb-3">
                   <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>MTD {formatCompactVnd(mtdRevenue)} đ ({mtdPct}%)</span>
-                    <span>Target {formatCompactVnd(monthlyTarget)} đ</span>
+                    <span>MTD {formatCompactVnd(mtdRevenue)} đ ({showStretchGoal ? stretchPct : mtdPct}%)</span>
+                    {showStretchGoal ? (
+                      <span>Stretch {formatCompactVnd(stretchGoal)} đ <span className="opacity-70">(target cleared)</span></span>
+                    ) : (
+                      <span>Target {formatCompactVnd(monthlyTarget)} đ</span>
+                    )}
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
                     <div
                       className={cn("h-full rounded-full transition-all duration-700", targetCleared ? "bg-success" : momentumCritical ? "bg-destructive" : "bg-primary")}
-                      style={{ width: `${Math.min(100, mtdPct)}%` }}
+                      style={{ width: `${Math.min(100, showStretchGoal ? stretchPct : mtdPct)}%` }}
                     />
                   </div>
                 </div>
@@ -1052,8 +1071,8 @@ export default function OwnerDashboardPage() {
                     <span className="font-semibold">Tonight logged: {formatCompactVnd(tonightsRevenue)} đ</span>
                     <span className="text-[10px] opacity-70">
                       {tonightVsRequired >= 1
-                        ? `+${formatCompactVnd(tonightsRevenue - requiredToday)} đ above required`
-                        : `${formatCompactVnd(requiredToday - tonightsRevenue)} đ below required`}
+                        ? `+${formatCompactVnd(tonightsRevenue - effectiveRequiredToday)} đ above required`
+                        : `${formatCompactVnd(effectiveRequiredToday - tonightsRevenue)} đ below required`}
                     </span>
                   </div>
                 )}
@@ -2218,14 +2237,18 @@ export default function OwnerDashboardPage() {
                 {/* Description */}
                 <div className="space-y-1.5">
                   <div className="text-xs text-muted-foreground px-1">Description</div>
-                  <textarea
-                    rows={4}
-                    className="w-full resize-none rounded-sm border border-border bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-border/80"
-                    placeholder="Add a description…"
+                  <TaskDescriptionEditor
                     value={editDraft.description}
-                    onChange={(e) => setEditDraft((s) => ({ ...s, description: e.target.value }))}
+                    onChange={(v) => setEditDraft((s) => ({ ...s, description: v }))}
                   />
                 </div>
+
+                {/* Sub-tasks */}
+                <SubTodoListEditor
+                  items={editDraft.subTodos}
+                  onChange={(items) => setEditDraft((s) => ({ ...s, subTodos: items }))}
+                  disabled={updateTask.isPending}
+                />
               </div>
 
               {/* Fixed footer */}
@@ -2263,6 +2286,7 @@ export default function OwnerDashboardPage() {
                           id: selectedTask.id,
                           title: editDraft.title.trim(),
                           description: editDraft.description.trim() || null,
+                          subTodos: editDraft.subTodos,
                           dueDate: editDraft.dueDate || null,
                           dueTime: editDraft.dueTime || null,
                           category: editDraft.category,
@@ -2478,14 +2502,18 @@ export default function OwnerDashboardPage() {
             {/* Description */}
             <div className="space-y-1.5">
               <div className="text-xs text-muted-foreground px-1">Description</div>
-              <textarea
-                rows={4}
-                className="w-full resize-none rounded-sm border border-border bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-border/80"
-                placeholder="Add a description…"
+              <TaskDescriptionEditor
                 value={createDraft.description || ""}
-                onChange={(e) => setCreateDraft((s) => ({ ...s, description: e.target.value }))}
+                onChange={(v) => setCreateDraft((s) => ({ ...s, description: v }))}
               />
             </div>
+
+            {/* Sub-tasks */}
+            <SubTodoListEditor
+              items={createDraft.subTodos ?? []}
+              onChange={(items) => setCreateDraft((s) => ({ ...s, subTodos: items }))}
+              disabled={createTask.isPending}
+            />
           </div>
 
           {/* Fixed footer */}
@@ -2504,6 +2532,7 @@ export default function OwnerDashboardPage() {
                     ...createDraft,
                     title: createDraft.title.trim(),
                     description: createDraft.description?.trim() || undefined,
+                    subTodos: createDraft.subTodos ?? [],
                     dueDate: createDraft.dueDate || undefined,
                     dueTime: createDraft.dueTime || undefined,
                     status: createDraft.status,

@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -9,8 +10,8 @@ import { useAuthStore } from './stores/authStore';
 import { Login } from './pages/auth/Login';
 import { PendingApproval } from './pages/auth/PendingApproval';
 
-// Owner pages
-import { Dashboard } from './pages/owner/Dashboard';
+// Owner pages (lazy load heaviest)
+const Dashboard = lazy(() => import('./pages/owner/Dashboard').then((m) => ({ default: m.Dashboard })));
 import { CompanyProfile } from './pages/owner/CompanyProfile';
 import { Staffing } from './pages/owner/Staffing';
 import { Alerts } from './pages/owner/Alerts';
@@ -43,12 +44,13 @@ import { Leave } from './pages/staff/Leave';
 import { Payslips } from './pages/staff/Payslips';
 import { CheckIn } from './pages/staff/CheckIn';
 
-// Manager pages
-import { ManagerDashboard, Reservations, LeaveApproval } from './pages/manager';
+// Manager pages (lazy load heaviest)
+const ManagerDashboard = lazy(() => import('./pages/manager').then((m) => ({ default: m.ManagerDashboard })));
+import { Reservations, LeaveApproval } from './pages/manager';
 import { ShiftSummary } from './pages/manager/ShiftSummary';
 import { Promotions } from './pages/manager/Promotions';
 import { Events } from './pages/manager/Events';
-import { ScheduleBuilder } from './pages/manager/ScheduleBuilder';
+const ScheduleBuilder = lazy(() => import('./pages/manager/ScheduleBuilder').then((m) => ({ default: m.ScheduleBuilder })));
 import { Incidents } from './pages/manager/Incidents';
 import { Onboarding } from './pages/manager/Onboarding';
 import { ManagerMyTasks } from './pages/manager/MyTasks';
@@ -93,9 +95,28 @@ function DashboardRedirect() {
   const viewAs = useAuthStore((s) => s.viewAs);
   const initialized = useAuthStore((s) => s.initialized);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const error = useAuthStore((s) => s.error);
+  const retryProfile = useAuthStore((s) => s.retryProfile);
 
-  // Still initialising auth or fetching profile — show a spinner so the
-  // component stays mounted and will re-render once profile arrives.
+  // Profile fetch failed — show error with retry instead of infinite loading
+  if (initialized && !isLoading && !profile && error) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <button
+            onClick={() => retryProfile()}
+            disabled={isLoading}
+            className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60"
+          >
+            {isLoading ? 'Retrying…' : 'Try again'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Still initialising auth or fetching profile — show a spinner
   if (!initialized || isLoading || !profile) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">

@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Plus,
   Search,
+  Shield,
   Users,
   XCircle,
   ZoomIn,
@@ -24,6 +25,7 @@ import { supabase } from "@/lib/supabase"
 import { useQueryClient } from "@tanstack/react-query"
 import { OrgChartNode, ProfileDetailPanel } from "@/components/org-chart"
 import { AddEmployeeModal } from "@/components/team/AddEmployeeModal"
+import { EditAccessModal } from "@/components/team/EditAccessModal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useUpdateEmployeeProfile } from "@/hooks/useEmployees"
+import { useAuthStore } from "@/stores/authStore"
 import { useOrgChart, useUpdateReportsTo, type OrgMember } from "@/hooks/useOrgChart"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -794,7 +797,10 @@ function TeamMemberCard({
   const displayName = person.full_name ?? "Unnamed"
   const displayEmail = person.email ?? ""
   const [removeOpen, setRemoveOpen] = useState(false)
+  const [accessEditOpen, setAccessEditOpen] = useState(false)
   const updateProfile = useUpdateEmployeeProfile(person.id)
+  const isOwner = useAuthStore((s) => s.isOwner())
+  const canChangeAccess = isOwner && person.role !== "owner"
   const maxHrs = person.role === "owner" ? 50 : 40
   const hrsPct = Math.min(100, Math.round((weekHrs / maxHrs) * 100))
   const hrsColor = hrsPct > 90 ? "#8B3030" : hrsPct > 60 ? "#3D6B4A" : "#B8922A"
@@ -879,6 +885,12 @@ function TeamMemberCard({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+              {canChangeAccess && (
+                <DropdownMenuItem onClick={() => setAccessEditOpen(true)}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Change access
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setRemoveOpen(true)}>
                 Remove from team
               </DropdownMenuItem>
@@ -921,6 +933,16 @@ function TeamMemberCard({
           )}
         </div>
       </Link>
+
+      {/* Edit access modal */}
+      <EditAccessModal
+        isOpen={accessEditOpen}
+        onClose={() => setAccessEditOpen(false)}
+        employeeId={person.id}
+        employeeName={displayName}
+        currentRole={person.role}
+        currentManagerType={person.manager_type as "bar" | "floor" | "marketing" | null}
+      />
 
       {/* Remove dialog */}
       <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
