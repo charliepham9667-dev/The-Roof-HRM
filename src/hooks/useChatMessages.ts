@@ -42,11 +42,15 @@ export function useChatMessages(channelId: string, myId?: string) {
     queryFn: async () => {
       if (isDm && myId && dmChannels.length > 0) {
         // DM: fetch both directions and merge
+        // res1 = messages current user (myId) sent TO peer (channel_id = @peerId, author_id = myId)
+        // res2 = messages peer sent TO current user (channel_id = @myId, author_id = peerId)
+        const peerId = dmChannels[0].slice(1) // strip '@'
         const [res1, res2] = await Promise.all([
           supabase
             .from('chat_messages')
             .select('id, channel_id, author_id, body, created_at, author:profiles(full_name, avatar_url)')
             .eq('channel_id', dmChannels[0])
+            .eq('author_id', myId) // only messages sent by me to the peer
             .order('created_at', { ascending: true })
             .limit(200),
           dmChannels[1] && myId
@@ -54,7 +58,7 @@ export function useChatMessages(channelId: string, myId?: string) {
                 .from('chat_messages')
                 .select('id, channel_id, author_id, body, created_at, author:profiles(full_name, avatar_url)')
                 .eq('channel_id', dmChannels[1])
-                .eq('author_id', dmChannels[0].slice(1)) // only messages from the peer (not all inbound)
+                .eq('author_id', peerId) // only messages sent by the peer to me
                 .order('created_at', { ascending: true })
                 .limit(200)
             : { data: [], error: null },
@@ -102,6 +106,7 @@ export function useChatMessages(channelId: string, myId?: string) {
 
     for (const ch of channelsToSub) {
       const isInboundChannel = isDm && myId && ch === `@${myId}`
+      const isOutboundChannel = isDm && myId && ch !== `@${myId}`
       const sub = supabase
         .channel(`chat_messages:${ch}`)
         .on(
@@ -113,9 +118,10 @@ export function useChatMessages(channelId: string, myId?: string) {
             filter: `channel_id=eq.${ch}`,
           },
           async (payload) => {
-            // For inbound channel (@myId), only process messages from the specific peer
-            // to avoid showing messages from other senders in this conversation
+            // For inbound channel (@myId): only process messages from the specific peer
             if (isInboundChannel && peerId && payload.new.author_id !== peerId) return
+            // For outbound channel (@peerId): only process messages sent by me
+            if (isOutboundChannel && myId && payload.new.author_id !== myId) return
 
             const { data } = await supabase
               .from('chat_messages')
