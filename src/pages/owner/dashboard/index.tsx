@@ -395,7 +395,7 @@ export default function OwnerDashboardPage() {
     return rows
   }, [roofEvents, weekDates, todayIso, isCurrentWeek])
 
-  const { data: allTasks = [], isLoading: tasksLoading } = useAllDelegationTasks([
+  const { data: allTasks = [], isLoading: tasksLoading, isError: tasksError, refetch: refetchTasks } = useAllDelegationTasks([
     "todo",
     "in_progress",
     "blocked",
@@ -613,8 +613,8 @@ export default function OwnerDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-card border border-border bg-card px-6 py-4 shadow-card">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-center">
+      <div className="rounded-card border border-border bg-card px-4 md:px-6 py-4 shadow-card">
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-3 md:items-center md:gap-4">
           <div>
             <div className="font-display text-xl tracking-[4px] text-primary">THE ROOF</div>
             <div className="mt-0.5 text-sm font-light tracking-widest text-muted-foreground">
@@ -622,23 +622,19 @@ export default function OwnerDashboardPage() {
             </div>
           </div>
 
-          <div className="text-center">
-            <div className="text-sm tracking-widest text-muted-foreground uppercase">
+          <div className="md:text-center">
+            <div className="text-xs tracking-widest text-muted-foreground uppercase truncate">
               {dateString}
             </div>
-            <div className="mt-1 font-subheading text-lg font-light italic text-foreground">
+            <div className="mt-1 font-subheading text-base md:text-lg font-light italic text-foreground">
               {greeting}, {firstName}
             </div>
           </div>
 
-          <div className="flex items-center justify-between md:justify-end md:gap-3">
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-xs tracking-wide text-muted-foreground">{hoursLabel}</div>
-              </div>
-              <div className="rounded-sm border border-border px-3 py-1 text-xs tracking-widest font-semibold text-foreground uppercase">
-                {modeLabel.toUpperCase()}
-              </div>
+          <div className="flex items-center gap-3 md:justify-end">
+            <div className="text-xs tracking-wide text-muted-foreground">{hoursLabel}</div>
+            <div className="rounded-sm border border-border px-3 py-1 text-xs tracking-widest font-semibold text-foreground uppercase shrink-0">
+              {modeLabel.toUpperCase()}
             </div>
           </div>
         </div>
@@ -659,9 +655,9 @@ export default function OwnerDashboardPage() {
         </CardShell>
 
         <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />}>
-          <div className="flex flex-wrap items-stretch gap-0">
+          <div className="flex flex-col sm:flex-row items-stretch gap-0">
             {/* Current conditions */}
-            <div className="min-w-0 w-full sm:w-auto sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
+            <div className="min-w-0 sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
               <div className="flex items-center gap-3">
                 <div className="text-[32px]">🌤</div>
                 <div className="font-display text-[34px] sm:text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
@@ -703,7 +699,7 @@ export default function OwnerDashboardPage() {
             </div>
 
             {/* 7-day forecast */}
-            <div className="flex flex-1 items-center pl-5">
+            <div className="flex flex-1 items-center sm:pl-5 pt-4 sm:pt-0 overflow-x-auto">
               {[
                 { d: "TUE", hi: 27, lo: 22, emoji: "🌤" },
                 { d: "WED", hi: 25, lo: 22, emoji: "🌥" },
@@ -713,7 +709,7 @@ export default function OwnerDashboardPage() {
                 { d: "SUN", hi: 25, lo: 22, emoji: "⛅" },
                 { d: "MON", hi: 25, lo: 22, emoji: "🌥" },
               ].map((x, i, arr) => (
-                <div key={x.d} className={cn("flex flex-1 flex-col items-center gap-1.5 py-1", i < arr.length - 1 && "border-r border-border")}>
+                <div key={x.d} className={cn("flex shrink-0 flex-col items-center gap-1.5 py-1 px-3", i < arr.length - 1 && "border-r border-border")}>
                   <div className="text-xs tracking-wider text-muted-foreground uppercase">{x.d}</div>
                   <div className="text-base">{x.emoji}</div>
                   <div className="text-sm text-foreground">{x.hi}°</div>
@@ -735,7 +731,7 @@ export default function OwnerDashboardPage() {
         <SectionTitle label="TODAY'S PULSE" />
 
         {/* Team on Shift (left, spans 2 rows) + right column (3 cards + revenue bar) */}
-        <div className="grid gap-4 lg:grid-cols-[1fr_1.6fr] lg:items-stretch">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_1.6fr] lg:items-stretch">
 
           {/* Team on Shift Today */}
           <div className="rounded-card border border-border bg-card shadow-card flex flex-col">
@@ -827,7 +823,7 @@ export default function OwnerDashboardPage() {
 
           {/* Right: 3 metric cards (row 1) + revenue bar (row 2) */}
           <div className="flex flex-col gap-4 h-full">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
             <MetricCard
               title="Reservations"
               footer={
@@ -1092,7 +1088,7 @@ export default function OwnerDashboardPage() {
       <div className="space-y-3">
         <SectionTitle label="TASK BOARD & TEAM ACCOUNTABILITY" />
 
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]" style={{ alignItems: "start" }}>
+        <div className="grid gap-3 grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]" style={{ alignItems: "start" }}>
           {/* Left: My Tasks */}
           <div>
             <div className="flex items-center justify-between mb-3 gap-2">
@@ -1123,7 +1119,7 @@ export default function OwnerDashboardPage() {
               </div>
             </div>
 
-            {tasksLoading ? (
+            {tasksLoading && !tasksError ? (
               <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card divide-y divide-border">
                 <div className="min-w-[420px]">
                 {[1, 2, 3].map((i) => (
@@ -1135,6 +1131,16 @@ export default function OwnerDashboardPage() {
                   </div>
                 ))}
                 </div>
+              </div>
+            ) : tasksError ? (
+              <div className="rounded-card border border-border bg-card shadow-card p-8 text-center">
+                <p className="text-sm text-muted-foreground">Unable to load tasks.</p>
+                <button
+                  onClick={() => refetchTasks()}
+                  className="mt-2 text-xs underline text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Retry
+                </button>
               </div>
             ) : taskView === "list" ? (
               <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card">
@@ -1468,7 +1474,7 @@ export default function OwnerDashboardPage() {
           </div>
         </div>
         {/* Two-column: vertical glance left, pipeline table right */}
-        <div className="grid gap-3 lg:grid-cols-[220px_1fr]" style={{ alignItems: "stretch" }}>
+        <div className="grid gap-3 grid-cols-1 lg:grid-cols-[220px_1fr]" style={{ alignItems: "stretch" }}>
 
         {/* LEFT — vertical day cards */}
         <div className="flex flex-col gap-1.5" style={{ height: "100%" }}>
@@ -1588,13 +1594,14 @@ export default function OwnerDashboardPage() {
         </div>{/* end glance-col */}
 
         {/* RIGHT — Pipeline card */}
-        <div style={{
+        <div className="overflow-x-auto" style={{
           border: "1px solid #e2ddd7",
           borderRadius: 8,
           overflow: "hidden",
           display: "flex",
           flexDirection: "column" as const,
           height: "100%",
+          minWidth: 0,
         }}>
 
         {/* Card header */}
@@ -1611,6 +1618,7 @@ export default function OwnerDashboardPage() {
           padding: "7px 18px",
           borderBottom: "1px solid #e2ddd7",
           background: "#f0ece6",
+          minWidth: 480,
         }}>
           {["Event", "DJ 1", "DJ 2", "Genre", "Promotion"].map((h) => (
             <div key={h} style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#9c9590" }}>{h}</div>
@@ -1634,6 +1642,7 @@ export default function OwnerDashboardPage() {
                   gap: 16,
                   padding: "10px 18px",
                   minHeight: 48,
+                  minWidth: 480,
                   borderBottom: "1px solid #e2ddd7",
                   borderTop: topBorder,
                   alignItems: "center",

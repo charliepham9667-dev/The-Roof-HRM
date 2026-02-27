@@ -169,18 +169,18 @@ export function LeaveRequestForm() {
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-end gap-2">
+          <div className="mt-4 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="rounded-lg px-4 py-2.5 sm:py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] sm:min-h-0"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createRequest.isPending}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="rounded-lg bg-primary px-4 py-2.5 sm:py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-0"
             >
               {createRequest.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Submit Request

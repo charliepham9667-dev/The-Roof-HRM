@@ -62,7 +62,10 @@ export function useAnnouncement(announcementId: string | null) {
         .eq('id', announcementId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Announcement fetch failed:', error.message);
+        throw error;
+      }
 
       return {
         ...mapAnnouncement(data),
@@ -77,6 +80,7 @@ export function useAnnouncement(announcementId: string | null) {
       };
     },
     enabled: !!announcementId,
+    retry: 1,
   });
 }
 
@@ -97,7 +101,10 @@ export function useAnnouncementReplies(announcementId: string | null) {
         .eq('is_active', true)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Announcement replies fetch failed:', error.message);
+        throw error;
+      }
 
       return (data || []).map((row: any) => ({
         ...mapAnnouncementReply(row),
@@ -110,6 +117,7 @@ export function useAnnouncementReplies(announcementId: string | null) {
       }));
     },
     enabled: !!announcementId,
+    retry: 1,
   });
 }
 

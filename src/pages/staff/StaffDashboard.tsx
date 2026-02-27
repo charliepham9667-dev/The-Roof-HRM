@@ -131,7 +131,7 @@ function ChecklistPanel({ role }: { role: string }) {
     const h = new Date().getHours();
     return h < 16 ? 'opening' : 'closing';
   });
-  const { data: templates, isLoading } = useMyTaskTemplates(tab);
+  const { data: templates, isLoading, isError: templatesError, refetch: refetchTemplates } = useMyTaskTemplates(tab);
   const roleLabel = capitalize(role) || 'Your Role';
 
   // aggregate progress across all templates
@@ -161,9 +161,14 @@ function ChecklistPanel({ role }: { role: string }) {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && !templatesError ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : templatesError ? (
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <p className="text-sm text-muted-foreground">Unable to load tasks.</p>
+          <button onClick={() => refetchTemplates()} className="text-xs underline text-muted-foreground hover:text-foreground">Retry</button>
         </div>
       ) : !templates?.length ? (
         <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-center">
@@ -251,7 +256,7 @@ export function StaffDashboard() {
   const clockInMut = useClockIn();
   const clockOutMut = useClockOut();
   const { isLoading: clockStatusLoading } = useClockStatus();
-  const { data: delegatedTasks = [], isLoading: delegatedLoading } = useMyAssignedTasks();
+  const { data: delegatedTasks = [], isLoading: delegatedLoading, isError: delegatedError, refetch: refetchDelegated } = useMyAssignedTasks();
 
   // ── local check-in / break state (mirrors manager dashboard) ──────────────
   const [checkedIn, setCheckedIn] = useState(false);
@@ -394,7 +399,7 @@ export function StaffDashboard() {
 
       {/* ── PAGE HEADER ─────────────────────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card shadow-card">
-        <div className="flex items-center justify-between px-6 py-3.5">
+        <div className="flex flex-col gap-1.5 px-4 md:px-6 py-3.5 md:flex-row md:items-center md:justify-between">
           {/* Brand */}
           <div>
             <div className="font-display text-base tracking-[4px] text-primary">THE ROOF</div>
@@ -402,16 +407,16 @@ export function StaffDashboard() {
           </div>
 
           {/* Centre */}
-          <div className="text-center min-w-0 shrink-0">
-            <div className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground whitespace-nowrap">{dateLabel}</div>
-            <div className="mt-0.5 font-serif italic text-[14px] text-foreground whitespace-nowrap">{getGreeting()}, {firstName}</div>
+          <div className="md:text-center min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground truncate">{dateLabel}</div>
+            <div className="mt-0.5 font-serif italic text-[14px] text-foreground">{getGreeting()}, {firstName}</div>
           </div>
 
           {/* Right */}
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-muted-foreground">Open 14:00 – 02:00</span>
             {todayPromos.length > 0 && (
-              <span className="rounded border border-foreground px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em]">
+              <span className="rounded border border-foreground px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] shrink-0">
                 {todayPromos[0].label}
               </span>
             )}
@@ -729,10 +734,15 @@ export function StaffDashboard() {
               )
             }
           />
-          {delegatedLoading ? (
+          {delegatedLoading && !delegatedError ? (
             <div className="flex items-center justify-center py-8 text-[13px] text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
               Loading…
+            </div>
+          ) : delegatedError ? (
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center gap-2">
+              <p className="text-[13px] text-muted-foreground">Unable to load delegated tasks.</p>
+              <button onClick={() => refetchDelegated()} className="text-xs underline text-muted-foreground hover:text-foreground">Retry</button>
             </div>
           ) : delegatedTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">

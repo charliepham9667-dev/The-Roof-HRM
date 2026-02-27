@@ -89,13 +89,14 @@ const onlineMembers = [
 export function Chat() {
   const [newMessage, setNewMessage] = useState('');
   const [selectedChannel, setSelectedChannel] = useState('1');
+  const [mobileShowChat, setMobileShowChat] = useState(false);
 
   const currentChannel = channels.find(c => c.id === selectedChannel);
 
   return (
     <div className="flex h-[calc(100vh-8rem)] rounded-card border border-border bg-card overflow-hidden shadow-card">
-      {/* Sidebar */}
-      <div className="w-64 border-r border-border flex flex-col">
+      {/* Sidebar — full width on mobile when chat not open, hidden when chat open */}
+      <div className={`${mobileShowChat ? 'hidden' : 'flex'} w-full md:flex md:w-64 border-r border-border flex-col`}>
         {/* Search */}
         <div className="p-3 border-b border-border">
           <div className="relative">
@@ -120,8 +121,8 @@ export function Chat() {
             {channels.filter(c => c.type === 'channel').map((channel) => (
               <button
                 key={channel.id}
-                onClick={() => setSelectedChannel(channel.id)}
-                className={`flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-colors ${
+                onClick={() => { setSelectedChannel(channel.id); setMobileShowChat(true); }}
+                className={`flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-colors min-h-[44px] ${
                   selectedChannel === channel.id
                     ? 'bg-primary/20 text-primary'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -150,8 +151,8 @@ export function Chat() {
             {channels.filter(c => c.type === 'dm').map((channel) => (
               <button
                 key={channel.id}
-                onClick={() => setSelectedChannel(channel.id)}
-                className={`flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-colors ${
+                onClick={() => { setSelectedChannel(channel.id); setMobileShowChat(true); }}
+                className={`flex items-center justify-between w-full rounded-lg px-3 py-2 text-sm transition-colors min-h-[44px] ${
                   selectedChannel === channel.id
                     ? 'bg-primary/20 text-primary'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -174,11 +175,18 @@ export function Chat() {
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      {/* Chat Area — full width on mobile when open */}
+      <div className={`${mobileShowChat ? 'flex' : 'hidden'} md:flex flex-1 flex-col`}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
+            <button
+              className="md:hidden mr-1 p-2 -ml-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setMobileShowChat(false)}
+              aria-label="Back to channels"
+            >
+              ←
+            </button>
             <Hash className="h-5 w-5 text-muted-foreground" />
             <span className="font-medium text-foreground">{currentChannel?.name}</span>
           </div>
@@ -207,7 +215,7 @@ export function Chat() {
               }`}>
                 {message.avatar}
               </div>
-              <div className={`max-w-md ${message.isOwn ? 'text-right' : ''}`}>
+              <div className={`max-w-[85%] md:max-w-md ${message.isOwn ? 'text-right' : ''}`}>
                 <div className={`flex items-center gap-2 mb-1 ${message.isOwn ? 'flex-row-reverse' : ''}`}>
                   <span className="text-sm font-medium text-foreground">{message.author}</span>
                   <span className="text-xs text-muted-foreground">{message.timestamp}</span>
@@ -239,8 +247,8 @@ export function Chat() {
         </div>
       </div>
 
-      {/* Members Sidebar */}
-      <div className="w-56 border-l border-border p-4">
+      {/* Members Sidebar — hidden on mobile */}
+      <div className="hidden md:block w-56 border-l border-border p-4">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Online — {onlineMembers.length}</h3>
         <div className="space-y-3">
           {onlineMembers.map((member) => (

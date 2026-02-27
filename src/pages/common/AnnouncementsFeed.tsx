@@ -516,7 +516,7 @@ function AnnouncementCard({
 // ─── Reply Section ─────────────────────────────────────────────────────────────
 
 function ReplySection({ announcementId }: { announcementId: string }) {
-  const { data: replies, isLoading, isError } = useAnnouncementReplies(announcementId)
+  const { data: replies, isLoading, isError, refetch } = useAnnouncementReplies(announcementId)
   const createReply = useCreateAnnouncementReply()
   const [text, setText] = useState("")
 
@@ -529,8 +529,13 @@ function ReplySection({ announcementId }: { announcementId: string }) {
 
   return (
     <div className="border-t border-border px-5 py-4 space-y-3 bg-secondary/30">
-      {(isLoading || isError) ? (
-        <div className="text-xs text-muted-foreground italic">Loading…</div>
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground italic">Loading replies…</div>
+      ) : isError ? (
+        <div className="text-xs text-muted-foreground">
+          Unable to load replies.{" "}
+          <button onClick={() => refetch()} className="underline hover:text-foreground transition-colors">Retry</button>
+        </div>
       ) : replies && replies.length > 0 ? (
         <div className="space-y-3">
           {replies.map((r) => (
@@ -622,7 +627,7 @@ function ChatPanel({ profile }: { profile: any }) {
   const { data: staffList = [] } = useStaffList()
   const peerIds = useMemo(() => staffList.filter((s) => s.id !== profile?.id).map((s) => s.id), [staffList, profile?.id])
   const { data: dmMetadata = {} } = useDMListMetadata(profile?.id, peerIds)
-  const { data: rawMessages = [], isLoading: messagesLoading } = useChatMessages(activeChannel, profile?.id)
+  const { data: rawMessages = [], isLoading: messagesLoading, isError: messagesError, refetch: refetchMessages } = useChatMessages(activeChannel, profile?.id)
   const sendMutation = useSendChatMessage()
   const markReadMutation = useMarkConversationRead()
   const isDmChannel = activeChannel.startsWith("@")
@@ -869,10 +874,22 @@ function ChatPanel({ profile }: { profile: any }) {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
-          {messagesLoading && (
+          {messagesLoading && !messagesError && (
             <div className="flex items-center justify-center h-16 text-xs text-muted-foreground">Loading messages…</div>
           )}
-          {!messagesLoading && currentMessages.length === 0 && (
+          {messagesError && (
+            <div className="flex flex-col items-center justify-center h-20 gap-2 text-xs text-muted-foreground">
+              <span>⚠️ Unable to load messages.</span>
+              <button
+                type="button"
+                onClick={() => refetchMessages()}
+                className="underline hover:text-foreground transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {!messagesLoading && !messagesError && currentMessages.length === 0 && (
             <div className="flex items-center justify-center h-16 text-xs text-muted-foreground">No messages yet. Be the first to say something!</div>
           )}
           {currentMessages.map((msg, idx) => {
@@ -1211,7 +1228,7 @@ export function AnnouncementsFeed() {
 export function AnnouncementDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data: announcement, isLoading } = useAnnouncement(id || null)
+  const { data: announcement, isLoading, isError, refetch } = useAnnouncement(id || null)
   const markRead = useMarkAnnouncementRead()
 
   useEffect(() => {
@@ -1219,6 +1236,12 @@ export function AnnouncementDetail() {
   }, [id, announcement?.isRead])
 
   if (isLoading) return <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Loading…</div>
+  if (isError) return (
+    <div className="text-center py-12">
+      <p className="text-muted-foreground">⚠️ Unable to load announcement.</p>
+      <button onClick={() => refetch()} className="mt-2 text-sm text-primary underline hover:text-primary/80 transition-colors">Retry</button>
+    </div>
+  )
   if (!announcement) return (
     <div className="text-center py-12">
       <p className="text-muted-foreground">Announcement not found</p>
@@ -1227,7 +1250,7 @@ export function AnnouncementDetail() {
   )
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
+    <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 space-y-5">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
         Back

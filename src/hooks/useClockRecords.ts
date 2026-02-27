@@ -60,6 +60,7 @@ export function useTodayClockRecords() {
       return (data || []).map(mapClockRecord);
     },
     enabled: !!profile?.id,
+    retry: 1,
     refetchInterval: 30000, // Refresh every 30s
   });
 }
@@ -84,7 +85,10 @@ export function useClockRecords(startDate: string, endDate: string, staffId?: st
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.warn('Clock records fetch failed:', error.message);
+        throw error;
+      }
 
       return (data || []).map((row: any) => ({
         ...mapClockRecord(row),
@@ -95,6 +99,7 @@ export function useClockRecords(startDate: string, endDate: string, staffId?: st
         } : undefined,
       }));
     },
+    retry: 1,
     refetchInterval: 30000, // Refresh every 30s (dashboard-friendly realtime)
   });
 }
@@ -329,7 +334,10 @@ export function useMyAttendanceHistory(daysBack: number = 90) {
         .lte('clock_time', `${endDate}T23:59:59`)
         .order('clock_time', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Attendance history fetch failed:', error.message);
+        throw error;
+      }
 
       const records: ClockRecord[] = (data || []).map(mapClockRecord);
 
@@ -382,6 +390,8 @@ export function useMyAttendanceHistory(daysBack: number = 90) {
       return result.sort((a, b) => b.date.localeCompare(a.date));
     },
     enabled: !!profile?.id,
+    retry: 1,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 }
 

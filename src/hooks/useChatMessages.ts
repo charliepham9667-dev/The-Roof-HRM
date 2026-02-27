@@ -58,8 +58,14 @@ export function useChatMessages(channelId: string, myId?: string) {
                 .limit(200)
             : { data: [], error: null },
         ])
-        if (res1.error) throw res1.error
-        if (res2.error) throw res2.error
+        if (res1.error) {
+          console.warn('Chat DM fetch failed:', res1.error.message)
+          throw res1.error
+        }
+        if (res2.error) {
+          console.warn('Chat DM fetch failed (inbound):', res2.error.message)
+          throw res2.error
+        }
         const merged = [...(res1.data ?? []), ...(res2.data ?? [])]
         merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         return merged as unknown as ChatMessage[]
@@ -72,10 +78,15 @@ export function useChatMessages(channelId: string, myId?: string) {
         .order('created_at', { ascending: true })
         .limit(200)
 
-      if (error) throw error
+      if (error) {
+        console.warn('Chat messages fetch failed:', error.message)
+        throw error
+      }
       return (data ?? []) as unknown as ChatMessage[]
     },
     enabled: !!channelId,
+    retry: 1,
+    staleTime: 1000 * 30, // 30 seconds
   })
 
   // Real-time subscription: append new messages as they arrive

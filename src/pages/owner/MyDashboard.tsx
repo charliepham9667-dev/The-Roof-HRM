@@ -307,7 +307,7 @@ export function MyDashboard() {
       </div>
 
       {/* Main Grid: Alerts + Goals + Bottlenecks */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Active Alerts */}
         <div className="rounded-card border border-border bg-card p-5 shadow-card">
           <h2 className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">Active Alerts</h2>
@@ -404,11 +404,11 @@ export function MyDashboard() {
       {/* Kanban Board */}
       <div>
         <h2 className="text-lg font-semibold text-foreground mb-4">Task Board</h2>
-        <div className="grid grid-cols-5 gap-4 overflow-x-auto">
+        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2">
           {kanbanColumns.map((column) => (
             <div
               key={column.key}
-              className={`rounded-card border-t-2 ${column.color} border border-border bg-card shadow-card min-h-[400px]`}
+              className={`snap-start shrink-0 w-[85vw] md:w-auto md:flex-1 rounded-card border-t-2 ${column.color} border border-border bg-card shadow-card min-h-[400px]`}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(column.key)}
             >

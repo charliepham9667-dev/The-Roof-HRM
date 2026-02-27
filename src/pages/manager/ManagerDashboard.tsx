@@ -513,7 +513,7 @@ export function ManagerDashboard() {
   // ── Task board ───────────────────────────────────────────────────────────────
   // useAllDelegationTasks fetches tasks assigned TO or delegated BY this user,
   // so both "Delegated to me" and "Delegated — Follow Up" panels get data
-  const { data: allTasks = [], isLoading: tasksLoading } = useAllDelegationTasks([
+  const { data: allTasks = [], isLoading: tasksLoading, isError: tasksError, refetch: refetchTasks } = useAllDelegationTasks([
     "todo", "in_progress", "blocked", "done",
   ])
 
@@ -692,28 +692,24 @@ export function ManagerDashboard() {
       <h1 className="sr-only">Manager Dashboard</h1>
 
       {/* ── Section 1: Header (Image 1) ─────────────────────────────────────── */}
-      <div className="rounded-card border border-border bg-card px-6 py-4 shadow-card">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-center">
+      <div className="rounded-card border border-border bg-card px-4 md:px-6 py-4 shadow-card">
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-3 md:items-center md:gap-4">
           <div>
             <div className="font-display text-xl tracking-[4px] text-primary">THE ROOF</div>
             <div className="mt-0.5 text-sm font-light tracking-widest text-muted-foreground">
               Da Nang · Club & Lounge
             </div>
           </div>
-          <div className="text-center">
-            <div className="text-sm tracking-widest text-muted-foreground uppercase">{dateString}</div>
-            <div className="mt-1 font-subheading text-lg font-light italic text-foreground">
+          <div className="md:text-center">
+            <div className="text-xs tracking-widest text-muted-foreground uppercase truncate">{dateString}</div>
+            <div className="mt-1 font-subheading text-base md:text-lg font-light italic text-foreground">
               {greeting}, {firstName}
             </div>
           </div>
-          <div className="flex items-center justify-between md:justify-end md:gap-3">
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-xs tracking-wide text-muted-foreground">{hoursLabel}</div>
-              </div>
-              <div className="rounded-sm border border-border px-3 py-1 text-xs tracking-widest font-semibold text-foreground uppercase">
-                {modeLabel.toUpperCase()}
-              </div>
+          <div className="flex items-center gap-3 md:justify-end">
+            <div className="text-xs tracking-wide text-muted-foreground">{hoursLabel}</div>
+            <div className="rounded-sm border border-border px-3 py-1 text-xs tracking-widest font-semibold text-foreground uppercase shrink-0">
+              {modeLabel.toUpperCase()}
             </div>
           </div>
         </div>
@@ -907,7 +903,7 @@ export function ManagerDashboard() {
       <div className="space-y-3">
         <SectionTitle label="TODAY'S PULSE" />
 
-        <div className="grid gap-3 lg:grid-cols-[1.1fr_1fr_1fr_1fr] items-stretch">
+        <div className="grid gap-3 grid-cols-1 lg:grid-cols-[1.1fr_1fr_1fr_1fr] items-stretch">
 
           {/* ── Col 1: Team on Shift ── */}
           <div className="rounded-card border border-border bg-card shadow-card overflow-hidden flex flex-col">
@@ -1024,8 +1020,13 @@ export function ManagerDashboard() {
                 <div className="py-6 text-center text-xs text-muted-foreground italic">
                   Log in as this manager to see their tasks.
                 </div>
-              ) : tasksLoading ? (
+              ) : tasksLoading && !tasksError ? (
                 <div className="py-6 text-center text-xs text-muted-foreground">Loading…</div>
+              ) : tasksError ? (
+                <div className="py-6 text-center text-xs text-muted-foreground">
+                  Unable to load tasks.{" "}
+                  <button onClick={() => refetchTasks()} className="underline hover:text-foreground">Retry</button>
+                </div>
               ) : allTasks.length === 0 ? (
                 <div className="py-6 text-center text-xs text-muted-foreground italic">No tasks today</div>
               ) : (
@@ -1236,7 +1237,7 @@ export function ManagerDashboard() {
           </div>
         )}
 
-        {!isOwnerPreviewing && <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]" style={{ alignItems: "start" }}>
+        {!isOwnerPreviewing && <div className="grid gap-3 grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]" style={{ alignItems: "start" }}>
 
           {/* Left: My Tasks kanban */}
           <div>
@@ -1256,9 +1257,14 @@ export function ManagerDashboard() {
               </div>
             </div>
 
-            {tasksLoading ? (
+            {tasksLoading && !tasksError ? (
               <div className="flex items-center justify-center py-10">
                 <div className="text-xs text-muted-foreground">Loading tasks…</div>
+              </div>
+            ) : tasksError ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+                <p className="text-xs text-muted-foreground">Unable to load tasks.</p>
+                <button onClick={() => refetchTasks()} className="text-xs underline text-muted-foreground hover:text-foreground">Retry</button>
               </div>
             ) : taskView === "list" ? (
               <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
@@ -1434,7 +1440,7 @@ export function ManagerDashboard() {
       </div>
 
       {/* ── Section 4: Floor Issues + Promo Cheatsheet + Pipeline */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
 
         {/* Left column: Floor Issues + Promo Cheatsheet */}
         <div className="space-y-6 lg:col-span-1">

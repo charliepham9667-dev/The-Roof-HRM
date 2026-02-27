@@ -118,6 +118,7 @@ export function useShifts(weekDate: Date) {
         notes: row.notes,
       }));
     },
+    retry: 1,
   });
 }
 
@@ -310,6 +311,7 @@ export function useTodayShifts(todayIso: string) {
     },
     enabled: Boolean(todayIso),
     staleTime: 1000 * 60 * 5,
+    retry: 1,
   });
 }
 
@@ -327,9 +329,14 @@ export function useStaffList() {
         .eq('status', 'active')
         .order('full_name');
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Staff list fetch failed:', error.message);
+        throw error;
+      }
       return data || [];
     },
+    retry: 1,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

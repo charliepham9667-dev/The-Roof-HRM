@@ -178,7 +178,7 @@ export function CheckIn() {
   const targetMonth = targetDate.getMonth(); // 0-indexed
   const monthLabel = `${MONTH_NAMES[targetMonth]} ${targetYear}`;
 
-  const { data: history = [], isLoading: histLoading } = useMyAttendanceHistory(90 + monthOffset * 30);
+  const { data: history = [], isLoading: histLoading, isError: histError, refetch: refetchHistory } = useMyAttendanceHistory(90 + monthOffset * 30);
 
   const filteredHistory = useMemo(() => {
     return history.filter((r) => {
@@ -433,6 +433,17 @@ export function CheckIn() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
               ))}
+            </div>
+          ) : histError ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              <p>Unable to load shift history.</p>
+              <button
+                type="button"
+                onClick={() => refetchHistory()}
+                className="mt-2 text-xs underline hover:text-foreground transition-colors"
+              >
+                Retry
+              </button>
             </div>
           ) : displayRows.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">

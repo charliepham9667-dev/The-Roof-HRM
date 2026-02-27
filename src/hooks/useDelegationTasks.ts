@@ -142,7 +142,10 @@ export function useAllDelegationTasks(statusFilter?: TaskStatus[]) {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.warn('Delegation tasks (all) fetch failed:', error.message);
+        throw error;
+      }
 
       return (data || []).map((row: any) => ({
         ...mapDelegationTask(row),
@@ -160,6 +163,8 @@ export function useAllDelegationTasks(statusFilter?: TaskStatus[]) {
       }));
     },
     enabled: !!profile?.id,
+    retry: 1,
+    staleTime: 1000 * 60 * 2,
   });
 }
 

@@ -131,6 +131,13 @@ export function ScheduleBuilder() {
 
   useEffect(() => {
     let cancelled = false
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) {
+        setLoading(false)
+        setError("Loading timed out. Please check your connection and retry.")
+      }
+    }, 15000)
+
     async function load() {
       try {
         await reload(weekStart)
@@ -138,12 +145,14 @@ export function ScheduleBuilder() {
         if (cancelled) return
         setError((e as Error)?.message || "Failed to load schedule")
       } finally {
+        clearTimeout(timeoutId)
         if (!cancelled) setLoading(false)
       }
     }
     void load()
     return () => {
       cancelled = true
+      clearTimeout(timeoutId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart])
@@ -649,7 +658,7 @@ export function ScheduleBuilder() {
       {/* Body */}
       {isDesktop ? (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="overflow-x-auto rounded-xl border border-border bg-card">
             <div className="overflow-auto">
               <div className="min-w-[1100px]">
 
@@ -748,8 +757,20 @@ export function ScheduleBuilder() {
                 </div>
 
                 {/* ── Employee rows by department ── */}
-                {loading ? (
+                {loading && !error ? (
                   <div className="p-8 text-sm text-muted-foreground">Loading schedule…</div>
+                ) : error ? (
+                  <div className="p-8 text-center text-sm text-destructive">
+                    <p className="font-medium">Failed to load schedule</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+                    <button
+                      type="button"
+                      className="mt-3 rounded-md border border-border px-4 py-2 text-xs text-foreground hover:bg-secondary transition-colors"
+                      onClick={() => void reload(weekStart).catch((e) => setError((e as Error)?.message || "Failed to load schedule")).finally(() => setLoading(false))}
+                    >
+                      Retry
+                    </button>
+                  </div>
                 ) : (
                   <>
                     {employeesByDepartment.map(([dept, list]) => {
@@ -915,6 +936,7 @@ export function ScheduleBuilder() {
           employees={employees}
           shifts={shifts}
           loading={loading}
+          error={error}
           onRefresh={async () => {
             try {
               await reload(weekStart)
@@ -1380,6 +1402,7 @@ function MobileDayList({
   employees,
   shifts,
   loading,
+  error,
   onRefresh,
   onAddShift,
   onEditShift,
@@ -1392,6 +1415,7 @@ function MobileDayList({
   employees: Employee[]
   shifts: Shift[]
   loading: boolean
+  error: string | null
   onRefresh: () => Promise<void>
   onAddShift: () => void
   onEditShift: (s: Shift) => void
@@ -1541,10 +1565,22 @@ function MobileDayList({
         </div>
 
         <div className="p-3">
-          {loading ? (
+          {loading && !error ? (
             <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Loading…
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-center">
+              <p className="text-sm font-medium text-destructive">Failed to load schedule</p>
+              <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+              <button
+                type="button"
+                onClick={onRefresh}
+                className="mt-3 rounded-md border border-border px-4 py-2 text-xs text-foreground hover:bg-secondary transition-colors"
+              >
+                Retry
+              </button>
             </div>
           ) : dayShifts.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-6 text-center">

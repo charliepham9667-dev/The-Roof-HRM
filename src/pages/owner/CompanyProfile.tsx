@@ -21,7 +21,7 @@ export function CompanyProfile() {
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr_0.5fr]">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1.25fr_1fr_0.5fr]">
 
         {/* Card 1: The Roof — Who We Are */}
         <div className="rounded-card border border-border bg-card px-6 py-5 shadow-card">

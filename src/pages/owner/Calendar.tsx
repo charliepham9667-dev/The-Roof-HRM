@@ -88,7 +88,7 @@ export function Calendar() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-[320px_1fr]">
         {/* Left sidebar (visual only) */}
         <Card className="overflow-hidden">
           <CardHeader className="border-b border-border">

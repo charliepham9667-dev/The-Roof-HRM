@@ -127,7 +127,7 @@ export function WeeklyFocus() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Goals */}
         <div className="lg:col-span-2 space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Weekly Goals</h2>
