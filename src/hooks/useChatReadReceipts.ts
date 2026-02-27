@@ -89,6 +89,7 @@ export function useDMListMetadata(profileId: string | undefined, peerIds: string
           .from('chat_messages')
           .select('id, channel_id, body, created_at')
           .in('channel_id', peerChannels)
+          .eq('author_id', profileId)
           .order('created_at', { ascending: false })
           .limit(peerChannels.length * 50),
       ])
