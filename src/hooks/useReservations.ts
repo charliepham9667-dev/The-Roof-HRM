@@ -2,6 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { Reservation, CreateReservationInput, ReservationStatus } from '../types';
+import { insertNotifications } from './useNotifications';
+
+const SOURCE_LABELS: Record<string, string> = {
+  phone: 'Phone call',
+  social_media: 'WhatsApp',
+  website: 'Website',
+  walk_in: 'Walk-in',
+  email: 'Email',
+};
 
 // Get today's reservations
 export function useTodayReservations() {
@@ -105,9 +114,50 @@ export function useCreateReservation() {
       if (error) throw new Error(error.message || JSON.stringify(error));
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data, input) => {
       console.log('[useCreateReservation] success, id:', data?.id);
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+
+      // Fan-out in-app notifications to all owners and managers
+      try {
+        const { data: recipients } = await supabase
+          .from('profiles')
+          .select('id')
+          .in('role', ['owner', 'manager']);
+
+        if (recipients && recipients.length > 0) {
+          const sourceLabel = SOURCE_LABELS[input.source || 'phone'] ?? 'Manual entry';
+          const dateLabel = new Date(`${input.reservationDate}T${input.reservationTime}`).toLocaleString('en-GB', {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+          });
+          const title = `New reservation: ${input.customerName}, ${input.partySize} pax — ${dateLabel}`;
+          const body = `Via ${sourceLabel}${input.tablePreference ? ` · Table: ${input.tablePreference}` : ''}`;
+
+          await insertNotifications(
+            recipients.map((r) => ({
+              userId: r.id,
+              title,
+              body,
+              notificationType: 'reservation_new' as const,
+              relatedType: 'reservation',
+              relatedId: data?.id,
+            }))
+          );
+
+          // Send Web Push to subscribed devices
+          const recipientIds = recipients.map((r) => r.id);
+          supabase.functions.invoke('send-push', {
+            body: {
+              user_ids: recipientIds,
+              title: `New reservation: ${input.customerName}`,
+              body: `${input.partySize} pax · ${dateLabel} · via ${sourceLabel}`,
+              url: '/reservations',
+            },
+          }).catch((err) => console.warn('[useCreateReservation] push notification failed:', err));
+        }
+      } catch (err) {
+        console.warn('[useCreateReservation] notification fan-out failed:', err);
+      }
     },
     onError: (error) => {
       console.error('[useCreateReservation] mutation error:', error);

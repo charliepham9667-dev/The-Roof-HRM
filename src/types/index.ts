@@ -642,6 +642,7 @@ export interface ResourceLink {
 export type NotificationType = 
   | 'shift_reminder' 
   | 'reservation_reminder' 
+  | 'reservation_new'
   | 'leave_status' 
   | 'task_assigned' 
   | 'task_due' 

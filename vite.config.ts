@@ -8,6 +8,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Use injectManifest so we can ship a custom service worker with push handlers
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         name: 'The Roof HRM',
         short_name: 'Roof HRM',
@@ -21,20 +25,9 @@ export default defineConfig({
           { src: '/icons/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB for main bundle
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/[^/]+\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
   ],

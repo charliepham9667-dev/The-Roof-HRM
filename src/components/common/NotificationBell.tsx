@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Check, Loader2 } from 'lucide-react';
+import { Bell, Check, Loader2, BellOff, BellRing } from 'lucide-react';
 import { 
   useNotifications, 
   useUnreadNotificationCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead 
 } from '../../hooks/useNotifications';
+import { usePushSubscription } from '../../hooks/usePushSubscription';
 import type { Notification, NotificationType } from '../../types';
 
 const typeConfig: Record<NotificationType, { label: string; color: string }> = {
   shift_reminder: { label: 'Shift', color: 'text-blue-400' },
   reservation_reminder: { label: 'Reservation', color: 'text-emerald-400' },
+  reservation_new: { label: 'New Reservation', color: 'text-emerald-500' },
   leave_status: { label: 'Leave', color: 'text-purple-400' },
   task_assigned: { label: 'Task', color: 'text-yellow-400' },
   task_due: { label: 'Task Due', color: 'text-red-400' },
@@ -29,6 +31,7 @@ export function NotificationBell() {
   const { data: notifications, isLoading } = useNotifications(10);
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const { isSupported, isSubscribed, isLoading: pushLoading, error: pushError, subscribe, unsubscribe } = usePushSubscription();
 
   const handleMarkAllRead = () => {
     markAllRead.mutate();
@@ -141,6 +144,29 @@ export function NotificationBell() {
                 </div>
               )}
             </div>
+
+            {/* Push notification opt-in/out */}
+            {isSupported && (
+              <div className="px-4 py-2.5 border-t border-border bg-muted/30">
+                {pushError && (
+                  <p className="text-[11px] text-destructive mb-1.5">{pushError}</p>
+                )}
+                <button
+                  onClick={isSubscribed ? unsubscribe : subscribe}
+                  disabled={pushLoading}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {pushLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : isSubscribed ? (
+                    <BellOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <BellRing className="h-3.5 w-3.5 text-primary" />
+                  )}
+                  {isSubscribed ? 'Disable phone notifications' : 'Enable phone notifications'}
+                </button>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="px-4 py-3 border-t border-border">
