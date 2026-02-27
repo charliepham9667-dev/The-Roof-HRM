@@ -744,8 +744,8 @@ export function RoleSidebar07() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link to="/" className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Building2 className="h-5 w-5" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden bg-white">
+                  <img src="/icons/android-chrome-192x192.png" alt="The Roof" className="h-9 w-9 object-cover" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-semibold">The Roof</span>

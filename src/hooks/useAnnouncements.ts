@@ -10,7 +10,7 @@ export function useAnnouncements() {
 
   return useQuery({
     queryKey: ['announcements'],
-    queryFn: async (): Promise<Announcement[]> => {
+    queryFn: async ({ signal }): Promise<Announcement[]> => {
       const { data, error } = await supabase
         .from('announcements')
         .select(`
@@ -21,7 +21,8 @@ export function useAnnouncements() {
         `)
         .eq('is_active', true)
         .order('is_pinned', { ascending: false })
-        .order('published_at', { ascending: false });
+        .order('published_at', { ascending: false })
+        .abortSignal(signal);
 
       if (error) throw error;
 
@@ -38,6 +39,7 @@ export function useAnnouncements() {
         isRead: row.announcement_reads?.some((r: any) => r.user_id === profile?.id) || false,
       }));
     },
+    retry: 0,
   });
 }
 

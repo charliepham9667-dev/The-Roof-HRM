@@ -160,7 +160,7 @@ export function TaskDelegation() {
               <h2 className="text-lg font-semibold text-foreground">{viewTask.title}</h2>
               <button
                 onClick={() => setViewTask(null)}
-                className="rounded p-1 text-muted-foreground hover:text-foreground"
+                className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>

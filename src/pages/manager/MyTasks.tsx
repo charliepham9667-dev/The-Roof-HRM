@@ -89,9 +89,9 @@ function TaskRow({ task, myId, onToggleDone, onEscalate, onEdit, onView }: TaskR
   const dueLabel = formatDue(task);
 
   return (
-    <div className={`flex items-start gap-3 py-3 px-1 border-b border-border/50 last:border-0 ${isDone ? 'opacity-60' : ''}`}>
+    <div className={`flex items-center gap-3 py-2 px-1 border-b border-border/50 last:border-0 min-h-[52px] ${isDone ? 'opacity-60' : ''}`}>
       <button
-        className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors"
+        className="shrink-0 flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:text-primary transition-colors"
         onClick={() => onToggleDone(task)}
         aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
       >
@@ -148,7 +148,7 @@ function TaskRow({ task, myId, onToggleDone, onEscalate, onEdit, onView }: TaskR
           {fromOwner && (
             <button
               onClick={() => onEscalate(task)}
-              className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="flex items-center gap-1 rounded-md border border-border px-3 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-h-[36px]"
             >
               <ArrowUpCircle className="h-3 w-3" />
               Escalate
@@ -157,7 +157,7 @@ function TaskRow({ task, myId, onToggleDone, onEscalate, onEdit, onView }: TaskR
           {!fromOwner && (
             <button
               onClick={() => onEdit(task)}
-              className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="rounded-md border border-border px-3 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-h-[36px]"
             >
               Edit
             </button>
@@ -352,23 +352,27 @@ export function ManagerMyTasks() {
       </div>
 
       {/* Filter tabs + Add button */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-foreground text-background'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="relative flex-1 min-w-0">
+          <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-none">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 min-h-[36px] text-xs font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-foreground text-background'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {/* Right-edge fade hint */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent" />
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+        <Button size="sm" className="shrink-0 gap-1.5" onClick={() => setAddOpen(true)}>
           <Plus className="h-3.5 w-3.5" />
           Add Task
         </Button>

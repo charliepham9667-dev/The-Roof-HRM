@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { createPortal } from "react-dom"
 import { addDays, format, isSameDay, startOfMonth, startOfWeek } from "date-fns"
 import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
 import { useContentCalendar, type ContentPost } from "@/hooks/useContentCalendar"
@@ -252,18 +253,19 @@ export default function ContentCalendar() {
     setModalOpen(true)
   }
 
+  const SAVE_TIMEOUT_MS = 30_000
+
   const handleSave = async () => {
     if (!fScheduledDate) return
 
     setSaveError(null)
     setIsSaving(true)
 
-    try {
+    const buildPayload = (): Partial<ContentPost> => {
       const baseNotes = editingPost?.notes ?? null
       const withPillar = upsertNoteField(baseNotes, "pillar", fPillar)
       const withTitle = upsertNoteField(withPillar, "title", fTitle.trim() || "New post")
-
-      const payload: Partial<ContentPost> = {
+      return {
         scheduled_date: fScheduledDate,
         scheduled_time: fScheduledTime ? `${fScheduledTime}:00` : null,
         platform: fPlatform,
@@ -273,16 +275,29 @@ export default function ContentCalendar() {
         status: fStatus,
         notes: withTitle,
       }
+    }
 
-      if (editingPost) {
-        await updatePost.mutateAsync({ id: editingPost.id, ...payload })
-      } else {
-        await createPost.mutateAsync(payload)
-      }
+    const savePromise =
+      editingPost
+        ? updatePost.mutateAsync({ id: editingPost.id, ...buildPayload() })
+        : createPost.mutateAsync(buildPayload())
 
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Save timed out. Please check your connection and try again.")),
+        SAVE_TIMEOUT_MS,
+      ),
+    )
+
+    try {
+      await Promise.race([savePromise, timeoutPromise])
+      toast.success("Post saved successfully")
       setModalOpen(false)
-    } catch (err: any) {
-      setSaveError(err?.message || "Failed to save. You may not have permission to edit this post.")
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save. You may not have permission to edit this post."
+      setSaveError(message)
+      toast.error(message)
     } finally {
       setIsSaving(false)
     }
@@ -291,8 +306,29 @@ export default function ContentCalendar() {
   const handleDelete = async () => {
     if (!editingPost) return
     if (!confirm("Delete this post?")) return
-    await deletePost.mutateAsync(editingPost.id)
-    setModalOpen(false)
+
+    setIsSaving(true)
+    setSaveError(null)
+
+    try {
+      await Promise.race([
+        deletePost.mutateAsync(editingPost.id),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Delete timed out. Please try again.")),
+            SAVE_TIMEOUT_MS,
+          ),
+        ),
+      ])
+      toast.success("Post deleted")
+      setModalOpen(false)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete post."
+      setSaveError(message)
+      toast.error(message)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const monthStart = useMemo(() => startOfMonth(cursor), [cursor])
@@ -982,9 +1018,9 @@ export default function ContentCalendar() {
           onClick={(e) => {
             if (e.target === e.currentTarget) setModalOpen(false)
           }}
-          className="fixed inset-0 z-[500] bg-foreground/40 backdrop-blur-[4px] flex items-center justify-center p-8"
+          className="fixed inset-0 z-[500] bg-foreground/40 backdrop-blur-[4px] flex items-center justify-center p-4 md:p-8"
         >
-          <div className="w-full max-w-[520px] rounded-lg border border-border bg-card shadow-[0_8px_32px_rgba(0,0,0,0.12),_0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
+          <div className="flex w-full max-w-[520px] max-h-[100dvh] md:max-h-[90vh] flex-col rounded-lg border border-border bg-card shadow-[0_8px_32px_rgba(0,0,0,0.12),_0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
             {/* header */}
             <div className="p-5 pb-4 border-b border-border flex items-start justify-between gap-3">
               <div className="flex items-stretch gap-3 flex-1 min-w-0">
@@ -1001,8 +1037,8 @@ export default function ContentCalendar() {
               </button>
             </div>
 
-            {/* body */}
-            <div className="p-5 space-y-4">
+            {/* body — scrollable on mobile */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
               <div className="h-40 rounded-md border border-border bg-secondary flex items-center justify-center text-5xl">
                 {postThumb(editingPost || ({ content_type: fContentType } as any))}
               </div>
@@ -1194,8 +1230,8 @@ export default function ContentCalendar() {
               </div>
             </div>
 
-            {/* footer */}
-            <div className="px-5 py-3 border-t border-border bg-secondary flex flex-col gap-2">
+            {/* footer — sticky on mobile */}
+            <div className="shrink-0 sticky bottom-0 px-5 py-3 border-t border-border bg-secondary flex flex-col gap-2">
               {saveError && (
                 <div className="rounded-sm border border-error/30 bg-error/8 px-3 py-2 text-xs text-error">
                   {saveError}
@@ -1205,7 +1241,7 @@ export default function ContentCalendar() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-muted-foreground hover:text-secondary-foreground hover:border-border/80"
+                  className="min-h-[44px] px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-muted-foreground hover:text-secondary-foreground hover:border-border/80"
                 >
                   Close
                 </button>
@@ -1214,7 +1250,8 @@ export default function ContentCalendar() {
                     <button
                       type="button"
                       onClick={handleDelete}
-                      className="px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-error hover:border-border/80"
+                      disabled={isSaving}
+                      className="min-h-[44px] px-4 py-2 rounded-sm border border-border text-xs tracking-wider uppercase text-error hover:border-border/80 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Delete
                     </button>
@@ -1224,7 +1261,7 @@ export default function ContentCalendar() {
                     onClick={handleSave}
                     disabled={!fScheduledDate || isSaving}
                     className={cn(
-                      "px-4 py-2 rounded-sm text-xs tracking-wider uppercase",
+                      "min-h-[44px] px-4 py-2 rounded-sm text-xs tracking-wider uppercase",
                       "bg-success text-white hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed",
                     )}
                   >

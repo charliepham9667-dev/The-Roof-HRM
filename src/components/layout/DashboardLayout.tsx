@@ -5,6 +5,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Header } from './Header';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { RoleSidebar07 } from './RoleSidebar07';
+import { MobileBottomNav } from './MobileBottomNav';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { useAuthStore } from '@/stores/authStore';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -78,9 +80,10 @@ export function DashboardLayout() {
     <SidebarProvider defaultOpen>
       <RoleSidebar07 />
       <SidebarInset className="min-w-0">
+        <OfflineBanner />
         <Header />
         <ViewAsPreviewBanner />
-        <main className="flex-1 min-w-0 overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6">
+        <main className="flex-1 min-w-0 overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6 pb-20 md:pb-6">
           <ErrorBoundary>
             <Suspense
               fallback={
@@ -93,6 +96,7 @@ export function DashboardLayout() {
             </Suspense>
           </ErrorBoundary>
         </main>
+        <MobileBottomNav />
       </SidebarInset>
     </SidebarProvider>
   );

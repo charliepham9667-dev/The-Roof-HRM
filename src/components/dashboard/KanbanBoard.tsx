@@ -296,7 +296,7 @@ function KanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-col rounded-card border border-border bg-card shadow-card overflow-hidden transition-colors min-h-[260px]",
+        "flex flex-col rounded-card border border-border bg-card shadow-card overflow-hidden transition-colors min-h-[180px] md:min-h-[260px]",
         isOver && "border-primary/50 ring-1 ring-primary/20 bg-primary/[0.01]",
       )}
     >
@@ -330,7 +330,7 @@ function KanbanColumn({
                 type="button"
                 onClick={() => onDoneFilterChange(f.key)}
                 className={cn(
-                  "rounded-sm border px-2 py-0.5 text-[9px] tracking-wide uppercase transition-colors",
+                  "rounded-sm border px-2 py-1.5 min-h-[28px] text-[9px] tracking-wide uppercase transition-colors",
                   doneFilter === f.key
                     ? "border-[#10b981]/40 bg-[#10b981]/15 text-[#10b981] font-semibold"
                     : "border-border bg-transparent text-muted-foreground hover:text-foreground",
@@ -371,7 +371,7 @@ function KanbanColumn({
           <button
             type="button"
             onClick={onNewTask}
-            className="w-full rounded-sm border border-dashed border-border/60 px-2 py-1.5 text-[10px] tracking-wider text-muted-foreground uppercase hover:border-primary/40 hover:text-primary transition-colors text-left"
+            className="w-full rounded-sm border border-dashed border-border/60 px-2 py-2.5 min-h-[40px] text-[10px] tracking-wider text-muted-foreground uppercase hover:border-primary/40 hover:text-primary transition-colors text-left"
           >
             + New task
           </button>
@@ -443,10 +443,10 @@ export function KanbanBoard({
     >
       <div className="relative">
         {/* Gradient scroll hint on the right for mobile */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background/80 to-transparent z-10 md:hidden" />
-        <div className="flex gap-2.5 overflow-x-auto pb-2 md:grid md:grid-cols-4 md:overflow-visible md:pb-0">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background/80 to-transparent z-10 md:hidden" />
+        <div className="flex gap-2.5 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth [WebkitOverflowScrolling:touch] md:grid md:grid-cols-4 md:overflow-visible md:pb-0 md:snap-none">
         {COLUMNS.map((col) => (
-          <div key={col.key} className="min-w-[240px] md:min-w-0">
+          <div key={col.key} className="snap-start shrink-0 w-[85vw] md:w-auto md:shrink md:min-w-0">
           <KanbanColumn
             key={col.key}
             col={col}
@@ -462,6 +462,12 @@ export function KanbanBoard({
           />
           </div>
         ))}
+        </div>
+        {/* Dot indicators for mobile scroll position */}
+        <div className="flex justify-center gap-1.5 mt-2 md:hidden">
+          {COLUMNS.map((col) => (
+            <div key={col.key} className={cn("h-1 w-4 rounded-full", col.color, "opacity-40")} />
+          ))}
         </div>
       </div>
 

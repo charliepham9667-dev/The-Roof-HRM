@@ -1173,10 +1173,10 @@ export default function OwnerDashboardPage() {
                 </div>
 
                 {/* Column headers */}
-                <div className="grid grid-cols-[1fr_110px_90px_80px] px-3 py-2 text-[10px] tracking-widest text-muted-foreground uppercase border-b border-border">
+                <div className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_110px_90px_80px] px-3 py-2 text-[10px] tracking-widest text-muted-foreground uppercase border-b border-border">
                   <div>Task</div>
-                  <div>Status</div>
-                  <div>Priority</div>
+                  <div className="hidden md:block">Status</div>
+                  <div className="hidden md:block">Priority</div>
                   <div>Due</div>
                 </div>
 
@@ -1214,17 +1214,23 @@ export default function OwnerDashboardPage() {
                         type="button"
                         onClick={() => openTask(t)}
                         className={cn(
-                          "grid w-full grid-cols-[1fr_110px_90px_80px] items-center border-t border-border px-3 py-2.5 text-left hover:bg-secondary/50 transition-colors",
+                          "grid w-full grid-cols-[1fr_auto] md:grid-cols-[1fr_110px_90px_80px] items-center border-t border-border px-3 py-3 md:py-2.5 text-left hover:bg-secondary/50 transition-colors min-h-[44px]",
                           t.status === "done" && "opacity-60",
                         )}
                       >
-                        <div className={cn("text-sm truncate", t.status === "done" ? "line-through text-muted-foreground" : "text-foreground")}>
-                          {t.title}
+                        <div className="min-w-0">
+                          <div className={cn("text-sm truncate", t.status === "done" ? "line-through text-muted-foreground" : "text-foreground")}>
+                            {t.title}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5 md:hidden">
+                            <Badge variant={badge.variant}>{badge.label}</Badge>
+                            <Badge variant={pri.variant}>{pri.label}</Badge>
+                          </div>
                         </div>
-                        <div>
+                        <div className="hidden md:block">
                           <Badge variant={badge.variant}>{badge.label}</Badge>
                         </div>
-                        <div>
+                        <div className="hidden md:block">
                           <Badge variant={pri.variant}>{pri.label}</Badge>
                         </div>
                         <div className={cn("text-[10px] tabular-nums", isOverdue ? "text-error" : "text-muted-foreground")}>
@@ -1820,6 +1826,7 @@ export default function OwnerDashboardPage() {
                 borderBottom: "1px solid #e2ddd7",
                 gap: 8,
                 backgroundColor: "#faf8f5",
+                flexWrap: "wrap" as const,
               }}>
                 {/* Left: label + badge */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -1835,8 +1842,8 @@ export default function OwnerDashboardPage() {
                   }}>{rating}</span>
                 </div>
 
-                {/* Right: 4 stats */}
-                <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                {/* Right: 4 stats — scrollable on very small screens */}
+                <div style={{ display: "flex", alignItems: "center", gap: 0, overflowX: "auto" as const, flexShrink: 1, minWidth: 0 }}>
                   {[
                     { label: "Events", value: String(eventCount) },
                     { label: "DJs Booked", value: String(djBookedCount) },
@@ -1845,8 +1852,9 @@ export default function OwnerDashboardPage() {
                   ].map((stat, i) => (
                     <div key={stat.label} style={{
                       display: "flex", flexDirection: "column" as const, alignItems: "center",
-                      padding: "0 12px",
+                      padding: "0 8px",
                       borderLeft: i > 0 ? "1px solid #e2ddd7" : "none",
+                      flexShrink: 0,
                     }}>
                       <span style={{
                         fontFamily: "'Inter', sans-serif",
@@ -1856,7 +1864,7 @@ export default function OwnerDashboardPage() {
                       <span style={{
                         fontSize: 7, fontWeight: 600, letterSpacing: "0.08em",
                         textTransform: "uppercase" as const,
-                        color: "#9c9590", marginTop: 2,
+                        color: "#9c9590", marginTop: 2, whiteSpace: "nowrap" as const,
                       }}>{stat.label}</span>
                     </div>
                   ))}

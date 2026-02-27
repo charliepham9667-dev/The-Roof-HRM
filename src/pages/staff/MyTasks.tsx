@@ -83,9 +83,9 @@ function TaskRow({ task, myId, onToggleDone, onEdit, onView }: TaskRowProps) {
   const dueLabel = formatDue(task);
 
   return (
-    <div className={`flex items-start gap-3 border-b border-border/50 px-1 py-3 last:border-0 ${isDone ? 'opacity-60' : ''}`}>
+    <div className={`flex items-center gap-3 border-b border-border/50 px-1 py-2 last:border-0 min-h-[52px] ${isDone ? 'opacity-60' : ''}`}>
       <button
-        className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors"
+        className="shrink-0 flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:text-primary transition-colors"
         onClick={() => onToggleDone(task)}
         aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
       >
@@ -140,7 +140,7 @@ function TaskRow({ task, myId, onToggleDone, onEdit, onView }: TaskRowProps) {
       {!isDone && !fromOther && (
         <button
           onClick={() => onEdit(task)}
-          className="shrink-0 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="shrink-0 rounded-md border border-border px-3 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground min-h-[36px]"
         >
           Edit
         </button>
@@ -340,7 +340,7 @@ export function StaffMyTasks() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 min-h-[36px] text-xs font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-foreground text-background'
                     : 'bg-muted text-muted-foreground hover:text-foreground'

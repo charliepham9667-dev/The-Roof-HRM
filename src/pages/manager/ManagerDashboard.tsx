@@ -1261,10 +1261,9 @@ export function ManagerDashboard() {
                 <div className="text-xs text-muted-foreground">Loading tasks…</div>
               </div>
             ) : taskView === "list" ? (
-              <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card">
-                <div className="min-w-[420px]">
-                <div className="grid grid-cols-[1fr_110px_90px_80px] px-3 py-2 text-[10px] tracking-widest text-muted-foreground uppercase border-b border-border">
-                  <div>Task</div><div>Status</div><div>Priority</div><div>Due</div>
+              <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+                <div className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_110px_90px_80px] px-3 py-2 text-[10px] tracking-widest text-muted-foreground uppercase border-b border-border">
+                  <div>Task</div><div className="hidden md:block">Status</div><div className="hidden md:block">Priority</div><div>Due</div>
                 </div>
                 {(() => {
                   const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
@@ -1283,16 +1282,21 @@ export function ManagerDashboard() {
                     const isOverdue = t.dueDate && t.dueDate < todayIso && t.status !== "done"
                     return (
                       <button key={t.id} type="button" onClick={() => openTask(t)}
-                        className={cn("grid w-full grid-cols-[1fr_110px_90px_80px] items-center border-t border-border px-3 py-2.5 text-left hover:bg-secondary/50", t.status === "done" && "opacity-60")}>
-                        <div className={cn("text-sm truncate", t.status === "done" ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</div>
-                        <div><span className={cn("rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide uppercase", badge.cls)}>{badge.label}</span></div>
-                        <div><span className={cn("rounded-sm border px-1.5 py-0.5 text-[10px] tracking-wide uppercase", pri.className)}>{pri.label}</span></div>
+                        className={cn("grid w-full grid-cols-[1fr_auto] md:grid-cols-[1fr_110px_90px_80px] items-center border-t border-border px-3 py-3 md:py-2.5 text-left hover:bg-secondary/50 min-h-[44px]", t.status === "done" && "opacity-60")}>
+                        <div className="min-w-0">
+                          <div className={cn("text-sm truncate", t.status === "done" ? "line-through text-muted-foreground" : "text-foreground")}>{t.title}</div>
+                          <div className="flex items-center gap-1.5 mt-0.5 md:hidden">
+                            <span className={cn("rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide uppercase", badge.cls)}>{badge.label}</span>
+                            <span className={cn("rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide uppercase", pri.className)}>{pri.label}</span>
+                          </div>
+                        </div>
+                        <div className="hidden md:block"><span className={cn("rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide uppercase", badge.cls)}>{badge.label}</span></div>
+                        <div className="hidden md:block"><span className={cn("rounded-sm border px-1.5 py-0.5 text-[10px] tracking-wide uppercase", pri.className)}>{pri.label}</span></div>
                         <div className={cn("text-[10px] tabular-nums", isOverdue ? "text-error" : "text-muted-foreground")}>{formatDue(t.dueDate)}</div>
                       </button>
                     )
                   })
                 })()}
-                </div>
               </div>
             ) : (
               <KanbanBoard

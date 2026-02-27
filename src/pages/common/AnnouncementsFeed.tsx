@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Settings, Wine, Music, Megaphone } from "lucide-react"
+import { MessageSquare, Settings, Wine, Music, Megaphone, CheckCheck } from "lucide-react"
 import {
   useAnnouncements,
   useCreateAnnouncement,
@@ -17,7 +17,13 @@ import { toast } from "sonner"
 import { useAuthStore } from "@/stores/authStore"
 import type { Announcement, AnnouncementAudience, CreateAnnouncementInput } from "@/types"
 import { useChatMessages, useSendChatMessage } from "@/hooks/useChatMessages"
+import {
+  useDMListMetadata,
+  useMarkConversationRead,
+  useRecipientReadState,
+} from "@/hooks/useChatReadReceipts"
 import { useStaffList } from "@/hooks/useShifts"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -577,6 +583,8 @@ interface ChatMsg {
   text: string
   reactions?: Array<{ emoji: string; count: number; mine?: boolean }>
   attachmentName?: string
+  isMine?: boolean
+  isRead?: boolean
 }
 
 interface ChannelDef {
@@ -603,38 +611,64 @@ const CHANNELS: ChannelDef[] = [
 
 
 function ChatPanel({ profile }: { profile: any }) {
+  const isMobile = useIsMobile()
   const [activeChannel, setActiveChannel] = useState<string>("#general")
+  const [mobileShowConversation, setMobileShowConversation] = useState(false)
   const [text, setText] = useState("")
   const [search, setSearch] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const { data: staffList = [] } = useStaffList()
-  const { data: rawMessages = [], isLoading: messagesLoading } = useChatMessages(activeChannel)
+  const peerIds = useMemo(() => staffList.filter((s) => s.id !== profile?.id).map((s) => s.id), [staffList, profile?.id])
+  const { data: dmMetadata = {} } = useDMListMetadata(profile?.id, peerIds)
+  const { data: rawMessages = [], isLoading: messagesLoading } = useChatMessages(activeChannel, profile?.id)
   const sendMutation = useSendChatMessage()
+  const markReadMutation = useMarkConversationRead()
+  const isDmChannel = activeChannel.startsWith("@")
+  const peerId = isDmChannel ? activeChannel.slice(1) : null
+  const { data: recipientLastReadAt } = useRecipientReadState(peerId, profile?.id, isDmChannel)
 
-  // Build DM channel list from real staff, excluding the current user
+  // Mark DM as read when opening the conversation
+  useEffect(() => {
+    if (peerId && profile?.id) {
+      markReadMutation.mutate({ userId: profile.id, peerId })
+    }
+  }, [activeChannel, peerId, profile?.id])
+
+  // Build DM channel list from real staff, merging metadata (last message, unread)
   const dmChannels: ChannelDef[] = useMemo(() => {
     return staffList
       .filter((s) => s.id !== profile?.id)
-      .map((s) => ({
-        id: `@${s.id}`,
-        icon: initials(s.full_name || "?"),
-        name: s.full_name || "Unknown",
-        displayName: `@${(s.full_name || "unknown").split(" ")[0].toLowerCase()}`,
-        desc: s.job_role || s.role || "",
-        isDm: true,
-        dmStatus: "offline" as const,
-        dmColor: avatarColor(s.full_name || "?"),
-        lastMessage: "",
-        lastTime: "",
-      }))
-  }, [staffList, profile?.id])
+      .map((s) => {
+        const meta = dmMetadata[s.id]
+        const lastMsg = meta?.lastMessage ?? ""
+        const preview = meta?.lastMessageAuthorName
+          ? `${meta.lastMessageAuthorName}: ${lastMsg.slice(0, 30)}${lastMsg.length > 30 ? "…" : ""}`
+          : lastMsg ? lastMsg.slice(0, 40) + (lastMsg.length > 40 ? "…" : "") : ""
+        return {
+          id: `@${s.id}`,
+          icon: initials(s.full_name || "?"),
+          name: s.full_name || "Unknown",
+          displayName: `@${(s.full_name || "unknown").split(" ")[0].toLowerCase()}`,
+          desc: s.job_role || s.role || "",
+          isDm: true,
+          dmStatus: "offline" as const,
+          dmColor: avatarColor(s.full_name || "?"),
+          lastMessage: preview || s.job_role || s.role || "",
+          lastTime: meta?.lastTime ?? "",
+          unread: meta?.unread,
+        }
+      })
+  }, [staffList, profile?.id, dmMetadata])
 
   // Map DB messages to the ChatMsg shape used by the render
   const currentMessages: ChatMsg[] = useMemo(() => {
+    const readThreshold = recipientLastReadAt ? new Date(recipientLastReadAt).getTime() : 0
     return rawMessages.map((m) => {
       const authorName = m.author?.full_name || "Unknown"
+      const mine = m.author_id === profile?.id
+      const read = mine && readThreshold > 0 && new Date(m.created_at).getTime() <= readThreshold
       return {
         id: m.id,
         av: initials(authorName),
@@ -642,9 +676,11 @@ function ChatPanel({ profile }: { profile: any }) {
         name: authorName,
         time: new Date(m.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }),
         text: m.body,
+        isMine: mine,
+        isRead: read,
       }
     })
-  }, [rawMessages])
+  }, [rawMessages, recipientLastReadAt, profile?.id])
 
   const currentChannelDef = [...CHANNELS, ...dmChannels].find((c) => c.id === activeChannel)
 
@@ -688,10 +724,20 @@ function ChatPanel({ profile }: { profile: any }) {
     !search || c.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  const handleSelectChannel = (id: string) => {
+    setActiveChannel(id)
+    if (isMobile) setMobileShowConversation(true)
+  }
+
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {/* ── Channel sidebar ── */}
-      <div className="w-60 shrink-0 border-r border-border bg-card flex flex-col overflow-hidden">
+      {/* ── Channel sidebar (full width on mobile when showing list) ── */}
+      <div
+        className={cn(
+          "shrink-0 border-r border-border bg-card flex flex-col overflow-hidden",
+          isMobile && mobileShowConversation ? "hidden" : isMobile ? "w-full flex-1" : "w-60"
+        )}
+      >
         <div className="px-4 py-3 border-b border-border">
           <div className="text-sm font-semibold text-foreground mb-2">Messages</div>
           <div className="flex items-center gap-2 bg-secondary border border-border rounded-md px-2 py-1.5">
@@ -712,9 +758,9 @@ function ChatPanel({ profile }: { profile: any }) {
             {filteredChannels.map((ch) => (
               <button
                 key={ch.id}
-                onClick={() => setActiveChannel(ch.id)}
+                onClick={() => handleSelectChannel(ch.id)}
                 className={cn(
-                  "w-full flex items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
+                  "w-full flex min-h-[44px] items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
                   activeChannel === ch.id ? "bg-secondary" : "hover:bg-secondary/60",
                 )}
               >
@@ -740,9 +786,9 @@ function ChatPanel({ profile }: { profile: any }) {
               {filteredDms.map((dm) => (
                 <button
                   key={dm.id}
-                  onClick={() => setActiveChannel(dm.id)}
+                  onClick={() => handleSelectChannel(dm.id)}
                   className={cn(
-                    "w-full flex items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
+                    "w-full flex min-h-[44px] items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
                     activeChannel === dm.id ? "bg-secondary" : "hover:bg-secondary/60",
                   )}
                 >
@@ -757,9 +803,16 @@ function ChatPanel({ profile }: { profile: any }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[12.5px] font-medium text-foreground truncate">{dm.name}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">{dm.desc}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{dm.lastMessage || dm.desc}</div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground shrink-0">{dm.lastTime}</div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <div className="text-[10px] text-muted-foreground">{dm.lastTime}</div>
+                    {dm.unread != null && dm.unread > 0 && (
+                      <span className="rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 min-w-[16px] text-center">
+                        {dm.unread > 99 ? "99+" : dm.unread}
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
@@ -767,10 +820,27 @@ function ChatPanel({ profile }: { profile: any }) {
         </div>
       </div>
 
-      {/* ── Main chat area ── */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      {/* ── Main chat area (hidden on mobile when showing list) ── */}
+      <div
+        className={cn(
+          "flex-1 min-w-0 flex flex-col overflow-hidden",
+          isMobile && !mobileShowConversation && "hidden"
+        )}
+      >
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card shrink-0">
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setMobileShowConversation(false)}
+              className="mr-1 flex h-9 w-9 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
+              aria-label="Back to conversations"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
+          )}
           {currentChannelDef?.isDm ? (
             <div className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: currentChannelDef.dmColor }}>
               {currentChannelDef.icon}
@@ -832,6 +902,12 @@ function ChatPanel({ profile }: { profile: any }) {
                     </div>
                   )}
                   <div className="text-[13px] text-foreground/80 leading-relaxed">{msg.text}</div>
+                  {msg.isMine && msg.isRead && (
+                    <div className="mt-0.5 text-[10px] text-muted-foreground flex items-center gap-1">
+                      <CheckCheck className="h-3 w-3" />
+                      <span>Seen</span>
+                    </div>
+                  )}
                   {msg.attachmentName && (
                     <div className="mt-2 inline-flex items-center gap-2 bg-secondary border border-border rounded-md px-3 py-2 cursor-pointer hover:border-border/80 transition-colors max-w-[280px]">
                       <div className="h-7 w-7 rounded bg-blue-50 flex items-center justify-center shrink-0">
@@ -913,7 +989,7 @@ function ChatPanel({ profile }: { profile: any }) {
 
 export function AnnouncementsFeed() {
   const profile = useAuthStore((s) => s.profile)
-  const { data: announcements, isLoading, isError } = useAnnouncements()
+  const { data: announcements, isLoading, isError, refetch } = useAnnouncements()
   const [searchParams] = useSearchParams()
 
   const [activeTab, setActiveTab] = useState<"ann" | "chat">(() =>
@@ -1089,8 +1165,15 @@ export function AnnouncementsFeed() {
             )}
 
             {/* List */}
-            {(isLoading || isError) ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">{isError ? "⚠️ Unable to load announcements. Please refresh." : "Loading announcements…"}</div>
+            {isLoading ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">Loading announcements…</div>
+            ) : isError ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                ⚠️ Unable to load announcements.{" "}
+                <button onClick={() => refetch()} className="underline hover:text-foreground transition-colors">
+                  Retry
+                </button>
+              </div>
             ) : (
               <div className="space-y-3">
                 {filterAnnouncements([...pinned, ...unpinned]).map((a) => (
