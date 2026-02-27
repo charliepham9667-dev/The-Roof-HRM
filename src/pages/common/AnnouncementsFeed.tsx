@@ -756,7 +756,7 @@ function ChatPanel({ profile }: { profile: any }) {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden py-2 px-2">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden py-2 px-2" style={{ minHeight: 0 }}>
           {/* Channels — fixed, no scroll needed (small list) */}
           <div className="shrink-0">
             <div className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase px-2 py-2">Channels</div>
@@ -785,9 +785,9 @@ function ChatPanel({ profile }: { profile: any }) {
           </div>
 
           {/* Direct Messages — scrollable so many users don't break the layout */}
-          <div className="flex flex-col min-h-0 mt-2">
+          <div className="flex flex-col flex-1 min-h-0 mt-2">
             <div className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase px-2 py-2 shrink-0">Direct Messages</div>
-            <div className="overflow-y-auto flex-1">
+            <div className="overflow-y-auto flex-1 min-h-0">
               {filteredDms.map((dm) => (
                 <button
                   key={dm.id}
