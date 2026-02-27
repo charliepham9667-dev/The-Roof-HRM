@@ -50,27 +50,36 @@ export function useCreateResource() {
     mutationFn: async (input: Partial<ResourceLink>) => {
       if (!profile?.id) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase
-        .from('resource_links')
-        .insert({
-          title: input.title,
-          title_vi: input.titleVi || null,
-          description: input.description || null,
-          description_vi: input.descriptionVi || null,
-          url: input.url,
-          category: input.category,
-          subcategory: input.subcategory || null,
-          icon: input.icon || 'file-text',
-          sort_order: input.sortOrder || 0,
-          is_active: true,
-          created_by: profile.id,
-        })
-        .select()
-        .single();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
 
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from('resource_links')
+          .insert({
+            title: input.title,
+            title_vi: input.titleVi || null,
+            description: input.description || null,
+            description_vi: input.descriptionVi || null,
+            url: input.url,
+            category: input.category,
+            subcategory: input.subcategory || null,
+            icon: input.icon || 'file-text',
+            sort_order: input.sortOrder || 0,
+            is_active: true,
+            created_by: profile.id,
+          })
+          .select()
+          .single()
+          .abortSignal(controller.signal);
+
+        if (error) throw new Error(error.message);
+        return data;
+      } finally {
+        clearTimeout(timeout);
+      }
     },
+    retry: 0,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
     },
