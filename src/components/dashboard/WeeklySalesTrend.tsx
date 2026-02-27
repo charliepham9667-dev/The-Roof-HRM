@@ -63,16 +63,20 @@ function formatTickLabel(dateISO: string) {
 function WeeklyTotalsLegend({
   actualTotal,
   lastYearTotal,
+  actualColor,
+  lastYearColor,
 }: {
   actualTotal: number
   lastYearTotal: number
+  actualColor: string
+  lastYearColor: string
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 pb-1 text-xs text-muted-foreground">
+    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-center gap-x-6 gap-y-2 pt-3 pb-1 text-xs text-muted-foreground">
       <div className="flex items-center gap-2">
         <span
           className="h-2.5 w-2.5 rounded-full border border-border/50 shrink-0"
-          style={{ backgroundColor: "var(--color-actual)" }}
+          style={{ backgroundColor: actualColor }}
           aria-hidden="true"
         />
         <span className="text-muted-foreground">This year</span>
@@ -83,7 +87,7 @@ function WeeklyTotalsLegend({
       <div className="flex items-center gap-2">
         <span
           className="h-2.5 w-2.5 rounded-full border border-border/50 shrink-0"
-          style={{ backgroundColor: "var(--color-lastYear)" }}
+          style={{ backgroundColor: lastYearColor }}
           aria-hidden="true"
         />
         <span className="text-muted-foreground">Last year</span>
@@ -286,7 +290,12 @@ export function WeeklySalesTrend({ noContainer = false }: WeeklySalesTrendProps)
               </ChartContainer>
 
               {/* Weekly totals (Last year vs Actual) */}
-              <WeeklyTotalsLegend actualTotal={thisPeriodTotal} lastYearTotal={lastYearTotal} />
+              <WeeklyTotalsLegend
+                actualTotal={thisPeriodTotal}
+                lastYearTotal={lastYearTotal}
+                actualColor={colors.actual}
+                lastYearColor={colors.lastYear}
+              />
             </div>
           </div>
         </div>

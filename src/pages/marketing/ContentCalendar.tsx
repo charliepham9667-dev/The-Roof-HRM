@@ -747,8 +747,8 @@ export default function ContentCalendar() {
           </div>
 
           {overviewTab === "kanban" ? (
-            <div className="overflow-x-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 min-w-[480px] sm:min-w-0">
+            <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { key: "toBeApproved", label: "TO BE APPROVED", dot: "#a06820", items: postOverview.toBeApproved },
                 { key: "approved", label: "APPROVED", dot: "#2e7a52", items: postOverview.approved },
@@ -861,6 +861,8 @@ export default function ContentCalendar() {
             </div>
 
             <div className="rounded-card border border-border overflow-hidden">
+              <div className="overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ minWidth: 780 }}>
               {/* Table header */}
               <div className="grid bg-secondary border-b border-border text-xs tracking-widest text-muted-foreground uppercase" style={{ gridTemplateColumns: "100px 160px 110px 140px 1.4fr 60px 110px" }}>
                 <div className="px-3 py-2.5 border-r border-border">Date</div>
@@ -970,6 +972,8 @@ export default function ContentCalendar() {
                     )
                   })
               )}
+            </div>
+            </div>
             </div>
             </div>
           )}
