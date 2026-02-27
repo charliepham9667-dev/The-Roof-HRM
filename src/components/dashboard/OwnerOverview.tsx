@@ -148,7 +148,7 @@ export function OwnerOverview() {
           </DashboardCardContent>
         </DashboardCard>
 
-        <DashboardCard className="w-full lg:flex-[3] flex flex-col shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)]">
+        <DashboardCard className="w-full lg:flex-[3] flex flex-col shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)] min-h-[300px]">
           <DashboardCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <DashboardCardTitle className="text-sm font-medium">Monthly Performance</DashboardCardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />

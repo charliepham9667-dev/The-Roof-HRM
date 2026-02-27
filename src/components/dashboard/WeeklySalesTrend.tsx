@@ -68,27 +68,27 @@ function WeeklyTotalsLegend({
   lastYearTotal: number
 }) {
   return (
-    <div className="flex h-[78px] flex-wrap items-center justify-center gap-x-6 gap-y-1 pt-2 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 pb-1 text-xs text-muted-foreground">
       <div className="flex items-center gap-2">
         <span
-          className="h-2.5 w-2.5 rounded-full border border-border/50"
+          className="h-2.5 w-2.5 rounded-full border border-border/50 shrink-0"
+          style={{ backgroundColor: "var(--color-actual)" }}
+          aria-hidden="true"
+        />
+        <span className="text-muted-foreground">This year</span>
+        <span className="font-mono font-medium tabular-nums text-foreground">
+          {formatVndFull(actualTotal)}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span
+          className="h-2.5 w-2.5 rounded-full border border-border/50 shrink-0"
           style={{ backgroundColor: "var(--color-lastYear)" }}
           aria-hidden="true"
         />
         <span className="text-muted-foreground">Last year</span>
         <span className="font-mono font-medium tabular-nums text-foreground">
           {formatVndFull(lastYearTotal)}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span
-          className="h-2.5 w-2.5 rounded-full border border-border/50"
-          style={{ backgroundColor: "var(--color-actual)" }}
-          aria-hidden="true"
-        />
-        <span className="text-muted-foreground">Actual</span>
-        <span className="font-mono font-medium tabular-nums text-foreground">
-          {formatVndFull(actualTotal)}
         </span>
       </div>
     </div>
@@ -247,7 +247,7 @@ export function WeeklySalesTrend({ noContainer = false }: WeeklySalesTrendProps)
                         labelFormatter={(value) => formatTickLabel(String(value))}
                         formatter={(value, name) => {
                           if (name === 'target') return [formatVndFull(Number(value)), 'Daily Target']
-                          if (name === 'actual') return [formatVndFull(Number(value)), 'Actual']
+                          if (name === 'actual') return [formatVndFull(Number(value)), 'This year']
                           if (name === 'lastYear') return [formatVndFull(Number(value)), 'Last year']
                           return [formatVndFull(Number(value)), String(name)]
                         }}

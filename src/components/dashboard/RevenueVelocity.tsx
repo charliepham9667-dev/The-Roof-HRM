@@ -107,34 +107,34 @@ export function RevenueVelocity({ noContainer = false }: RevenueVelocityProps) {
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* MTD Revenue */}
-        <div className="bg-background rounded-lg border border-border p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)]">
+        <div className="bg-background rounded-lg border border-border p-3 md:p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)] min-w-0">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">MTD Revenue</p>
-          <p className="text-xl font-bold text-foreground">{formatVND(mtdRevenue)}</p>
+          <p className="text-sm md:text-xl font-bold text-foreground break-all">{formatVND(mtdRevenue)}</p>
         </div>
 
         {/* Goal Achieved */}
-        <div className="bg-background rounded-lg border border-border p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)]">
+        <div className="bg-background rounded-lg border border-border p-3 md:p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)] min-w-0">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Goal Achieved</p>
-          <p className={`text-xl font-bold ${goalAchievedPercent >= 100 ? 'text-success' : 'text-foreground'}`}>
+          <p className={`text-sm md:text-xl font-bold ${goalAchievedPercent >= 100 ? 'text-success' : 'text-foreground'}`}>
             {goalAchievedPercent.toFixed(1)}%
           </p>
           <p className="text-xs text-muted-foreground">Day {currentDay} of {daysInMonth}</p>
         </div>
 
         {/* Surplus/Deficit */}
-        <div className="bg-background rounded-lg border border-border p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)]">
+        <div className="bg-background rounded-lg border border-border p-3 md:p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)] min-w-0">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
             {surplus >= 0 ? 'Current Surplus' : 'Current Deficit'}
           </p>
-          <p className={`text-xl font-bold ${surplus >= 0 ? 'text-success' : 'text-error'}`}>
+          <p className={`text-sm md:text-xl font-bold break-all ${surplus >= 0 ? 'text-success' : 'text-error'}`}>
             {surplus >= 0 ? '+' : ''}{formatVND(surplus)}
           </p>
         </div>
 
         {/* Projected Month End */}
-        <div className="bg-background rounded-lg border border-border p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)]">
+        <div className="bg-background rounded-lg border border-border p-3 md:p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)] min-w-0">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Projected Month End</p>
-          <p className="text-xl font-bold text-foreground">{formatVND(projectedMonthEnd)}</p>
+          <p className="text-sm md:text-xl font-bold text-foreground break-all">{formatVND(projectedMonthEnd)}</p>
           <p className="text-xs text-muted-foreground">At current pace</p>
         </div>
       </div>
@@ -147,13 +147,13 @@ export function RevenueVelocity({ noContainer = false }: RevenueVelocityProps) {
             <span className="text-xs text-muted-foreground">(1.5x target)</span>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Gap to Stretch</p>
-              <p className="text-lg font-bold text-warning">{formatVND(gapToStretch)}</p>
+              <p className="text-sm md:text-lg font-bold text-warning break-all">{formatVND(gapToStretch)}</p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Required Pace</p>
-              <p className="text-lg font-bold text-warning">{formatM(requiredPaceForStretch)} / day</p>
+              <p className="text-sm md:text-lg font-bold text-warning">{formatM(requiredPaceForStretch)} / day</p>
             </div>
           </div>
         </div>

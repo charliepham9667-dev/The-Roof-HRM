@@ -155,10 +155,10 @@ export function MonthlyPerformance({ noContainer = false }: MonthlyPerformancePr
           </div>
         </div>
 
-        <div className="mt-3 flex-1">
+        <div className="mt-3 min-h-[200px] md:flex-1">
           <ChartContainer
             config={chartConfig}
-            className="aspect-auto h-full min-h-[250px] w-full block [&_.recharts-surface]:!h-full [&_.recharts-surface]:!w-full"
+            className="aspect-auto h-[200px] md:h-full md:min-h-[250px] w-full block [&_.recharts-surface]:!h-full [&_.recharts-surface]:!w-full"
           >
             <BarChart accessibilityLayer data={monthlyData}>
               <CartesianGrid vertical={false} stroke={colors.grid} />
@@ -213,7 +213,7 @@ export function MonthlyPerformance({ noContainer = false }: MonthlyPerformancePr
   );
 
   if (noContainer) {
-    return <div className="flex h-full flex-col gap-4">{content}</div>;
+    return <div className="flex flex-col gap-4 min-h-[260px] md:h-full">{content}</div>;
   }
 
   return (
