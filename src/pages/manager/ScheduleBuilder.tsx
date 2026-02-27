@@ -1603,48 +1603,78 @@ function MobileDayList({
                         name: employeeById.get(key)?.full_name || employeeById.get(key)?.email || "Employee",
                         sub: employeeById.get(key)?.department || "",
                       }
+                const isToday = toYmd(selectedDay) === toYmd(new Date())
+                const anyOnNow = isToday && list.some((s) => isOnShiftNow(s.date, s.start_time, s.end_time, new Date()))
 
                 return (
-                  <div key={key} className="rounded-xl border border-border bg-background">
+                  <div
+                    key={key}
+                    className={cn(
+                      "rounded-xl border bg-background",
+                      anyOnNow ? "border-emerald-400/60" : "border-border",
+                    )}
+                  >
                     <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex items-center gap-2">
                         <div className="truncate text-sm font-semibold">{header.name}</div>
-                        {header.sub ? <div className="truncate text-xs text-muted-foreground">{header.sub}</div> : null}
+                        {anyOnNow && (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                            On shift
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {list.length} shift{list.length === 1 ? "" : "s"}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {header.sub ? <div className="truncate text-xs text-muted-foreground hidden sm:block">{header.sub}</div> : null}
+                        <div className="text-xs text-muted-foreground">
+                          {list.length} shift{list.length === 1 ? "" : "s"}
+                        </div>
                       </div>
                     </div>
 
                     <div className="divide-y divide-border">
-                      {list.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-muted/30"
-                          onClick={() => onEditShift(s)}
-                        >
-                          <div className="min-w-0">
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatTimeRange(s.start_time, s.end_time)}
+                      {list.map((s) => {
+                        const onNow = isToday && isOnShiftNow(s.date, s.start_time, s.end_time, new Date())
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className={cn(
+                              "flex w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-muted/30",
+                              onNow && "bg-emerald-50/60 dark:bg-emerald-950/20",
+                            )}
+                            onClick={() => onEditShift(s)}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">
+                                  {formatTimeRange(s.start_time, s.end_time)}
+                                </span>
+                                {onNow && (
+                                  <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Now
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-0.5 text-xs text-muted-foreground">
+                                {key === "open"
+                                  ? "Unassigned"
+                                  : employeeById.get(key)?.full_name || employeeById.get(key)?.email || "Employee"}
+                                {key !== "open" && employeeById.get(key)?.department
+                                  ? ` • ${employeeById.get(key)?.department}`
+                                  : ""}
+                                {s.role ? ` • ${s.role}` : ""}
+                              </div>
                             </div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">
-                              {key === "open"
-                                ? "Unassigned"
-                                : employeeById.get(key)?.full_name || employeeById.get(key)?.email || "Employee"}
-                              {key !== "open" && employeeById.get(key)?.department
-                                ? ` • ${employeeById.get(key)?.department}`
-                                : ""}
-                              {s.role ? ` • ${s.role}` : ""}
+                            <div className="flex items-center gap-2">
+                              {s.role ? (
+                                <Badge variant="brand">{s.role}</Badge>
+                              ) : null}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {s.role ? (
-                              <Badge variant="brand">{s.role}</Badge>
-                            ) : null}
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 )

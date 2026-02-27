@@ -497,7 +497,7 @@ export default function ContentCalendar() {
       {/* MAIN */}
       <div className="flex flex-col">
         {/* Calendar views */}
-        <div className="min-h-[400px] overflow-x-auto">
+        <div className="min-h-[400px] overflow-x-auto scroll-smooth overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isLoading ? (
             <div className="py-16 text-center text-xs tracking-wider text-muted-foreground uppercase">
               Loading…
@@ -535,7 +535,7 @@ export default function ContentCalendar() {
                           type="button"
                           onClick={() => openPostModal(undefined, day)}
                           className={cn(
-                            "text-left border-r border-border last:border-r-0 p-2 min-h-[120px] relative overflow-hidden",
+                            "text-left border-r border-border last:border-r-0 p-1.5 min-h-[80px] md:p-2 md:min-h-[120px] relative overflow-hidden w-full",
                             "hover:bg-primary/[0.02] transition-colors",
                             !inMonth && "bg-foreground/[0.015]",
                             isToday && "bg-primary/[0.04]",
@@ -564,7 +564,7 @@ export default function ContentCalendar() {
                                   e.stopPropagation()
                                   openPostModal(p)
                                 }}
-                                className="flex items-center gap-1.5 px-1.5 py-1 rounded-sm mb-[3px] border"
+                                className="flex items-center gap-1 px-1 py-0.5 rounded-sm mb-[3px] border overflow-hidden min-w-0"
                                 style={{
                                   background: PILLARS[pillar].dimBg,
                                   color: PILLARS[pillar].color,
@@ -572,11 +572,11 @@ export default function ContentCalendar() {
                                 }}
                               >
                                 <span
-                                  className="w-[5px] h-[5px] rounded-full shrink-0"
+                                  className="w-[4px] h-[4px] rounded-full shrink-0"
                                   style={{ background: PILLARS[pillar].color }}
                                 />
-                                <span className="text-xs text-muted-foreground shrink-0">{time}</span>
-                                <span className="text-xs truncate">{postTitle(p)}</span>
+                                <span className="hidden md:inline text-[10px] text-muted-foreground shrink-0">{time}</span>
+                                <span className="text-[10px] truncate min-w-0">{postTitle(p)}</span>
                               </div>
                             )
                           })}

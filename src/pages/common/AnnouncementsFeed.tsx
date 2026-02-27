@@ -599,19 +599,19 @@ interface ChannelDef {
   displayName: string
   desc: string
   unread?: number
-  lastMessage: string
-  lastTime: string
+  lastMessage?: string
+  lastTime?: string
   isDm?: boolean
   dmStatus?: "online" | "away" | "offline"
   dmColor?: string
 }
 
 const CHANNELS: ChannelDef[] = [
-  { id: "#general",    icon: <MessageSquare className="h-3.5 w-3.5" />, name: "# general",    displayName: "#general",    desc: "All staff · 12 members",   unread: 3, lastMessage: "John: Roster confirmed for Sat",       lastTime: "17:28" },
-  { id: "#operations", icon: <Settings className="h-3.5 w-3.5" />,     name: "# operations", displayName: "#operations", desc: "Ops team · 6 members",      unread: 1, lastMessage: "Tiny: Covers are set ✓",              lastTime: "16:50" },
-  { id: "#bar-team",   icon: <Wine className="h-3.5 w-3.5" />,         name: "# bar-team",   displayName: "#bar-team",   desc: "Bar staff · 5 members",     lastMessage: "Phu: New Tet menu is live",                 lastTime: "14:30" },
-  { id: "#events",     icon: <Music className="h-3.5 w-3.5" />,        name: "# events",     displayName: "#events",     desc: "Event planning · 4 members",unread: 1, lastMessage: "Charlie: DJ brief for tonight",       lastTime: "13:00" },
-  { id: "#marketing",  icon: <Megaphone className="h-3.5 w-3.5" />,    name: "# marketing",  displayName: "#marketing",  desc: "Marketing team",            lastMessage: "Content calendar updated",                 lastTime: "Yesterday" },
+  { id: "#general",    icon: <MessageSquare className="h-3.5 w-3.5" />, name: "# general",    displayName: "#general",    desc: "All staff · 12 members" },
+  { id: "#operations", icon: <Settings className="h-3.5 w-3.5" />,     name: "# operations", displayName: "#operations", desc: "Ops team · 6 members" },
+  { id: "#bar-team",   icon: <Wine className="h-3.5 w-3.5" />,         name: "# bar-team",   displayName: "#bar-team",   desc: "Bar staff · 5 members" },
+  { id: "#events",     icon: <Music className="h-3.5 w-3.5" />,        name: "# events",     displayName: "#events",     desc: "Event planning · 4 members" },
+  { id: "#marketing",  icon: <Megaphone className="h-3.5 w-3.5" />,    name: "# marketing",  displayName: "#marketing",  desc: "Marketing team" },
 ]
 
 

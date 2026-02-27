@@ -442,11 +442,9 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <div className="relative">
-        {/* Gradient scroll hint on the right for mobile */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background/80 to-transparent z-10 md:hidden" />
-        <div className="flex gap-2.5 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth [WebkitOverflowScrolling:touch] md:grid md:grid-cols-4 md:overflow-visible md:pb-0 md:snap-none">
+        <div className="flex flex-col gap-2.5 md:grid md:grid-cols-4 md:overflow-visible md:pb-0">
         {COLUMNS.map((col) => (
-          <div key={col.key} className="snap-start shrink-0 w-[85vw] md:w-auto md:shrink md:min-w-0">
+          <div key={col.key} className="w-full md:w-auto md:shrink md:min-w-0">
           <KanbanColumn
             key={col.key}
             col={col}

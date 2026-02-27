@@ -770,12 +770,12 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
       {isLoading ? (
         <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">Loading…</div>
       ) : (
-        <div className="flex gap-4 flex-1 min-h-0 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+        <div className="flex flex-col gap-4 md:flex-row md:flex-1 md:min-h-0">
           {columns.map((col) => {
             const colTasks = filtered.filter((t) => t.status === col)
             const cfg = MAINT_STATUS_CONFIG[col]
             return (
-              <div key={col} className="flex flex-col gap-2 snap-start shrink-0 w-[85vw] md:w-auto md:flex-1 min-h-0">
+              <div key={col} className="flex flex-col gap-2 w-full md:flex-1 md:min-h-0">
                 {/* Column header */}
                 <div className={cn("rounded-t-card rounded-b-sm border border-border bg-card px-3 py-2 border-t-2", cfg.col)}>
                   <div className="flex items-center justify-between">
@@ -1239,7 +1239,7 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-5 gap-3 shrink-0">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5 md:gap-3 shrink-0">
         {[
           { label: "Total Sets", value: stats.totalSets, sub: "Jan 1 – Today" },
           { label: "Unique DJs", value: stats.uniqueDJs, sub: "in this period" },

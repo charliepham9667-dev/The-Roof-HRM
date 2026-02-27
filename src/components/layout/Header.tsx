@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings, Search, LogOut, ChevronRight, Home, X } from 'lucide-react';
+import { Settings, Search, LogOut, ChevronRight, Home, X, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { NotificationBell } from '../common/NotificationBell';
 import { SidebarTrigger } from '@/components/ui';
@@ -101,10 +101,20 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const signOut = useAuthStore((s) => s.signOut);
+  const profile = useAuthStore((s) => s.profile);
+  const viewAs = useAuthStore((s) => s.viewAs);
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
+
+  const effectiveRole = viewAs?.role || profile?.role;
+  const dashboardUrl =
+    effectiveRole === 'staff'
+      ? '/staff/dashboard'
+      : effectiveRole === 'manager'
+        ? '/manager/dashboard'
+        : '/owner/dashboard';
 
   // Collapse mobile search on route change
   useEffect(() => { setMobileSearchOpen(false) }, [location.pathname])
@@ -131,7 +141,14 @@ export function Header({ onMenuClick }: HeaderProps) {
           
           {/* Mobile title - visible on mobile only (hidden when search open) */}
           {!mobileSearchOpen && (
-            <span className="md:hidden text-foreground font-medium truncate">The Roof</span>
+            <button
+              type="button"
+              onClick={() => navigate(dashboardUrl)}
+              className="md:hidden text-foreground font-medium truncate hover:text-primary transition-colors"
+              aria-label="Go to dashboard"
+            >
+              The Roof
+            </button>
           )}
         </div>
 
@@ -159,6 +176,15 @@ export function Header({ onMenuClick }: HeaderProps) {
             aria-label="Search"
           >
             {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          </button>
+
+          {/* Refresh — mobile only */}
+          <button
+            className="md:hidden rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            onClick={() => navigate(0)}
+            aria-label="Refresh"
+          >
+            <RefreshCw className="h-5 w-5" />
           </button>
 
           {/* Theme toggle */}

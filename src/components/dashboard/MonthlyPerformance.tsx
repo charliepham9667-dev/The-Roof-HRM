@@ -118,23 +118,23 @@ export function MonthlyPerformance({ noContainer = false }: MonthlyPerformancePr
   const content = (
     <>
       <div className="@container/card flex h-full flex-col">
-        <div className="relative">
-          <div className="grid gap-1 pr-44">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col gap-1 min-w-0">
             <span
               className={`flex items-center gap-1 text-sm font-medium ${
                 isOnTarget ? 'text-success' : 'text-error'
               }`}
             >
-              {isOnTarget ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              {isOnTarget ? <TrendingUp className="h-4 w-4 shrink-0" /> : <TrendingDown className="h-4 w-4 shrink-0" />}
               {currentMonth.achievementPercent}%
               {isFetching && <Loader2 className="ml-1 h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </span>
             <p className="text-xs text-muted-foreground">{periodLabel}</p>
           </div>
 
-          <div className="absolute right-0 top-0">
+          <div className="shrink-0">
             <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-              <SelectTrigger className="flex w-40" aria-label="Select a value">
+              <SelectTrigger className="flex w-36" aria-label="Select a value">
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent className="rounded-control">
