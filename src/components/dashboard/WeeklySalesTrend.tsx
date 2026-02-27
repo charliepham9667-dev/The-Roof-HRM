@@ -72,7 +72,7 @@ function WeeklyTotalsLegend({
   lastYearColor: string
 }) {
   return (
-    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-center gap-x-6 gap-y-2 pt-3 pb-1 text-xs text-muted-foreground">
+    <div className="flex flex-col gap-2 pt-3 pb-1 text-xs text-muted-foreground">
       <div className="flex items-center gap-2">
         <span
           className="h-2.5 w-2.5 rounded-full border border-border/50 shrink-0"
@@ -92,7 +92,7 @@ function WeeklyTotalsLegend({
         />
         <span className="text-muted-foreground">Last year</span>
         <span className="font-mono font-medium tabular-nums text-foreground">
-          {formatVndFull(lastYearTotal)}
+          {lastYearTotal > 0 ? formatVndFull(lastYearTotal) : <span className="text-muted-foreground italic">No data</span>}
         </span>
       </div>
     </div>
@@ -213,7 +213,7 @@ export function WeeklySalesTrend({ noContainer = false }: WeeklySalesTrendProps)
                 } as React.CSSProperties
               }
             >
-              <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
+              <ChartContainer config={chartConfig} className="aspect-auto h-[220px] md:h-[250px] w-full">
                 <AreaChart data={weeklyData}>
                   <defs>
                     <linearGradient id="fillActual" x1="0" y1="0" x2="0" y2="1">

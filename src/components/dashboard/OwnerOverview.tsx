@@ -130,7 +130,7 @@ export function OwnerOverview() {
 
       {/* Charts row (shadcn dashboard layout) */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
-        <DashboardCard className="lg:col-span-4 h-[430px]">
+        <DashboardCard className="lg:col-span-4 h-auto md:h-[430px] !overflow-visible">
           <DashboardCardContent className="pt-6">
             <WeeklySalesTrend noContainer />
           </DashboardCardContent>
