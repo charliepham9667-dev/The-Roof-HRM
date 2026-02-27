@@ -699,7 +699,7 @@ export default function OwnerDashboardPage() {
             </div>
 
             {/* 7-day forecast */}
-            <div className="flex flex-1 items-center sm:pl-5 pt-4 sm:pt-0 overflow-x-auto">
+            <div className="flex min-w-0 w-full items-center sm:pl-5 pt-4 sm:pt-0 overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
               {[
                 { d: "TUE", hi: 27, lo: 22, emoji: "🌤" },
                 { d: "WED", hi: 25, lo: 22, emoji: "🌥" },
