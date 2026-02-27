@@ -1022,6 +1022,7 @@ export function AnnouncementsFeed() {
   const pinned = announcements?.filter((a) => a.isPinned) || []
   const unpinned = announcements?.filter((a) => !a.isPinned) || []
   const unreadCount = announcements?.filter((a) => !a.isRead).length || 0
+  const chatUnreadCount = Object.values(dmMetadata).reduce((sum, m) => sum + (m.unread || 0), 0)
 
   function filterAnnouncements(list: Announcement[]) {
     return list.filter((a) => {
@@ -1069,7 +1070,7 @@ export function AnnouncementsFeed() {
             ),
           },
           {
-            id: "chat", label: "Chat", badge: 5,
+            id: "chat", label: "Chat", badge: chatUnreadCount,
             icon: (
               <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>

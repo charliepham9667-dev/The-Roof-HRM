@@ -99,12 +99,13 @@ export function useDMListMetadata(profileId: string | undefined, peerIds: string
         return {}
       }
       if (readRes.error) {
+        // Soft-fail: if chat_conversation_read doesn't exist yet, continue with empty read state
+        // rather than aborting all DM metadata (which would leave lastMessage data stale/bleeding)
         console.warn('[useDMListMetadata] read state query error (chat_conversation_read may not exist yet):', readRes.error.message)
-        return {}
       }
       if (outboundRes.error) {
+        // Soft-fail: missing outbound messages shouldn't abort inbound DM metadata
         console.warn('[useDMListMetadata] outbound query error:', outboundRes.error.message)
-        return {}
       }
 
       const lastReadPerPeer: Record<string, number> = {}
