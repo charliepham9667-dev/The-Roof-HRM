@@ -265,7 +265,7 @@ function CardShell({
   className?: string
 }) {
   return (
-    <section className={cn("rounded-card border border-border bg-card shadow-card", className)}>
+    <section className={cn("rounded-card border border-border bg-card shadow-card min-w-0 overflow-hidden", className)}>
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
           {icon ? <div className="text-primary">{icon}</div> : null}
@@ -611,7 +611,7 @@ export default function OwnerDashboardPage() {
   const [_editingMeeting, _setEditingMeeting] = useState<"title" | "location" | null>(null)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0 w-full">
       {/* Header */}
       <div className="rounded-card border border-border bg-card px-4 md:px-6 py-4 shadow-card">
         <div className="flex flex-col gap-2 md:grid md:grid-cols-3 md:items-center md:gap-4">
@@ -641,7 +641,7 @@ export default function OwnerDashboardPage() {
       </div>
 
       {/* HQ row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[320px_1fr]">
+      <div className="grid gap-4 w-full min-w-0 md:grid-cols-2 lg:grid-cols-[320px_1fr]">
         <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />}>
           <div className="grid gap-4 overflow-hidden">
             <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
@@ -699,7 +699,7 @@ export default function OwnerDashboardPage() {
             </div>
 
             {/* 7-day forecast */}
-            <div className="flex min-w-0 w-full items-center sm:pl-5 pt-4 sm:pt-0 overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="-mx-5 sm:mx-0 px-5 sm:px-0 sm:pl-5 flex min-w-0 w-full items-center pt-4 sm:pt-0 overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
               {[
                 { d: "TUE", hi: 27, lo: 22, emoji: "🌤" },
                 { d: "WED", hi: 25, lo: 22, emoji: "🌥" },
