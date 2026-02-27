@@ -79,11 +79,11 @@ export function DashboardLayout() {
   return (
     <SidebarProvider defaultOpen>
       <RoleSidebar07 />
-      <SidebarInset className="min-w-0">
+      <SidebarInset className="min-w-0 overflow-x-hidden">
         <OfflineBanner />
         <Header />
         <ViewAsPreviewBanner />
-        <main className="flex-1 min-w-0 overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6 pb-20 md:pb-6">
+        <main className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6 pb-20 md:pb-6">
           <ErrorBoundary>
             <Suspense
               fallback={

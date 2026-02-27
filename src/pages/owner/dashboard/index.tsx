@@ -665,9 +665,9 @@ export default function OwnerDashboardPage() {
               <div className="mt-2 text-xs text-secondary-foreground tracking-wide">Broken Clouds · Humidity 78%</div>
 
               <div className="mt-3 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <Zap className="h-3.5 w-3.5 shrink-0" />
-                  <span>Rain expected Saturday — prep covers & heaters by 13:00</span>
+                  <span className="min-w-0 break-words">Rain expected Saturday — prep covers & heaters by 13:00</span>
                 </div>
                 <button
                   disabled={rainTaskState !== 'idle'}
@@ -976,12 +976,12 @@ export default function OwnerDashboardPage() {
             })()
 
             return (
-              <div className="rounded-card border border-border bg-card px-6 py-5 shadow-card flex-1 flex flex-col">
+              <div className="rounded-card border border-border bg-card px-4 sm:px-6 py-5 shadow-card flex-1 flex flex-col">
                 {/* Header row */}
-                <div className="flex items-start justify-between mb-3">
-                  <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-3">
+                  <div className="min-w-0">
                     <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-1">Today's Revenue Target</div>
-                    <div className="flex items-baseline gap-3">
+                    <div className="flex items-baseline gap-3 flex-wrap">
                       <div className="font-display text-[28px] sm:text-[38px] leading-none tracking-[2px] text-foreground">
                         {velocityLoading ? "—" : formatCompactVnd(effectiveRequiredToday)}
                         <span className="text-xl sm:text-2xl text-muted-foreground font-light"> đ</span>
@@ -997,7 +997,7 @@ export default function OwnerDashboardPage() {
                         : ` · Goal ${formatCompactVnd(monthlyTarget)} đ/month`}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-1 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => setTonightEditOpen(true)}
