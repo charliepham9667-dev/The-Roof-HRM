@@ -255,32 +255,30 @@ export default function ContentCalendar() {
 
   const SAVE_TIMEOUT_MS = 30_000
 
-  const handleSave = async () => {
-    if (!fScheduledDate) return
+  const buildPayload = (statusOverride?: ContentPost["status"]): Partial<ContentPost> => {
+    const baseNotes = editingPost?.notes ?? null
+    const withPillar = upsertNoteField(baseNotes, "pillar", fPillar)
+    const withTitle = upsertNoteField(withPillar, "title", fTitle.trim() || "New post")
+    return {
+      scheduled_date: fScheduledDate,
+      scheduled_time: fScheduledTime ? `${fScheduledTime}:00` : null,
+      platform: fPlatform,
+      content_type: fContentType,
+      caption: fCaption.trim() || null,
+      media_url: fMediaUrl.trim() || null,
+      status: statusOverride ?? fStatus,
+      notes: withTitle,
+    }
+  }
 
+  const runSave = async (payload: Partial<ContentPost>) => {
     setSaveError(null)
     setIsSaving(true)
 
-    const buildPayload = (): Partial<ContentPost> => {
-      const baseNotes = editingPost?.notes ?? null
-      const withPillar = upsertNoteField(baseNotes, "pillar", fPillar)
-      const withTitle = upsertNoteField(withPillar, "title", fTitle.trim() || "New post")
-      return {
-        scheduled_date: fScheduledDate,
-        scheduled_time: fScheduledTime ? `${fScheduledTime}:00` : null,
-        platform: fPlatform,
-        content_type: fContentType,
-        caption: fCaption.trim() || null,
-        media_url: fMediaUrl.trim() || null,
-        status: fStatus,
-        notes: withTitle,
-      }
-    }
-
     const savePromise =
       editingPost
-        ? updatePost.mutateAsync({ id: editingPost.id, ...buildPayload() })
-        : createPost.mutateAsync(buildPayload())
+        ? updatePost.mutateAsync({ id: editingPost.id, ...payload })
+        : createPost.mutateAsync(payload)
 
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
@@ -301,6 +299,17 @@ export default function ContentCalendar() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleSave = async () => {
+    if (!fScheduledDate) return
+    await runSave(buildPayload())
+  }
+
+  const handleApprove = async () => {
+    if (!fScheduledDate) return
+    setFStatus("published")
+    await runSave(buildPayload("published"))
   }
 
   const handleDelete = async () => {
@@ -1260,16 +1269,29 @@ export default function ContentCalendar() {
                       Delete
                     </button>
                   ) : null}
+                  {fStatus !== "published" && (
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={!fScheduledDate || isSaving}
+                      className={cn(
+                        "min-h-[44px] px-4 py-2 rounded-sm text-xs tracking-wider uppercase",
+                        "border border-border bg-secondary text-muted-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed",
+                      )}
+                    >
+                      {isSaving ? "Saving…" : "Save"}
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={handleSave}
+                    onClick={fStatus === "published" ? handleSave : handleApprove}
                     disabled={!fScheduledDate || isSaving}
                     className={cn(
                       "min-h-[44px] px-4 py-2 rounded-sm text-xs tracking-wider uppercase",
                       "bg-success text-white hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed",
                     )}
                   >
-                    {isSaving ? "Saving…" : fStatus === "published" ? "✓ Approved" : "Approve post"}
+                    {isSaving ? "Saving…" : fStatus === "published" ? "✓ Save Approved" : "Approve Post"}
                   </button>
                 </div>
               </div>
