@@ -49,11 +49,12 @@ export function useChatMessages(channelId: string, myId?: string) {
             .eq('channel_id', dmChannels[0])
             .order('created_at', { ascending: true })
             .limit(200),
-          dmChannels[1]
+          dmChannels[1] && myId
             ? supabase
                 .from('chat_messages')
                 .select('id, channel_id, author_id, body, created_at, author:profiles(full_name, avatar_url)')
                 .eq('channel_id', dmChannels[1])
+                .eq('author_id', dmChannels[0].slice(1)) // only messages from the peer (not all inbound)
                 .order('created_at', { ascending: true })
                 .limit(200)
             : { data: [], error: null },
@@ -89,6 +90,9 @@ export function useChatMessages(channelId: string, myId?: string) {
     staleTime: 1000 * 30, // 30 seconds
   })
 
+  // peerId for DMs — the person we're chatting with
+  const peerId = isDm ? channelId.slice(1) : null
+
   // Real-time subscription: append new messages as they arrive
   useEffect(() => {
     if (!channelId) return
@@ -97,6 +101,7 @@ export function useChatMessages(channelId: string, myId?: string) {
     const unsubs: (() => void)[] = []
 
     for (const ch of channelsToSub) {
+      const isInboundChannel = isDm && myId && ch === `@${myId}`
       const sub = supabase
         .channel(`chat_messages:${ch}`)
         .on(
@@ -108,6 +113,10 @@ export function useChatMessages(channelId: string, myId?: string) {
             filter: `channel_id=eq.${ch}`,
           },
           async (payload) => {
+            // For inbound channel (@myId), only process messages from the specific peer
+            // to avoid showing messages from other senders in this conversation
+            if (isInboundChannel && peerId && payload.new.author_id !== peerId) return
+
             const { data } = await supabase
               .from('chat_messages')
               .select('id, channel_id, author_id, body, created_at, author:profiles(full_name, avatar_url)')
