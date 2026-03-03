@@ -3,6 +3,7 @@
 -- loading on INSERT for non-owner roles because the RLS policy silently blocked.
 
 DROP POLICY IF EXISTS "Resources manageable by owner" ON resource_links;
+DROP POLICY IF EXISTS "Resources manageable by owner or manager" ON resource_links;
 
 CREATE POLICY "Resources manageable by owner or manager"
   ON resource_links FOR ALL TO authenticated
