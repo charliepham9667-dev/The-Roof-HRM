@@ -402,12 +402,12 @@ export function VenueManager() {
 
         <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
 
-          {/* Left panel — full width on mobile when floor tab is active */}
+          {/* Left panel — full width on mobile, sidebar on desktop */}
           {!editMode && (
             <div className={cn(
               activeTab === "floor" ? "w-full md:w-auto" : "hidden",
               activeTab === "calendar" && "hidden",
-              "md:block"
+              "block"
             )}>
               <ReservationPanel
                 totalFree={Math.max(0, totalFree)}

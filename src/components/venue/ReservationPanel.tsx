@@ -3,6 +3,7 @@ import { useDraggable } from "@dnd-kit/core"
 import { cn } from "@/lib/utils"
 import { useDeleteReservation } from "@/hooks/useReservations"
 import type { CsvReservation } from "@/hooks/useReservationsCsv"
+import { Clock, Users, Phone, Mail, ChevronDown, ChevronUp, MapPin } from "lucide-react"
 
 // ─── Source badge ──────────────────────────────────────────────────────────────
 
@@ -122,6 +123,137 @@ function DraggableReservationCard({
   )
 }
 
+// ─── Mobile list item (non-draggable, tap to expand) ──────────────────────────
+
+function MobileReservationListItem({
+  reservation: r,
+  isAllocated,
+  canEdit,
+}: {
+  reservation: CsvReservation
+  isAllocated: boolean
+  canEdit: boolean
+  onDelete: () => Promise<void>
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const deleteRes = useDeleteReservation()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const dbId = r.mustHaves ?? null
+  const badge = SOURCE_BADGE[sourceFromReservation(r)] ?? SOURCE_BADGE.website
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!dbId) return
+    if (!confirmDelete) { setConfirmDelete(true); return }
+    await deleteRes.mutateAsync(dbId)
+    setConfirmDelete(false)
+  }
+
+  return (
+    <div className={cn("transition-colors", isAllocated && "opacity-50")}>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full text-left px-4 py-3.5"
+      >
+        <div className="flex items-start gap-3">
+          {/* Time pill */}
+          <div className="shrink-0 flex flex-col items-center justify-center rounded-lg bg-primary/8 border border-primary/20 px-2 py-2 min-w-[50px]">
+            <Clock className="h-3 w-3 text-primary mb-0.5" />
+            <span className="text-[11px] font-bold text-primary leading-none">{r.time || "—"}</span>
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-semibold text-sm text-foreground truncate">{r.name || "Unknown"}</span>
+              <span className={cn("rounded-sm border px-1 py-0.5 text-[8px] tracking-wide font-medium", badge.cls)}>
+                {badge.label}
+              </span>
+              {isAllocated && (
+                <span className="text-[9px] text-[#10b981] font-medium">✓ Seated</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                <span className="font-medium text-foreground">{r.numberOfGuests}</span> pax
+              </span>
+              {r.table && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {r.table}
+                </span>
+              )}
+              {r.phone && (
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  <a href={`tel:${r.phone}`} className="hover:text-foreground" onClick={(e) => e.stopPropagation()}>
+                    {r.phone}
+                  </a>
+                </span>
+              )}
+            </div>
+            {r.specialRequests && !expanded && (
+              <p className="mt-1 text-[10px] text-muted-foreground italic truncate">📝 {r.specialRequests}</p>
+            )}
+          </div>
+
+          <div className="shrink-0 text-muted-foreground mt-0.5">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        </div>
+      </button>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="px-4 pb-3 pt-1 border-t border-border/40 space-y-1.5 bg-muted/20">
+          {r.email && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Mail className="h-3 w-3 shrink-0" />
+              <a href={`mailto:${r.email}`} className="hover:text-foreground truncate">{r.email}</a>
+            </div>
+          )}
+          {r.occasion && (
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/70">Occasion: </span>{r.occasion}
+            </div>
+          )}
+          {r.specialRequests && (
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/70">Special Requests: </span>{r.specialRequests}
+            </div>
+          )}
+          {r.notes && r.notes.trim() && (
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/70">Notes: </span>{r.notes}
+            </div>
+          )}
+          {canEdit && dbId && (
+            <div className="flex items-center justify-end pt-1">
+              {confirmDelete ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-red-500">Delete this reservation?</span>
+                  <button type="button" onClick={handleDelete} disabled={deleteRes.isPending} className="rounded px-2 py-0.5 text-xs bg-red-500 text-white hover:bg-red-600 disabled:opacity-50">
+                    {deleteRes.isPending ? "…" : "Yes, delete"}
+                  </button>
+                  <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-muted-foreground hover:text-foreground underline">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={handleDelete} className="text-xs text-red-400 hover:text-red-600 border border-red-400/30 rounded px-2 py-0.5 hover:bg-red-50 transition-colors">
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── ReservationPanel ──────────────────────────────────────────────────────────
 
 export function ReservationPanel({
@@ -151,91 +283,154 @@ export function ReservationPanel({
   const dayName = today.toLocaleDateString("en-US", { weekday: "long" })
   const dateStr = today.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
 
+  // Sort reservations by time
+  const sorted = [...todayReservations].sort((a, b) =>
+    (a.time ?? "").localeCompare(b.time ?? "")
+  )
+  const totalPax = sorted.reduce((sum, r) => sum + (r.numberOfGuests ?? 0), 0)
+
   return (
-    <div className="flex flex-col gap-3 w-52 shrink-0">
-      {/* Live table status */}
-      <div className="rounded-card border border-border bg-card shadow-card p-3">
-        <div className="flex items-center gap-1.5 mb-3">
-          <span className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
-          <span className="text-[10px] tracking-widest font-semibold text-foreground uppercase">Live Table Status</span>
+    <>
+      {/* ── DESKTOP sidebar (md+) ── */}
+      <div className="hidden md:flex flex-col gap-3 w-52 shrink-0">
+        {/* Live table status */}
+        <div className="rounded-card border border-border bg-card shadow-card p-3">
+          <div className="flex items-center gap-1.5 mb-3">
+            <span className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
+            <span className="text-[10px] tracking-widest font-semibold text-foreground uppercase">Live Table Status</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              { label: "FREE",     value: totalFree,     color: "text-[#10b981]" },
+              { label: "TAKEN",    value: totalTaken,    color: "text-[#ef4444]" },
+              { label: "RESERVED", value: totalReserved, color: "text-[#f59e0b]" },
+            ].map((s) => (
+              <div key={s.label}>
+                <div className={cn("text-lg font-bold leading-none", s.color)}>{s.value}</div>
+                <div className="text-[8px] tracking-widest text-muted-foreground mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground">
+            Total capacity <span className="font-semibold text-foreground">{totalCapacity} pax</span>
+            {" · "}Tonight's bookings:{" "}
+            <span className="font-semibold text-primary">{confirmedPax} confirmed</span>
+          </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          {[
-            { label: "FREE",     value: totalFree,     color: "text-[#10b981]" },
-            { label: "TAKEN",    value: totalTaken,    color: "text-[#ef4444]" },
-            { label: "RESERVED", value: totalReserved, color: "text-[#f59e0b]" },
-          ].map((s) => (
-            <div key={s.label}>
-              <div className={cn("text-lg font-bold leading-none", s.color)}>{s.value}</div>
-              <div className="text-[8px] tracking-widest text-muted-foreground mt-0.5">{s.label}</div>
-            </div>
-          ))}
+
+        {/* Shift / date */}
+        <div className="rounded-card border border-border bg-card shadow-card p-3 space-y-1.5">
+          <div className="text-[9px] tracking-widest text-muted-foreground uppercase">Shift</div>
+          <div className="text-base font-semibold text-foreground">{dayName}</div>
+          <div className="text-[10px] text-muted-foreground">{dateStr}</div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-[10px]">🕐</span>
+            <span className="rounded-sm border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-1.5 py-0.5 text-[9px] text-[#92400e]">
+              Opening Hours: 14:00 – 02:00 AM
+            </span>
+          </div>
         </div>
-        <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground">
-          Total capacity <span className="font-semibold text-foreground">{totalCapacity} pax</span>
-          {" · "}Tonight's bookings:{" "}
-          <span className="font-semibold text-primary">{confirmedPax} confirmed</span>
+
+        {/* Incoming reservations */}
+        <div className="rounded-card border border-border bg-card shadow-card p-3 flex-1 flex flex-col gap-2 overflow-hidden">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-[9px] tracking-widest font-semibold text-foreground uppercase">Incoming Reservations</div>
+            {canEdit && (
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={onImportCsv} className="rounded-sm border border-border px-1.5 py-0.5 text-[8px] tracking-wide text-muted-foreground hover:bg-secondary transition-colors">
+                  Import CSV
+                </button>
+                <button type="button" onClick={onAddManual} className="rounded-sm border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[8px] tracking-wide text-primary hover:bg-primary/20 transition-colors font-medium">
+                  + Manual
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="text-[9px] text-muted-foreground italic">Drag a reservation onto an available table to allocate it</div>
+          <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-0.5">
+            {sorted.length === 0 ? (
+              <div className="text-[10px] text-muted-foreground italic py-2">No reservations today.</div>
+            ) : (
+              sorted.map((r) => {
+                const uid = `res-${r.name}-${r.time}`
+                return (
+                  <DraggableReservationCard key={uid} reservation={r} isAllocated={allocatedIds.has(uid)} canEdit={canEdit} />
+                )
+              })
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Shift / date */}
-      <div className="rounded-card border border-border bg-card shadow-card p-3 space-y-1.5">
-        <div className="text-[9px] tracking-widest text-muted-foreground uppercase">Shift</div>
-        <div className="text-base font-semibold text-foreground">{dayName}</div>
-        <div className="text-[10px] text-muted-foreground">{dateStr}</div>
-        <div className="flex items-center gap-1.5 mt-1">
-          <span className="text-[10px]">🕐</span>
-          <span className="rounded-sm border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-1.5 py-0.5 text-[9px] text-[#92400e]">
-            Opening Hours: 14:00 – 02:00 AM
-          </span>
-        </div>
-      </div>
-
-      {/* Incoming reservations */}
-      <div className="rounded-card border border-border bg-card shadow-card p-3 flex-1 flex flex-col gap-2 overflow-hidden">
-        <div className="flex items-center justify-between mb-1">
-          <div className="text-[9px] tracking-widest font-semibold text-foreground uppercase">Incoming Reservations</div>
-          {canEdit && (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={onImportCsv}
-                className="rounded-sm border border-border px-1.5 py-0.5 text-[8px] tracking-wide text-muted-foreground hover:bg-secondary transition-colors"
-              >
-                Import CSV
-              </button>
-              <button
-                type="button"
-                onClick={onAddManual}
-                className="rounded-sm border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[8px] tracking-wide text-primary hover:bg-primary/20 transition-colors font-medium"
-              >
-                + Manual
-              </button>
+      {/* ── MOBILE full-width list (< md) ── */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {/* Stats row */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-border bg-card p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
+              <span className="text-[10px] tracking-widest font-semibold text-muted-foreground uppercase">Live Status</span>
             </div>
-          )}
+            <div className="grid grid-cols-3 gap-1 text-center">
+              {[
+                { label: "Free",     value: totalFree,     color: "text-[#10b981]" },
+                { label: "Taken",    value: totalTaken,    color: "text-[#ef4444]" },
+                { label: "Reserved", value: totalReserved, color: "text-[#f59e0b]" },
+              ].map((s) => (
+                <div key={s.label}>
+                  <div className={cn("text-base font-bold leading-none", s.color)}>{s.value}</div>
+                  <div className="text-[8px] text-muted-foreground mt-0.5">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-3 flex flex-col justify-between">
+            <div className="text-[10px] tracking-widest font-semibold text-muted-foreground uppercase mb-1">Tonight</div>
+            <div className="text-xl font-bold text-foreground">{confirmedPax}</div>
+            <div className="text-[10px] text-muted-foreground">confirmed pax</div>
+          </div>
         </div>
 
-        <div className="text-[9px] text-muted-foreground italic">Drag a reservation onto an available table to allocate it</div>
+        {/* Incoming reservations — grouped list */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div>
+              <div className="text-xs font-semibold text-foreground uppercase tracking-widest">Today's Reservations</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{dateStr} · {sorted.length} bookings · {totalPax} guests</div>
+            </div>
+            {canEdit && (
+              <div className="flex items-center gap-1.5">
+                <button type="button" onClick={onImportCsv} className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary transition-colors">
+                  CSV
+                </button>
+                <button type="button" onClick={onAddManual} className="rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs text-primary hover:bg-primary/20 transition-colors font-medium">
+                  + Add
+                </button>
+              </div>
+            )}
+          </div>
 
-        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-0.5">
-          {todayReservations.length === 0 ? (
-            <div className="text-[10px] text-muted-foreground italic py-2">No reservations today.</div>
+          {/* List */}
+          {sorted.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">
+              No reservations today
+            </div>
           ) : (
-            todayReservations.map((r) => {
-              const uid = `res-${r.name}-${r.time}`
-              return (
-                <DraggableReservationCard
-                  key={uid}
+            <div className="divide-y divide-border">
+              {sorted.map((r, idx) => (
+                <MobileReservationListItem
+                  key={`mob-${r.name}-${r.time}-${idx}`}
                   reservation={r}
-                  isAllocated={allocatedIds.has(uid)}
+                  isAllocated={allocatedIds.has(`res-${r.name}-${r.time}`)}
                   canEdit={canEdit}
+                  onDelete={async () => {}} // delete handled inside card
                 />
-              )
-            })
+              ))}
+            </div>
           )}
-
         </div>
       </div>
-    </div>
+    </>
   )
 }
