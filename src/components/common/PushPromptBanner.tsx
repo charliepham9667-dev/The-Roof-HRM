@@ -35,17 +35,28 @@ function dismiss() {
 export function PushPromptBanner() {
   const isMobile = useIsMobile();
   const profile = useAuthStore((s) => s.profile);
-  const { isSupported, isSubscribed, isLoading, subscribe, error } = usePushSubscription();
+  const {
+    isSupported,
+    isSubscribed,
+    isLoading,
+    subscribe,
+    error,
+    hasVapidKey,
+    hasPushApis,
+    vapidKeyError,
+  } = usePushSubscription();
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     setDismissed(wasDismissedRecently());
   }, []);
 
+  const canEnable = isSupported && !vapidKeyError;
   const show =
     isMobile &&
     !!profile?.id &&
-    isSupported &&
+    hasVapidKey &&
+    hasPushApis &&
     !isSubscribed &&
     !dismissed;
 
@@ -71,16 +82,18 @@ export function PushPromptBanner() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            onClick={handleEnable}
-            disabled={isLoading}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5"
-          >
-            {isLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : null}
-            Enable
-          </button>
+          {canEnable && (
+            <button
+              onClick={handleEnable}
+              disabled={isLoading}
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {isLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : null}
+              Enable
+            </button>
+          )}
           <button
             onClick={handleDismiss}
             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

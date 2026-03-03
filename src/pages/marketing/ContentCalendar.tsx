@@ -183,6 +183,7 @@ export default function ContentCalendar() {
   const [overviewTab, setOverviewTab] = useState<"kanban" | "list">("kanban")
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveTimedOut, setSaveTimedOut] = useState(false)
 
   // ── List filters ──────────────────────────────────────────────────────────
   const [filterStatus, setFilterStatus]   = useState<"all" | ContentPost["status"]>("all")
@@ -227,6 +228,7 @@ export default function ContentCalendar() {
 
   const openPostModal = (post?: ContentPost, date?: Date) => {
     setSaveError(null)
+    setSaveTimedOut(false)
     if (post) {
       setEditingPost(post)
       setFTitle(getNoteField(post.notes, "title") || postTitle(post))
@@ -253,7 +255,7 @@ export default function ContentCalendar() {
     setModalOpen(true)
   }
 
-  const SAVE_TIMEOUT_MS = 30_000
+  const SAVE_TIMEOUT_MS = 60_000
 
   const buildPayload = (statusOverride?: ContentPost["status"]): Partial<ContentPost> => {
     const baseNotes = editingPost?.notes ?? null
@@ -273,6 +275,7 @@ export default function ContentCalendar() {
 
   const runSave = async (payload: Partial<ContentPost>) => {
     setSaveError(null)
+    setSaveTimedOut(false)
     setIsSaving(true)
 
     const savePromise =
@@ -295,6 +298,7 @@ export default function ContentCalendar() {
       const message =
         err instanceof Error ? err.message : "Failed to save. You may not have permission to edit this post."
       setSaveError(message)
+      setSaveTimedOut(message.includes("timed out"))
       toast.error(message)
     } finally {
       setIsSaving(false)
@@ -1246,8 +1250,18 @@ export default function ContentCalendar() {
             {/* footer — sticky on mobile */}
             <div className="shrink-0 sticky bottom-0 px-5 py-3 border-t border-border bg-secondary flex flex-col gap-2">
               {saveError && (
-                <div className="rounded-sm border border-error/30 bg-error/8 px-3 py-2 text-xs text-error">
-                  {saveError}
+                <div className="rounded-sm border border-error/30 bg-error/8 px-3 py-2 text-xs text-error flex flex-col gap-2">
+                  <span>{saveError}</span>
+                  {saveTimedOut && (
+                    <button
+                      type="button"
+                      onClick={() => runSave(buildPayload())}
+                      disabled={isSaving}
+                      className="self-start rounded-sm border border-error/50 bg-error/15 px-3 py-1.5 text-xs font-medium text-error hover:bg-error/25 disabled:opacity-50"
+                    >
+                      {isSaving ? "Retrying…" : "Retry save"}
+                    </button>
+                  )}
                 </div>
               )}
               <div className="flex items-center justify-between">

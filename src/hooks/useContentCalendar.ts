@@ -53,9 +53,9 @@ export function useContentCalendar() {
       if (error) throw error
       return data
     },
-    onSuccess: async (post) => {
+    onSuccess: (post) => {
       queryClient.invalidateQueries({ queryKey: ["content_calendar"] })
-      await notifyOwnersForApproval(post, profile?.id)
+      notifyOwnersForApproval(post, profile?.id).catch(() => {})
     },
   })
 
@@ -71,11 +71,10 @@ export function useContentCalendar() {
       if (error) throw error
       return data
     },
-    onSuccess: async (post, variables) => {
+    onSuccess: (post, variables) => {
       queryClient.invalidateQueries({ queryKey: ["content_calendar"] })
-      // Re-notify owners when a post is re-submitted for review (status set back to draft)
       if (variables.status === 'draft') {
-        await notifyOwnersForApproval(post, profile?.id)
+        notifyOwnersForApproval(post, profile?.id).catch(() => {})
       }
     },
   })

@@ -19,6 +19,7 @@ export function PushDiagnostics() {
     unsubscribe,
     hasVapidKey,
     hasPushApis,
+    vapidKeyError,
   } = usePushSubscription();
   const [testState, setTestState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
 
@@ -53,7 +54,9 @@ export function PushDiagnostics() {
         <div className="flex items-center justify-between gap-4">
           <dt className="text-muted-foreground">VAPID key configured</dt>
           <dd className="flex items-center gap-1.5">
-            {hasVapidKey ? (
+            {vapidKeyError ? (
+              <><X className="h-4 w-4 shrink-0 text-destructive" /> Invalid</>
+            ) : hasVapidKey ? (
               <><Check className="h-4 w-4 text-green-600" /> Yes</>
             ) : (
               <><X className="h-4 w-4 text-destructive" /> No — set VITE_VAPID_PUBLIC_KEY</>
@@ -82,8 +85,8 @@ export function PushDiagnostics() {
         </div>
       </dl>
 
-      {error && (
-        <p className="mt-2 text-xs text-destructive">{error}</p>
+      {(error || vapidKeyError) && (
+        <p className="mt-2 text-xs text-destructive">{error || vapidKeyError}</p>
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">

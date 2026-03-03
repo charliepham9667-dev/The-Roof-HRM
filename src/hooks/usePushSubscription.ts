@@ -4,6 +4,9 @@ import { useAuthStore } from '../stores/authStore';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 
+/** P-256 uncompressed public key must be 65 bytes (0x04 + 32-byte X + 32-byte Y) */
+const VAPID_KEY_LENGTH = 65;
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -15,6 +18,32 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+/**
+ * Validates VAPID public key format. Must be base64url-encoded 65-byte P-256 key.
+ * Common mistake: using hex output from web-push (invalid) instead of the base64url public key.
+ */
+function validateVapidKey(key: string): string | null {
+  if (!key || typeof key !== 'string') return 'VAPID key is missing.';
+  const trimmed = key.trim();
+  if (!trimmed) return 'VAPID key is empty.';
+  // Hex strings (e.g. from some key generators) cause "invalid P-256" — must be base64url
+  if (/^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length === 64) {
+    return 'VAPID key appears to be hex format. Use base64url from: npx web-push generate-vapid-keys';
+  }
+  try {
+    const bytes = urlBase64ToUint8Array(trimmed);
+    if (bytes.length !== VAPID_KEY_LENGTH) {
+      return `VAPID key must decode to 65 bytes (got ${bytes.length}). Regenerate with: npx web-push generate-vapid-keys`;
+    }
+    if (bytes[0] !== 0x04) {
+      return 'VAPID key must be uncompressed P-256 (starts with 0x04). Regenerate with: npx web-push generate-vapid-keys';
+    }
+    return null;
+  } catch {
+    return 'VAPID key is not valid base64url. Regenerate with: npx web-push generate-vapid-keys';
+  }
+}
+
 export function usePushSubscription() {
   const profile = useAuthStore((s) => s.profile);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -22,12 +51,13 @@ export function usePushSubscription() {
   const [error, setError] = useState<string | null>(null);
 
   const hasVapidKey = !!VAPID_PUBLIC_KEY;
+  const vapidKeyError = VAPID_PUBLIC_KEY ? validateVapidKey(VAPID_PUBLIC_KEY) : null;
   const hasPushApis =
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
     'PushManager' in window &&
     'Notification' in window;
-  const isSupported = hasVapidKey && hasPushApis;
+  const isSupported = hasVapidKey && !vapidKeyError && hasPushApis;
 
   // Check current subscription state on mount
   useEffect(() => {
@@ -40,7 +70,12 @@ export function usePushSubscription() {
   }, [isSupported, profile?.id]);
 
   const subscribe = useCallback(async () => {
-    if (!isSupported || !profile?.id || !VAPID_PUBLIC_KEY) return;
+    if (!hasVapidKey || !profile?.id || !VAPID_PUBLIC_KEY) return;
+    const keyErr = validateVapidKey(VAPID_PUBLIC_KEY);
+    if (keyErr) {
+      setError(keyErr);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -75,7 +110,7 @@ export function usePushSubscription() {
     } finally {
       setIsLoading(false);
     }
-  }, [isSupported, profile?.id]);
+  }, [hasVapidKey, profile?.id]);
 
   const unsubscribe = useCallback(async () => {
     if (!isSupported || !profile?.id) return;
@@ -101,10 +136,11 @@ export function usePushSubscription() {
     isSupported,
     isSubscribed,
     isLoading,
-    error,
+    error: error ?? vapidKeyError,
     subscribe,
     unsubscribe,
     hasVapidKey,
     hasPushApis,
+    vapidKeyError,
   };
 }
