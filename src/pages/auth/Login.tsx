@@ -49,11 +49,8 @@ export function Login() {
   };
 
   return (
-    <div
-      className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-8"
-      style={{ WebkitOverflowScrolling: 'touch', overflowY: 'auto' }}
-    >
-      <Card className="w-full max-w-md space-y-6 p-8">
+    <div className="min-h-screen bg-background px-4 py-12">
+      <Card className="mx-auto w-full max-w-md space-y-6 p-8">
         <div className="space-y-1 text-center">
           <h1 className="font-serif text-xl font-semibold text-foreground">
             {mode === 'signin' ? 'Sign in to' : 'Sign up for'} The Roof HRM
