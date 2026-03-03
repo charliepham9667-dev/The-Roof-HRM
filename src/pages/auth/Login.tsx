@@ -1,7 +1,19 @@
-import { FormEvent, useState, useEffect } from 'react';
+import { FormEvent, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Input, Label } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
+import { Loader2 } from 'lucide-react';
+
+// iOS PWA standalone mode has a WebKit bug where inputs inside
+// positioned/shadowed containers don't receive focus on tap.
+// The only reliable fix is to call .focus() programmatically on touchend.
+function usePWAInputFix() {
+  const handleTouchEnd = (e: React.TouchEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    // Small timeout lets the tap event fully resolve before focusing
+    setTimeout(() => input.focus(), 0);
+  };
+  return handleTouchEnd;
+}
 
 export function Login() {
   const navigate = useNavigate();
@@ -9,21 +21,25 @@ export function Login() {
   const signUp = useAuthStore((s) => s.signUp);
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
-  
+  const profile = useAuthStore((s) => s.profile);
+
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
 
-  // Redirect as soon as both user + profile are ready
-  const profile = useAuthStore((s) => s.profile);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const fullNameRef = useRef<HTMLInputElement>(null);
+
+  const handleTouchEnd = usePWAInputFix();
+
   useEffect(() => {
     if (user && profile) {
       if (profile.status === 'pending' || profile.status === 'rejected') {
         navigate('/pending-approval', { replace: true });
       } else {
-        // Navigate to / — DashboardRedirect will pick the right role dashboard
         navigate('/', { replace: true });
       }
     }
@@ -32,14 +48,11 @@ export function Login() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-
     try {
       if (mode === 'signup') {
         await signUp(email, password, fullName, 'staff');
         navigate('/pending-approval');
       } else {
-        // signIn sets user + fetches profile; the useEffect above will
-        // navigate once profile is available — no manual navigate needed here.
         await signIn(email, password);
       }
     } catch (err: unknown) {
@@ -49,42 +62,83 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-12">
-      <Card className="mx-auto w-full max-w-md space-y-6 p-8">
-        <div className="space-y-1 text-center">
-          <h1 className="font-serif text-xl font-semibold text-foreground">
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#fff',
+        padding: '48px 16px',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 400,
+          margin: '0 auto',
+          backgroundColor: '#fff',
+          padding: '32px 24px',
+          borderRadius: 12,
+          border: '1px solid #dad4c8',
+        }}
+      >
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1a1612', marginBottom: 4 }}>
             {mode === 'signin' ? 'Sign in to' : 'Sign up for'} The Roof HRM
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p style={{ fontSize: 14, color: '#82786a' }}>
             Internal access for F&B owners and managers.
           </p>
         </div>
 
+        {/* Error */}
         {error && (
-          <div className="bg-error/10 border border-error text-error px-4 py-2 rounded text-sm">
+          <div style={{
+            backgroundColor: 'rgba(184,50,50,0.08)',
+            border: '1px solid #b83232',
+            color: '#b83232',
+            padding: '8px 12px',
+            borderRadius: 6,
+            fontSize: 14,
+            marginBottom: 16,
+          }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
           {mode === 'signup' && (
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
+            <div style={{ marginBottom: 16 }}>
+              <label
+                htmlFor="fullName"
+                style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#1a1612', marginBottom: 6 }}
+              >
+                Full Name
+              </label>
+              <input
+                ref={fullNameRef}
                 id="fullName"
                 type="text"
                 required
                 autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                onTouchEnd={handleTouchEnd}
                 placeholder="Charlie Pham"
+                style={inputStyle}
               />
             </div>
           )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Work Email</Label>
-            <Input
+
+          <div style={{ marginBottom: 16 }}>
+            <label
+              htmlFor="email"
+              style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#1a1612', marginBottom: 6 }}
+            >
+              Work Email
+            </label>
+            <input
+              ref={emailRef}
               id="email"
               type="email"
               required
@@ -92,40 +146,68 @@ export function Login() {
               inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onTouchEnd={handleTouchEnd}
               placeholder="you@venuegroup.com"
+              style={inputStyle}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
+          <div style={{ marginBottom: 24 }}>
+            <label
+              htmlFor="password"
+              style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#1a1612', marginBottom: 6 }}
+            >
+              Password
+            </label>
+            <input
+              ref={passwordRef}
               id="password"
               type="password"
               required
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onTouchEnd={handleTouchEnd}
               placeholder="••••••••"
+              style={inputStyle}
             />
           </div>
 
-          <Button
+          <button
             type="submit"
             disabled={isLoading}
-            className="w-full"
+            style={{
+              width: '100%',
+              padding: '10px 0',
+              backgroundColor: '#9a6f2e',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.7 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              touchAction: 'manipulation',
+            }}
           >
-            {isLoading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
-          </Button>
+            {isLoading && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+            {isLoading ? 'Signing in…' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
+          </button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
+        {/* Mode toggle */}
+        <p style={{ textAlign: 'center', fontSize: 14, color: '#82786a', marginTop: 20 }}>
           {mode === 'signin' ? (
             <>
               Don't have an account?{' '}
               <button
                 type="button"
                 onClick={() => setMode('signup')}
-                className="text-primary hover:underline"
+                style={{ color: '#9a6f2e', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, touchAction: 'manipulation' }}
               >
                 Sign Up
               </button>
@@ -136,15 +218,30 @@ export function Login() {
               <button
                 type="button"
                 onClick={() => setMode('signin')}
-                className="text-primary hover:underline"
+                style={{ color: '#9a6f2e', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, touchAction: 'manipulation' }}
               >
                 Sign In
               </button>
             </>
           )}
         </p>
-      </Card>
+      </div>
     </div>
   );
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  height: 44,
+  padding: '0 12px',
+  fontSize: 16,   // 16px prevents iOS auto-zoom
+  color: '#1a1612',
+  backgroundColor: '#fff',
+  border: '1px solid #dad4c8',
+  borderRadius: 8,
+  outline: 'none',
+  boxSizing: 'border-box',
+  // These are the critical iOS PWA properties:
+  WebkitAppearance: 'none',
+  touchAction: 'manipulation',
+};
