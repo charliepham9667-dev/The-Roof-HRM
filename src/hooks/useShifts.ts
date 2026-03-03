@@ -270,7 +270,7 @@ export function useClockInOut() {
   });
 }
 
-// Get today's shifts
+// Get today's shifts (supports both schemas: shift_date/staff_id and date/employee_id)
 export function useTodayShifts(todayIso: string) {
   return useQuery({
     queryKey: ['shifts-today', todayIso],
@@ -284,30 +284,41 @@ export function useTodayShifts(todayIso: string) {
             email,
             job_role,
             department
+          ),
+          profiles2:employee_id (
+            full_name,
+            email,
+            job_role,
+            department
           )
         `)
-        .eq('shift_date', todayIso)
+        .or(`shift_date.eq.${todayIso},date.eq.${todayIso}`)
         .not('status', 'eq', 'cancelled')
         .order('start_time', { ascending: true });
 
       if (error) throw error;
 
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        staffId: row.staff_id,
-        staffName: row.profiles?.full_name || 'Unknown',
-        staffEmail: row.profiles?.email,
-        jobRole: row.profiles?.job_role || row.role || '',
-        department: row.profiles?.department || '',
-        shiftDate: row.shift_date,
-        startTime: row.start_time,
-        endTime: row.end_time,
-        role: row.role,
-        status: row.status,
-        clockIn: row.clock_in,
-        clockOut: row.clock_out,
-        notes: row.notes,
-      }));
+      return (data || []).map((row: any) => {
+        const profile = row.profiles || row.profiles2;
+        const staffId = row.staff_id || row.employee_id;
+        const shiftDate = row.shift_date || row.date;
+        return {
+          id: row.id,
+          staffId,
+          staffName: profile?.full_name || 'Unknown',
+          staffEmail: profile?.email,
+          jobRole: profile?.job_role || row.role || '',
+          department: profile?.department || '',
+          shiftDate,
+          startTime: row.start_time,
+          endTime: row.end_time,
+          role: row.role,
+          status: row.status,
+          clockIn: row.clock_in,
+          clockOut: row.clock_out,
+          notes: row.notes,
+        };
+      });
     },
     enabled: Boolean(todayIso),
     staleTime: 1000 * 60 * 5,

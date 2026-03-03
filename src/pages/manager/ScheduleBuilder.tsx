@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { createPortal } from "react-dom"
 import { ChevronLeft, ChevronRight, Plus, Loader2, Pencil } from "lucide-react"
 import { toast } from "sonner"
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui"
 
 export function ScheduleBuilder() {
+  const queryClient = useQueryClient()
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const [selectedWeek, setSelectedWeek] = useState<Date>(() => new Date())
   const weekStart = useMemo(() => startOfWeekSunday(selectedWeek), [selectedWeek])
@@ -418,6 +420,8 @@ export function ScheduleBuilder() {
       }
 
       toast.success(`Schedule published for ${employeeIds.length} employee${employeeIds.length === 1 ? "" : "s"}`)
+      queryClient.invalidateQueries({ queryKey: ["shifts"] })
+      queryClient.invalidateQueries({ queryKey: ["shifts-today"] })
       await reload(weekStart, true)
     } catch (e) {
       toast.error((e as Error)?.message || "Failed to publish schedule")
