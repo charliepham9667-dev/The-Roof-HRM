@@ -2,7 +2,7 @@
 import { clientsClaim } from 'workbox-core';
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst } from 'workbox-strategies';
+import { NetworkFirst, NetworkOnly } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
@@ -14,9 +14,27 @@ clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-// Runtime cache for Supabase API (Network First, 24h)
+// Auth, realtime, storage, and Edge Functions MUST always go to network.
+// Caching these causes login loops and stale 401s on iOS PWA.
 registerRoute(
-  ({ url }) => url.hostname.includes('.supabase.co') && url.pathname.startsWith('/rest/v1/'),
+  ({ url }) =>
+    url.hostname.includes('.supabase.co') && (
+      url.pathname.startsWith('/auth/') ||
+      url.pathname.startsWith('/realtime/') ||
+      url.pathname.startsWith('/storage/') ||
+      url.pathname.startsWith('/functions/') ||
+      url.searchParams.has('apikey')
+    ),
+  new NetworkOnly()
+);
+
+// Runtime cache for Supabase REST API (Network First, 24h)
+// Auth endpoints above are excluded, so only data queries are cached.
+registerRoute(
+  ({ url }) =>
+    url.hostname.includes('.supabase.co') &&
+    url.pathname.startsWith('/rest/v1/') &&
+    !url.pathname.startsWith('/rest/v1/profiles'),
   new NetworkFirst({
     cacheName: 'supabase-api',
     plugins: [

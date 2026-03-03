@@ -1,8 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-// Web Push using the webpush-webcrypto library (Deno-compatible, no Node.js built-ins)
-import * as webpush from 'https://esm.sh/web-push@3.6.7';
+// npm: specifier lets Deno use the npm version which works in Supabase Edge Functions
+import webpush from 'npm:web-push@3.6.7';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

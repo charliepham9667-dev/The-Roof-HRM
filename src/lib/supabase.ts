@@ -7,4 +7,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Persist session in localStorage so PWA reinstalls / page reloads
+    // don't drop the session on iOS home-screen apps.
+    persistSession: true,
+    storageKey: 'theroof-auth-token',
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
