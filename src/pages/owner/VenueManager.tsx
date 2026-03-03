@@ -16,6 +16,7 @@ import { FloorPlan, VENUE_TABLES, type TableStatus, type VenueTable } from "@/co
 import { ReservationPanel } from "@/components/venue/ReservationPanel"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { VenueCalendar } from "@/components/venue/VenueCalendar"
+import { ReservationsListView } from "@/components/venue/ReservationsListView"
 import type { CsvReservation } from "@/hooks/useReservationsCsv"
 import type { Reservation } from "@/types"
 
@@ -104,7 +105,7 @@ export function VenueManager() {
   })()
 
   // ── View tab ─────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"floor" | "calendar">("floor")
+  const [activeTab, setActiveTab] = useState<"floor" | "calendar" | "list">("floor")
 
   // ── Layout state ────────────────────────────────────────────────────────────
   const [tables, setTables] = useState<VenueTable[]>(loadLayout)
@@ -315,11 +316,26 @@ export function VenueManager() {
               </svg>
               Calendar
             </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab("list"); setEditMode(false) }}
+              className={cn(
+                "hidden md:flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors border",
+                activeTab === "list"
+                  ? "border-[#78350F]/30 bg-[#78350F]/10 text-[#78350F]"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary",
+              )}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M2 4h12M2 8h12M2 12h8"/>
+              </svg>
+              List
+            </button>
           </div>
         </div>
 
-        {/* Row 2: controls toolbar — hidden on mobile for floor tab (desktop-only controls) */}
-        <div className="hidden md:flex flex-wrap items-center gap-2 mt-2">
+        {/* Row 2: controls toolbar — hidden on mobile and on list tab */}
+        <div className={cn("hidden md:flex flex-wrap items-center gap-2 mt-2", activeTab === "list" && "!hidden")}>
           {activeTab === "floor" && !editMode && <Legend />}
 
           {savedNotice && (
@@ -391,6 +407,14 @@ export function VenueManager() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
+        {/* ── List view (desktop/tablet only) ── */}
+        {activeTab === "list" && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ReservationsListView canEdit={canEdit} />
+          </div>
+        )}
+
+        {activeTab !== "list" && (
         <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
 
           {/* Left panel — full width on mobile, sidebar on desktop */}
@@ -452,6 +476,7 @@ export function VenueManager() {
             )}
           </div>
         </div>
+        )}
 
         {/* Drag overlay */}
         <DragOverlay>

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { insertNotifications } from "@/hooks/useNotifications"
 
 // ── February content tab CSV URL ─────────────────────────────────────────────
 // To update: File → Share → Publish to web → select tab → CSV → copy link
@@ -291,21 +292,69 @@ export function useGoogleSheetsSync() {
 
       // 5. Insert all sheet rows fresh — no conflict possible since we just deleted them.
       const BATCH = 50
+      const allInserted: Array<{ id: string; platform: string; scheduled_date: string; caption: string | null; status: string }> = []
       for (let i = 0; i < toUpsert.length; i += BATCH) {
         const batch = toUpsert.slice(i, i + BATCH)
         const { error: insertErr, data: insertedRows } = await supabase
           .from("content_calendar")
           .insert(batch)
-          .select("id")
+          .select("id, platform, scheduled_date, caption, status")
 
         if (insertErr) {
           result.errors.push(`Insert error (batch ${i / BATCH + 1}): ${insertErr.message}`)
           result.skipped += batch.length
         } else {
           result.upserted += insertedRows?.length ?? batch.length
+          if (insertedRows) allInserted.push(...(insertedRows as typeof allInserted))
         }
       }
 
+      // 6. Notify owners about content needing approval (draft/scheduled from sync)
+      const needsApproval = allInserted.filter((r) => r.status === "draft" || r.status === "scheduled")
+      if (needsApproval.length > 0) {
+        try {
+          const { data: owners } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("role", "owner")
+            .eq("is_active", true)
+            .eq("status", "active")
+          if (owners && owners.length > 0) {
+            const title =
+              needsApproval.length === 1
+                ? `Content needs approval: ${needsApproval[0].platform} post on ${needsApproval[0].scheduled_date}`
+                : `Content sync: ${needsApproval.length} posts need approval`
+            const body =
+              needsApproval.length === 1 && needsApproval[0].caption
+                ? needsApproval[0].caption.length > 80
+                  ? `${needsApproval[0].caption.slice(0, 80)}…`
+                  : needsApproval[0].caption
+                : undefined
+            await insertNotifications(
+              owners.map((o: { id: string }) => ({
+                userId: o.id,
+                title,
+                body,
+                notificationType: "content_approval" as const,
+                relatedType: "content_post",
+                relatedId: needsApproval[0]?.id ?? "",
+              }))
+            )
+            supabase.functions
+              .invoke("send-push", {
+                body: {
+                  user_ids: owners.map((o: { id: string }) => o.id),
+                  title,
+                  body: body ?? "",
+                  url: "/marketing/content-calendar",
+                },
+              })
+              .catch((err) => console.warn("[useGoogleSheetsSync] content approval push failed:", err))
+          }
+        } catch {
+          // notifications are best-effort
+        }
+      }
 
       lastSyncTimestamp = Date.now()
       setLastSynced(new Date())

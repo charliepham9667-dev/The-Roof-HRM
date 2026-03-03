@@ -54,6 +54,23 @@ export function PushDiagnostics() {
       <p className="mb-3 text-xs text-muted-foreground">
         Pop-up notifications (lock screen, banner) require enabling on each device. In-app notifications always show in the bell.
       </p>
+      <details className="mb-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-foreground">Phone not getting pop-ups when app is closed?</summary>
+        <div className="mt-2 space-y-2 text-[11px] text-muted-foreground">
+          <p className="font-medium text-foreground">iPhone (required):</p>
+          <ol className="list-decimal space-y-1 pl-4">
+            <li>Safari → Share → <strong>Add to Home Screen</strong></li>
+            <li>Open <strong>from home screen icon only</strong> (Safari tabs won&#39;t get push)</li>
+            <li>Bell → Enable pop-up notifications → Allow</li>
+            <li><strong>Press Home or swipe app away</strong>, then tap Send test</li>
+          </ol>
+          <p className="pt-1 font-medium text-foreground">Android:</p>
+          <ol className="list-decimal space-y-1 pl-4">
+            <li>Chrome → allow notifications when prompted</li>
+            <li>Minimize app, then Send test</li>
+          </ol>
+        </div>
+      </details>
 
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between gap-4">

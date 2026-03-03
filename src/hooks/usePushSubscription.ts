@@ -81,11 +81,17 @@ export function usePushSubscription() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        setError('Notification permission denied. Please enable it in your browser settings.');
+        setError('Notification permission denied. Go to device Settings → Notifications → enable for this app.');
         return;
       }
 
-      const reg = await navigator.serviceWorker.ready;
+      // Service worker must be ready (can hang on iOS if not opened from Home Screen)
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Service worker timed out. Add app to Home Screen and open from there, then try again.')), 15000)
+        ),
+      ]);
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),

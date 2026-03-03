@@ -99,7 +99,7 @@ export function useContentCalendar() {
   }
 }
 
-async function notifyOwnersForApproval(post: ContentPost, createdById?: string) {
+export async function notifyOwnersForApproval(post: ContentPost, createdById?: string) {
   try {
     const { data: owners } = await supabase
       .from('profiles')

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Check, Loader2, BellOff, BellRing, Send } from 'lucide-react';
 import { 
@@ -27,8 +27,16 @@ const typeConfig: Record<NotificationType, { label: string; color: string }> = {
   content_approval: { label: 'Approval', color: 'text-violet-400' },
 };
 
+const OPEN_PANEL_EVENT = 'open-notifications-panel';
+
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener(OPEN_PANEL_EVENT, handler);
+    return () => window.removeEventListener(OPEN_PANEL_EVENT, handler);
+  }, []);
   const [testPushState, setTestPushState] = useState<'idle' | 'sending' | 'ok' | 'error' | 'no_devices'>('idle');
   const { data: count = 0 } = useUnreadNotificationCount();
   const { data: notifications, isLoading } = useNotifications(10);
@@ -204,22 +212,27 @@ export function NotificationBell() {
 
                   {/* Test push button — only visible when subscribed */}
                   {isSubscribed && (
-                    <button
-                      onClick={handleTestPush}
-                      disabled={testPushState === 'sending'}
-                      className="flex items-center gap-2 text-xs transition-colors disabled:opacity-50 text-primary hover:text-primary/80"
-                    >
-                      {testPushState === 'sending' ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Send className="h-3.5 w-3.5" />
-                      )}
-                      {testPushState === 'sending' && 'Sending…'}
-                      {testPushState === 'ok' && '✓ Sent — check your device!'}
-                      {testPushState === 'no_devices' && 'No devices — tap Enable above, or Disable then Enable'}
-                      {testPushState === 'error' && '✗ Failed'}
-                      {testPushState === 'idle' && 'Send test notification'}
-                    </button>
+                    <div className="space-y-1">
+                      <button
+                        onClick={handleTestPush}
+                        disabled={testPushState === 'sending'}
+                        className="flex items-center gap-2 text-xs transition-colors disabled:opacity-50 text-primary hover:text-primary/80"
+                      >
+                        {testPushState === 'sending' ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" />
+                        )}
+                        {testPushState === 'sending' && 'Sending…'}
+                        {testPushState === 'ok' && '✓ Sent — check lock screen or notification shade!'}
+                        {testPushState === 'no_devices' && 'No devices — tap Enable above, or Disable then Enable'}
+                        {testPushState === 'error' && '✗ Failed'}
+                        {testPushState === 'idle' && 'Send test notification'}
+                      </button>
+                      <p className="text-[10px] text-muted-foreground">
+                        Swipe the app away or press Home first, then tap Send — notifications only appear when app is in background.
+                      </p>
+                    </div>
                   )}
                 </>
               ) : (
@@ -229,8 +242,7 @@ export function NotificationBell() {
                     <span>Phone notifications</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
-                    To receive push notifications, open this app in Safari and tap{' '}
-                    <strong>Share → Add to Home Screen</strong>, then reopen it from your home screen.
+                    <strong>iPhone:</strong> Safari → Share → Add to Home Screen, then open from home screen. <strong>Android:</strong> Use Chrome and allow notifications.
                   </p>
                 </div>
               )}

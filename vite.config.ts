@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Register SW as early as possible (critical for mobile push)
+      injectRegister: 'inline',
       // Use injectManifest so we can ship a custom service worker with push handlers
       strategies: 'injectManifest',
       srcDir: 'src',
