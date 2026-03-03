@@ -346,7 +346,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
       tablePreference: r.table ?? undefined,
       specialRequests: r.specialRequests ?? undefined,
       status: "confirmed",
-      source: r.occasion ?? undefined,
+      source: (r.occasion as import("@/types").ReservationSource | undefined) ?? "website",
       notes: r.notes ?? undefined,
       reminderSent: false,
       createdAt: r.submittedAt ?? new Date().toISOString(),
