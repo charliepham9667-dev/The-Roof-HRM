@@ -293,32 +293,36 @@ export function useTodayShifts(todayIso: string) {
           )
         `)
         .or(`shift_date.eq.${todayIso},date.eq.${todayIso}`)
-        .not('status', 'eq', 'cancelled')
+        .in('status', ['published', 'in_progress', 'completed', 'no_show'])
         .order('start_time', { ascending: true });
 
       if (error) throw error;
 
-      return (data || []).map((row: any) => {
-        const profile = row.profiles || row.profiles2;
-        const staffId = row.staff_id || row.employee_id;
-        const shiftDate = row.shift_date || row.date;
-        return {
-          id: row.id,
-          staffId,
-          staffName: profile?.full_name || 'Unknown',
-          staffEmail: profile?.email,
-          jobRole: profile?.job_role || row.role || '',
-          department: profile?.department || '',
-          shiftDate,
-          startTime: row.start_time,
-          endTime: row.end_time,
-          role: row.role,
-          status: row.status,
-          clockIn: row.clock_in,
-          clockOut: row.clock_out,
-          notes: row.notes,
-        };
-      });
+      // Use the same canonical date as Schedule Builder: prefer `date`, fallback to `shift_date`
+      const effectiveDate = (row: any) => row.date ?? row.shift_date;
+      return (data || [])
+        .filter((row: any) => effectiveDate(row) === todayIso && (row.staff_id || row.employee_id))
+        .map((row: any) => {
+          const profile = row.profiles || row.profiles2;
+          const staffId = row.staff_id || row.employee_id;
+          const shiftDate = row.date ?? row.shift_date;
+          return {
+            id: row.id,
+            staffId,
+            staffName: profile?.full_name || 'Unknown',
+            staffEmail: profile?.email,
+            jobRole: profile?.job_role || row.role || '',
+            department: profile?.department || '',
+            shiftDate,
+            startTime: row.start_time,
+            endTime: row.end_time,
+            role: row.role,
+            status: row.status,
+            clockIn: row.clock_in,
+            clockOut: row.clock_out,
+            notes: row.notes,
+          };
+        });
     },
     enabled: Boolean(todayIso),
     staleTime: 1000 * 60 * 5,
@@ -419,6 +423,24 @@ export function useUpcomingShiftReminder() {
           };
         })
       );
+
+      // Push to user's phone
+      const first = unnotified[0];
+      const isToday = first.shift_date === todayIso;
+      const pushTitle = unnotified.length === 1
+        ? `${isToday ? "Today" : "Tomorrow"}'s shift: ${first.start_time.slice(0, 5)}–${first.end_time.slice(0, 5)}`
+        : `${unnotified.length} upcoming shifts in the next 24 hours`;
+      const pushBody = unnotified.length === 1
+        ? `You have a ${first.role} shift scheduled`
+        : 'Check your schedule in the app';
+      supabase.functions.invoke('send-push', {
+        body: {
+          user_ids: [profile.id],
+          title: pushTitle,
+          body: pushBody,
+          url: '/staff/my-shifts',
+        },
+      }).catch((err) => console.warn('[useUpcomingShiftReminder] push failed:', err));
 
       return unnotified.length;
     },

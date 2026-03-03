@@ -62,18 +62,18 @@ export function ScheduleBuilder() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
 
   useEffect(() => {
-    // Keep selectedDay within week; prefer today if in this week.
+    // Keep selectedDay within week; prefer today (venue ICT) if in this week.
     const ws = toYmd(weekStart)
     const we = toYmd(weekEnd)
-    const today = new Date()
-    const todayYmd = toYmd(today)
+    const todayIso = getTodayIsoIct()
+    const todayDate = new Date(todayIso + "T12:00:00")
 
     setSelectedDay((prev) => {
       const prevYmd = toYmd(prev)
       const prevInWeek = prevYmd >= ws && prevYmd <= we
       if (prevInWeek) return prev
-      const todayInWeek = todayYmd >= ws && todayYmd <= we
-      return todayInWeek ? today : weekStart
+      const todayInWeek = todayIso >= ws && todayIso <= we
+      return todayInWeek ? todayDate : weekStart
     })
   }, [weekStart, weekEnd])
 
@@ -321,11 +321,13 @@ export function ScheduleBuilder() {
       const { error } = await supabase.from("shifts").delete().eq("id", shift.id)
       if (error) throw error
       toast.success("Shift deleted")
+      queryClient.invalidateQueries({ queryKey: ["shifts"] })
+      queryClient.invalidateQueries({ queryKey: ["shifts-today"] })
       await reload(weekStart, true)
     } catch (e) {
       toast.error((e as Error)?.message || "Failed to delete shift")
     }
-  }, [weekStart]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [weekStart, queryClient]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const duplicateShift = useCallback(async (shift: Shift) => {
     try {
@@ -549,8 +551,7 @@ export function ScheduleBuilder() {
   }
 
   // ── Derived stats for header ──────────────────────────────────────────────
-  const today = new Date()
-  const todayYmd = toYmd(today)
+  const todayYmd = getTodayIsoIct()
 
   const onShiftNowCount = useMemo(() => {
     const now = new Date()
@@ -599,7 +600,7 @@ export function ScheduleBuilder() {
             <Button
               variant="outline"
               className="h-7 px-3 text-xs font-medium"
-              onClick={() => setSelectedWeek(new Date())}
+              onClick={() => setSelectedWeek(new Date(getTodayIsoIct() + "T12:00:00"))}
             >
               Today
             </Button>
@@ -1007,7 +1008,11 @@ export function ScheduleBuilder() {
         editShift={editShift}
         shiftSchema={shiftSchema}
         supabase={supabase as any}
-        onSuccess={() => reload(weekStart, true).catch((e) => setError((e as Error)?.message || "Failed to refresh schedule"))}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["shifts"] })
+          queryClient.invalidateQueries({ queryKey: ["shifts-today"] })
+          reload(weekStart, true).catch((e) => setError((e as Error)?.message || "Failed to refresh schedule"))
+        }}
         onDelete={async (id) => {
           const shift = shifts.find((s) => s.id === id)
           if (shift) await deleteShift(shift)
@@ -1121,11 +1126,20 @@ function useMediaQuery(query: string) {
   return matches
 }
 
+const ICT_TZ = "Asia/Ho_Chi_Minh"
+
 function toYmd(d: Date) {
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, "0")
   const dd = String(d.getDate()).padStart(2, "0")
   return `${yyyy}-${mm}-${dd}`
+}
+
+/** Today's date in venue timezone (ICT), aligns with dashboard "Team on Shift Today" */
+function getTodayIsoIct() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: ICT_TZ }).formatToParts(new Date())
+  const map = new Map(parts.map((p) => [p.type, p.value]))
+  return `${map.get("year")}-${map.get("month")}-${map.get("day")}`
 }
 
 function startOfWeekSunday(d: Date) {
@@ -1616,7 +1630,7 @@ function MobileDayList({
                         name: employeeById.get(key)?.full_name || employeeById.get(key)?.email || "Employee",
                         sub: employeeById.get(key)?.department || "",
                       }
-                const isToday = toYmd(selectedDay) === toYmd(new Date())
+                const isToday = toYmd(selectedDay) === getTodayIsoIct()
                 const anyOnNow = isToday && list.some((s) => isOnShiftNow(s.date, s.start_time, s.end_time, new Date()))
 
                 return (

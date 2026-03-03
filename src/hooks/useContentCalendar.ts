@@ -116,16 +116,23 @@ async function notifyOwnersForApproval(post: ContentPost, createdById?: string) 
     const platformLabel = post.platform === 'all' ? 'All Platforms' : post.platform.charAt(0).toUpperCase() + post.platform.slice(1)
     const dateLabel = post.scheduled_date
 
+    const title = `Content needs approval: ${platformLabel} post on ${dateLabel}`
+    const body = post.caption ? (post.caption.length > 80 ? `${post.caption.slice(0, 80)}…` : post.caption) : undefined
     await insertNotifications(
       recipients.map((o: any) => ({
         userId: o.id,
-        title: `Content needs approval: ${platformLabel} post on ${dateLabel}`,
-        body: post.caption ? (post.caption.length > 80 ? `${post.caption.slice(0, 80)}…` : post.caption) : undefined,
+        title,
+        body,
         notificationType: 'content_approval' as const,
         relatedType: 'content_post',
         relatedId: post.id,
       }))
     )
+    // Push to owners' phones
+    const recipientIds = recipients.map((o: any) => o.id)
+    supabase.functions.invoke('send-push', {
+      body: { user_ids: recipientIds, title, body: body ?? '', url: '/marketing/content-calendar' },
+    }).catch((err) => console.warn('[notifyOwnersForApproval] push failed:', err))
   } catch {
     // notifications are best-effort
   }

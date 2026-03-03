@@ -191,14 +191,24 @@ export function useSendChatMessage() {
         const recipientId = newMsg.channel_id.slice(1)
         if (recipientId && recipientId !== newMsg.author_id) {
           const senderName = (newMsg.author as any)?.full_name || 'Someone'
+          const bodyPreview = newMsg.body.length > 80 ? `${newMsg.body.slice(0, 80)}…` : newMsg.body
           insertNotifications([{
             userId: recipientId,
             title: `New message from ${senderName}`,
-            body: newMsg.body.length > 80 ? `${newMsg.body.slice(0, 80)}…` : newMsg.body,
+            body: bodyPreview,
             notificationType: 'announcement',
             relatedType: 'chat_dm',
             relatedId: newMsg.id,
-          }])
+          }]).then(() => {
+            supabase.functions.invoke('send-push', {
+              body: {
+                user_ids: [recipientId],
+                title: `New message from ${senderName}`,
+                body: bodyPreview,
+                url: '/chat',
+              },
+            }).catch((err) => console.warn('[useSendChatMessage] push failed:', err))
+          }).catch(() => {})
         }
       }
     },
