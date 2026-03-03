@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
 import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
+import { InlineComment } from "@/components/venue/ReservationPanel"
 import type { Reservation } from "@/types"
 import {
   Calendar,
@@ -132,6 +133,11 @@ function ReservationRow({
             {r.specialRequests && !expanded && (
               <p className="mt-1 text-[10px] text-muted-foreground italic truncate">📝 {r.specialRequests}</p>
             )}
+            {r.notes && r.notes.trim() && !expanded && (
+              <p className="mt-0.5 text-[10px] text-primary/70 italic truncate flex items-center gap-1">
+                <span className="inline-block h-2.5 w-2.5 shrink-0">💬</span>{r.notes}
+              </p>
+            )}
           </div>
 
           {/* Right actions */}
@@ -170,9 +176,10 @@ function ReservationRow({
             {r.specialPackages && (
               <div className="col-span-full"><span className="font-medium text-foreground/70">Package: </span>{r.specialPackages}</div>
             )}
-            {r.notes && r.notes.trim() && (
-              <div className="col-span-full"><span className="font-medium text-foreground/70">Notes: </span>{r.notes}</div>
-            )}
+          </div>
+          <div className="pt-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Staff comment</p>
+            <InlineComment dbId={dbId} currentNote={r.notes} canEdit={canEdit} />
           </div>
           {canEdit && dbId && (
             <div className="flex items-center justify-end pt-1 gap-2">

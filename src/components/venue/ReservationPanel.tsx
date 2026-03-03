@@ -1,9 +1,9 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { cn } from "@/lib/utils"
-import { useDeleteReservation } from "@/hooks/useReservations"
+import { useDeleteReservation, useUpdateReservation } from "@/hooks/useReservations"
 import type { CsvReservation } from "@/hooks/useReservationsCsv"
-import { Clock, Users, Phone, Mail, ChevronDown, ChevronUp, MapPin } from "lucide-react"
+import { Clock, Users, Phone, Mail, ChevronDown, ChevronUp, MapPin, MessageSquare, Check, X, Pencil } from "lucide-react"
 
 // ─── Source badge ──────────────────────────────────────────────────────────────
 
@@ -23,6 +23,157 @@ function sourceFromReservation(reservation: CsvReservation): string {
   const phone = reservation.phone ?? ""
   if (phone.toLowerCase().includes("zalo") || phone.toLowerCase().includes("wa")) return "whatsapp"
   return "website"
+}
+
+// ─── Inline comment widget ────────────────────────────────────────────────────
+
+export function InlineComment({
+  dbId,
+  currentNote,
+  canEdit,
+  compact = false,
+}: {
+  dbId: string | null
+  currentNote: string | null | undefined
+  canEdit: boolean
+  compact?: boolean
+}) {
+  const updateRes = useUpdateReservation()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(currentNote ?? "")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Keep draft in sync when currentNote changes (e.g. after save)
+  useEffect(() => {
+    if (!editing) setDraft(currentNote ?? "")
+  }, [currentNote, editing])
+
+  useEffect(() => {
+    if (editing) textareaRef.current?.focus()
+  }, [editing])
+
+  async function handleSave(e: React.MouseEvent | React.KeyboardEvent) {
+    e.stopPropagation()
+    if (!dbId) return
+    await updateRes.mutateAsync({ id: dbId, notes: draft.trim() })
+    setEditing(false)
+  }
+
+  function handleCancel(e: React.MouseEvent) {
+    e.stopPropagation()
+    setDraft(currentNote ?? "")
+    setEditing(false)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSave(e)
+    if (e.key === "Escape") { setDraft(currentNote ?? ""); setEditing(false) }
+  }
+
+  const hasNote = (currentNote ?? "").trim().length > 0
+
+  if (!canEdit && !hasNote) return null
+
+  if (compact) {
+    // Card-size compact version for desktop sidebar cards
+    return (
+      <div className="mt-1.5" onPointerDown={(e) => e.stopPropagation()}>
+        {editing ? (
+          <div className="flex flex-col gap-1">
+            <textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Add a comment… (e.g. Coming 30 min late)"
+              rows={2}
+              className="w-full resize-none rounded border border-primary/40 bg-background px-1.5 py-1 text-[9px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+            <div className="flex items-center gap-1 justify-end">
+              <button type="button" onClick={handleCancel} className="rounded px-1 py-0.5 text-[8px] text-muted-foreground hover:text-foreground border border-border hover:bg-muted transition-colors">
+                <X className="h-2.5 w-2.5" />
+              </button>
+              <button type="button" onClick={handleSave} disabled={updateRes.isPending} className="rounded px-1 py-0.5 text-[8px] bg-primary text-primary-foreground hover:bg-primary/90 border border-primary disabled:opacity-50 transition-colors">
+                {updateRes.isPending ? "…" : <Check className="h-2.5 w-2.5" />}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-1 group/note">
+            {hasNote ? (
+              <>
+                <MessageSquare className="h-2.5 w-2.5 text-primary/60 shrink-0 mt-0.5" />
+                <span className="text-[9px] text-primary/80 italic flex-1 break-words">{currentNote}</span>
+              </>
+            ) : (
+              <span className="text-[9px] text-muted-foreground/50 italic">No comment</span>
+            )}
+            {canEdit && dbId && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setEditing(true) }}
+                className="shrink-0 opacity-0 group-hover/note:opacity-100 ml-auto transition-opacity"
+                title={hasNote ? "Edit comment" : "Add comment"}
+              >
+                <Pencil className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Full-size version for list rows
+  return (
+    <div className="mt-2" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+      {editing ? (
+        <div className="flex flex-col gap-1.5">
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add a comment… (e.g. Coming 30 min late, requested window seat)"
+            rows={2}
+            className="w-full resize-none rounded-md border border-primary/40 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+          <div className="flex items-center gap-1.5 justify-between">
+            <span className="text-[10px] text-muted-foreground">⌘ Enter to save · Esc to cancel</span>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={handleCancel} className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground border border-border hover:bg-muted transition-colors">
+                <X className="h-3 w-3" /> Cancel
+              </button>
+              <button type="button" onClick={handleSave} disabled={updateRes.isPending} className="flex items-center gap-1 rounded px-2 py-1 text-xs bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+                {updateRes.isPending ? "Saving…" : <><Check className="h-3 w-3" /> Save</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start gap-2 group/note rounded-md px-2.5 py-1.5 -mx-2.5 hover:bg-muted/40 transition-colors cursor-default">
+          <MessageSquare className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", hasNote ? "text-primary/70" : "text-muted-foreground/40")} />
+          <div className="flex-1 min-w-0">
+            {hasNote ? (
+              <p className="text-xs text-foreground/80 italic break-words">{currentNote}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground/50 italic">No comment yet</p>
+            )}
+          </div>
+          {canEdit && dbId && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="shrink-0 opacity-0 group-hover/note:opacity-100 transition-opacity rounded p-0.5 hover:bg-muted"
+              title={hasNote ? "Edit comment" : "Add comment"}
+            >
+              <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── Draggable reservation card ────────────────────────────────────────────────
@@ -106,6 +257,7 @@ function DraggableReservationCard({
       {isAllocated && (
         <div className="mt-1 text-[9px] text-[#10b981] font-medium">✓ Seated</div>
       )}
+      <InlineComment dbId={dbId} currentNote={reservation.notes} canEdit={canEdit} compact />
       {confirmDelete && (
         <div className="mt-1.5 flex items-center justify-between gap-1">
           <span className="text-[9px] text-red-600 font-medium">Delete this reservation?</span>
@@ -224,11 +376,7 @@ function MobileReservationListItem({
               <span className="font-medium text-foreground/70">Special Requests: </span>{r.specialRequests}
             </div>
           )}
-          {r.notes && r.notes.trim() && (
-            <div className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground/70">Notes: </span>{r.notes}
-            </div>
-          )}
+          <InlineComment dbId={dbId} currentNote={r.notes} canEdit={canEdit} />
           {canEdit && dbId && (
             <div className="flex items-center justify-end pt-1">
               {confirmDelete ? (
