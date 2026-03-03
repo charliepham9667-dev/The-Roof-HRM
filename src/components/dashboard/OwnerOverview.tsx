@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Loader2, Settings, BarChart3 } from 'lucide-react';
-import { useKPISummary, useSyncStatus } from '../../hooks/useDashboardData';
+import { Loader2, Settings, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useKPISummary, useSyncStatus, MonthParam } from '../../hooks/useDashboardData';
 import { WeeklySalesTrend } from './WeeklySalesTrend';
 import { MonthlyPerformance } from './MonthlyPerformance';
 import { TargetManager } from './TargetManager';
@@ -26,19 +26,60 @@ function formatVND(value: number): string {
   return `${value} đ`;
 }
 
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function MonthPicker({ selected, onChange }: { selected: MonthParam; onChange: (m: MonthParam) => void }) {
+  const now = new Date();
+  const isCurrentMonth = selected.year === now.getFullYear() && selected.month === now.getMonth();
+
+  const prev = () => {
+    if (selected.month === 0) onChange({ year: selected.year - 1, month: 11 });
+    else onChange({ year: selected.year, month: selected.month - 1 });
+  };
+  const next = () => {
+    if (isCurrentMonth) return;
+    if (selected.month === 11) onChange({ year: selected.year + 1, month: 0 });
+    else onChange({ year: selected.year, month: selected.month + 1 });
+  };
+
+  return (
+    <div className="flex items-center gap-1 rounded-lg border border-border bg-card px-1 py-0.5 shadow-sm">
+      <button onClick={prev} className="p-1 rounded hover:bg-muted transition-colors" aria-label="Previous month">
+        <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+      </button>
+      <span className="text-sm font-medium text-foreground min-w-[130px] text-center select-none">
+        {MONTH_NAMES[selected.month]} {selected.year}
+        {isCurrentMonth && <span className="ml-1 text-xs text-primary font-normal">(current)</span>}
+      </span>
+      <button
+        onClick={next}
+        disabled={isCurrentMonth}
+        className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Next month"
+      >
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </button>
+    </div>
+  );
+}
+
 export function OwnerOverview() {
   const [showTargetManager, setShowTargetManager] = useState(false);
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<MonthParam>({
+    year: now.getFullYear(),
+    month: now.getMonth(),
+  });
   
-  const { data: kpi, isLoading, error } = useKPISummary();
+  const { data: kpi, isLoading, error } = useKPISummary(selectedMonth);
   const { data: syncStatus } = useSyncStatus();
 
   const getGreetingMessage = () => {
-    const today = new Date();
-    return today.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    });
+    const isCurrentMonth = selectedMonth.year === now.getFullYear() && selectedMonth.month === now.getMonth();
+    if (isCurrentMonth) {
+      return now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+    return `Viewing ${MONTH_NAMES[selectedMonth.month]} ${selectedMonth.year}`;
   };
 
   const getSyncBadge = (): { variant: 'warning' | 'error' | 'success'; label: string } | null => {
@@ -64,7 +105,10 @@ export function OwnerOverview() {
   };
 
   const syncBadge = getSyncBadge();
-  const kpiTimeframeSubtext = "Month-to-date vs same period last year";
+  const isCurrentMonth = selectedMonth.year === now.getFullYear() && selectedMonth.month === now.getMonth();
+  const kpiTimeframeSubtext = isCurrentMonth
+    ? "Month-to-date vs same period last year"
+    : `${MONTH_NAMES[selectedMonth.month]} ${selectedMonth.year} vs same period last year`;
   const revenueSubtext = kpi?.targetMet.isOnTrack
     ? "On track to hit target"
     : "Needs to increase revenue to hit target";
@@ -72,18 +116,19 @@ export function OwnerOverview() {
   return (
     <div className="flex-1 space-y-4">
       {/* Page header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
           <h1 className="text-[28px] font-bold leading-tight text-foreground">Finance Summary</h1>
           <p className="mt-1 text-sm text-muted-foreground">{getGreetingMessage()}</p>
         </div>
-        {syncBadge && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <MonthPicker selected={selectedMonth} onChange={setSelectedMonth} />
+          {syncBadge && (
             <StatusBadge variant={syncBadge.variant} showIcon>
               {syncBadge.label}
             </StatusBadge>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* KPI row (dashboard-01) */}
@@ -144,7 +189,7 @@ export function OwnerOverview() {
             <DashboardCardTitle className="text-sm font-medium">Executive Summary</DashboardCardTitle>
           </DashboardCardHeader>
           <DashboardCardContent>
-            <EXecutiveSUmmary noContainer />
+            <EXecutiveSUmmary noContainer selectedMonth={selectedMonth} />
           </DashboardCardContent>
         </DashboardCard>
 
@@ -211,12 +256,12 @@ function TargetMetCard({ percentage, isOnTrack, onEdit }: { percentage: number; 
   );
 }
 
-function EXecutiveSUmmary({ noContainer }: { noContainer?: boolean }) {
+function EXecutiveSUmmary({ noContainer, selectedMonth }: { noContainer?: boolean; selectedMonth?: MonthParam }) {
   return (
     <div className={noContainer ? 'space-y-4' : undefined}>
-      <RevenueVelocity noContainer={noContainer} />
+      <RevenueVelocity noContainer={noContainer} selectedMonth={selectedMonth} />
       <Separator />
-      <ExecutiveSummary noContainer={noContainer} />
+      <ExecutiveSummary noContainer={noContainer} selectedMonth={selectedMonth} />
     </div>
   );
 }

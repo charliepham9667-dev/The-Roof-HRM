@@ -82,23 +82,37 @@ export interface RevenueVelocityData {
   avgDailyRevenue: number;
 }
 
-export function useRevenueVelocity() {
+export interface MonthParam { year: number; month: number } // month is 0-indexed
+
+export function useRevenueVelocity(selectedMonth?: MonthParam) {
+  const now = new Date();
+  const viewYear = selectedMonth?.year ?? now.getFullYear();
+  const viewMonth = selectedMonth?.month ?? now.getMonth(); // 0-indexed
+  const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
   return useQuery({
-    queryKey: ['revenue-velocity'],
+    queryKey: ['revenue-velocity', viewYear, viewMonth],
     retry: 1,
     queryFn: async (): Promise<RevenueVelocityData> => {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth();
-      // Revenue is only recognized end-of-day, so we count *completed* days only.
-      // Example: Feb 5 → count through Feb 4 (Day 4 of 28).
-      const calendarDay = now.getDate();
-      const completedDay = Math.max(0, calendarDay - 1);
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+      // For historical months use the full month; for current month exclude today (EOD accounting).
+      let completedDay: number;
+      let calendarDay: number;
+      if (isCurrentMonth) {
+        calendarDay = now.getDate();
+        completedDay = Math.max(0, calendarDay - 1);
+      } else {
+        calendarDay = daysInMonth;
+        completedDay = daysInMonth;
+      }
 
       // Get monthly target
-      const periodStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      const todayISO = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(calendarDay).padStart(2, '0')}`;
+      const periodStart = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-01`;
+      // For historical months, include the full month (use day after last day as exclusive upper bound).
+      const todayISO = isCurrentMonth
+        ? `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(calendarDay).padStart(2, '0')}`
+        : `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(daysInMonth + 1).padStart(2, '0')}`;
+
       const { data: targetData } = await supabase
         .from('targets')
         .select('target_value')
@@ -109,19 +123,18 @@ export function useRevenueVelocity() {
 
       const monthlyTarget = targetData?.target_value || 1200000000; // Default 1.2B
 
-      // Get MTD revenue
+      // Get MTD / full-month revenue
       const { data: metricsData } = await supabase
         .from('daily_metrics')
         .select('date, revenue')
         .gte('date', periodStart)
-        // Exclude today (EOD accounting): only include dates strictly before today.
         .lt('date', todayISO)
         .order('date', { ascending: false });
 
       const mtdRevenue = (metricsData || []).reduce((sum, row) => sum + (row.revenue || 0), 0);
       const daysWithData = (metricsData || []).filter(r => r.revenue > 0).length;
       
-      // Yesterday's revenue (most recent day)
+      // Yesterday's / last day's revenue (most recent day with data)
       const yesterdayRevenue = metricsData && metricsData.length > 0 ? metricsData[0].revenue : 0;
       
       // Average daily revenue
@@ -129,7 +142,7 @@ export function useRevenueVelocity() {
 
       // Calculations
       const goalAchievedPercent = monthlyTarget > 0 ? (mtdRevenue / monthlyTarget) * 100 : 0;
-      const surplus = mtdRevenue - monthlyTarget; // Simple: actual - target
+      const surplus = mtdRevenue - monthlyTarget;
       const projectedMonthEnd = daysWithData > 0 ? (mtdRevenue / daysWithData) * daysInMonth : 0;
       const dailyTargetPace = monthlyTarget / daysInMonth;
 
@@ -137,7 +150,7 @@ export function useRevenueVelocity() {
       const showStretchGoal = goalAchievedPercent >= 100;
       const stretchGoal = monthlyTarget * 1.5;
       const gapToStretch = stretchGoal - mtdRevenue;
-      const remainingDays = daysInMonth - completedDay;
+      const remainingDays = isCurrentMonth ? daysInMonth - completedDay : 0;
       const requiredPaceForStretch = remainingDays > 0 ? gapToStretch / remainingDays : 0;
 
       return {
@@ -324,40 +337,44 @@ export interface KPISummary {
   targetMet: { percentage: number; isOnTrack: boolean };
 }
 
-export function useKPISummary() {
+export function useKPISummary(selectedMonth?: MonthParam) {
+  const now = new Date();
+  const viewYear = selectedMonth?.year ?? now.getFullYear();
+  const viewMonth = selectedMonth?.month ?? now.getMonth(); // 0-indexed
+  const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
+
   return useQuery({
-    queryKey: ['kpi-summary'],
+    queryKey: ['kpi-summary', viewYear, viewMonth],
     retry: 1,
     queryFn: async (): Promise<KPISummary> => {
-      // Get current year
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth();
-      
-      // First, find the latest date with data in current year
-      const { data: latestData } = await supabase
-        .from('daily_metrics')
-        .select('date')
-        .gte('date', `${currentYear}-01-01`)
-        .order('date', { ascending: false })
-        .limit(1)
-        .single();
-      
-      // Use latest data date, or fall back to today
-      // Parse date string directly to avoid timezone issues (date is YYYY-MM-DD format)
-      const endDay = latestData?.date 
-        ? parseInt(latestData.date.split('-')[2], 10)
-        : now.getDate();
-      
-      // Current period: Month start to latest data date (2026)
-      const periodStart2026 = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      const periodEnd2026 = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
-      
-      // Same period last year (2025) - use same day range for fair comparison
-      const periodStart2025 = `${currentYear - 1}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      const periodEnd2025 = `${currentYear - 1}-${String(currentMonth + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
-      // Get current period data (2026)
+      // For current month find latest data date; for historical use full month.
+      let endDay: number;
+      if (isCurrentMonth) {
+        const { data: latestData } = await supabase
+          .from('daily_metrics')
+          .select('date')
+          .gte('date', `${viewYear}-01-01`)
+          .order('date', { ascending: false })
+          .limit(1)
+          .single();
+        endDay = latestData?.date
+          ? parseInt(latestData.date.split('-')[2], 10)
+          : now.getDate();
+      } else {
+        endDay = daysInMonth;
+      }
+
+      // Selected period
+      const periodStart2026 = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-01`;
+      const periodEnd2026 = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+      
+      // Same period one year prior
+      const periodStart2025 = `${viewYear - 1}-${String(viewMonth + 1).padStart(2, '0')}-01`;
+      const periodEnd2025 = `${viewYear - 1}-${String(viewMonth + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+
+      // Get selected period data
       const { data: currentPeriodData, error: currentError } = await supabase
         .from('daily_metrics')
         .select('revenue, pax, avg_spend')
@@ -411,7 +428,7 @@ export function useKPISummary() {
       );
       lastYearPeriod.avgSpend = lastYearPeriod.pax > 0 ? lastYearPeriod.totalSpend / lastYearPeriod.pax : 0;
 
-      const target = targetData?.target_value || 975000000;
+      const target = targetData?.target_value || 1200000000; // Default 1.2B
 
       // Calculate YoY trends (same period comparison)
       const revenueTrend = lastYearPeriod.revenue > 0

@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown, Target, Loader2 } from 'lucide-react';
-import { useRevenueVelocity } from '../../hooks/useDashboardData';
+import { useRevenueVelocity, MonthParam } from '../../hooks/useDashboardData';
 
 // Format VND with commas
 function formatVND(value: number): string {
@@ -12,12 +12,12 @@ function formatM(value: number): string {
 }
 
 export interface RevenueVelocityProps {
-  /** If true, renders content only without card wrapper */
   noContainer?: boolean;
+  selectedMonth?: MonthParam;
 }
 
-export function RevenueVelocity({ noContainer = false }: RevenueVelocityProps) {
-  const { data, isLoading, error } = useRevenueVelocity();
+export function RevenueVelocity({ noContainer = false, selectedMonth }: RevenueVelocityProps) {
+  const { data, isLoading, error } = useRevenueVelocity(selectedMonth);
 
   if (isLoading) {
     if (noContainer) {
@@ -68,11 +68,25 @@ export function RevenueVelocity({ noContainer = false }: RevenueVelocityProps) {
     avgDailyRevenue,
   } = data;
 
-  const isOnTrack = goalAchievedPercent >= (currentDay / daysInMonth) * 100;
+  const now = new Date();
+  const isPast = selectedMonth
+    ? selectedMonth.year < now.getFullYear() || (selectedMonth.year === now.getFullYear() && selectedMonth.month < now.getMonth())
+    : false;
+  const isOnTrack = isPast
+    ? goalAchievedPercent >= 100
+    : goalAchievedPercent >= (currentDay / daysInMonth) * 100;
   const remainingDays = daysInMonth - currentDay;
 
   // Generate dynamic insight
   const generateInsight = () => {
+    if (isPast) {
+      if (goalAchievedPercent >= 100) {
+        return `${showStretchGoal ? `Target cleared and stretch goal reached at ${formatM(mtdRevenue)}.` : `Monthly target achieved with ${formatM(mtdRevenue)} revenue.`} Average daily revenue was ${formatM(avgDailyRevenue)}.`;
+      } else {
+        const shortfall = monthlyTarget - mtdRevenue;
+        return `Finished ${formatM(shortfall)} short of the ${formatM(monthlyTarget)} target. Average daily revenue was ${formatM(avgDailyRevenue)}.`;
+      }
+    }
     if (showStretchGoal) {
       const paceNeeded = formatM(requiredPaceForStretch);
       if (yesterdayRevenue >= requiredPaceForStretch) {
@@ -131,11 +145,15 @@ export function RevenueVelocity({ noContainer = false }: RevenueVelocityProps) {
           </p>
         </div>
 
-        {/* Projected Month End */}
+        {/* Projected Month End / Final Revenue */}
         <div className="bg-background rounded-lg border border-border p-3 md:p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)] min-w-0">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Projected Month End</p>
-          <p className="text-sm md:text-xl font-bold text-foreground break-all">{formatVND(projectedMonthEnd)}</p>
-          <p className="text-xs text-muted-foreground">At current pace</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+            {isPast ? 'Final Revenue' : 'Projected Month End'}
+          </p>
+          <p className="text-sm md:text-xl font-bold text-foreground break-all">
+            {formatVND(isPast ? mtdRevenue : projectedMonthEnd)}
+          </p>
+          {!isPast && <p className="text-xs text-muted-foreground">At current pace</p>}
         </div>
       </div>
 
@@ -166,17 +184,19 @@ export function RevenueVelocity({ noContainer = false }: RevenueVelocityProps) {
           <span className="text-foreground font-medium">{formatM(dailyTargetPace)}</span>
         </div>
         <div>
-          <span className="text-muted-foreground">Your Average: </span>
+          <span className="text-muted-foreground">{isPast ? 'Daily Average: ' : 'Your Average: '}</span>
           <span className={`font-medium ${avgDailyRevenue >= dailyTargetPace ? 'text-success' : 'text-error'}`}>
             {formatM(avgDailyRevenue)}
           </span>
         </div>
-        <div>
-          <span className="text-muted-foreground">Yesterday: </span>
-          <span className={`font-medium ${yesterdayRevenue >= dailyTargetPace ? 'text-success' : 'text-warning'}`}>
-            {formatM(yesterdayRevenue)}
-          </span>
-        </div>
+        {!isPast && (
+          <div>
+            <span className="text-muted-foreground">Yesterday: </span>
+            <span className={`font-medium ${yesterdayRevenue >= dailyTargetPace ? 'text-success' : 'text-warning'}`}>
+              {formatM(yesterdayRevenue)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Velocity Insight */}

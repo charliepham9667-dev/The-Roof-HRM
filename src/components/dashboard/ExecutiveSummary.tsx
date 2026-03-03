@@ -1,6 +1,5 @@
 import { Building2, Loader2 } from 'lucide-react';
-import { useRevenueVelocity } from '../../hooks/useDashboardData';
-import { useKPISummary } from '../../hooks/useDashboardData';
+import { useRevenueVelocity, useKPISummary, MonthParam } from '../../hooks/useDashboardData';
 
 // Format VND with commas
 function formatVND(value: number): string {
@@ -13,13 +12,13 @@ function formatM(value: number): string {
 }
 
 export interface ExecutiveSummaryProps {
-  /** If true, renders content only without card wrapper */
   noContainer?: boolean;
+  selectedMonth?: MonthParam;
 }
 
-export function ExecutiveSummary({ noContainer = false }: ExecutiveSummaryProps) {
-  const { data: velocity, isLoading: velocityLoading } = useRevenueVelocity();
-  const { data: kpi, isLoading: kpiLoading } = useKPISummary();
+export function ExecutiveSummary({ noContainer = false, selectedMonth }: ExecutiveSummaryProps) {
+  const { data: velocity, isLoading: velocityLoading } = useRevenueVelocity(selectedMonth);
+  const { data: kpi, isLoading: kpiLoading } = useKPISummary(selectedMonth);
 
   const isLoading = velocityLoading || kpiLoading;
 
@@ -69,6 +68,10 @@ export function ExecutiveSummary({ noContainer = false }: ExecutiveSummaryProps)
     yesterdayRevenue,
   } = velocity;
 
+  const now = new Date();
+  const isPast = selectedMonth
+    ? selectedMonth.year < now.getFullYear() || (selectedMonth.year === now.getFullYear() && selectedMonth.month < now.getMonth())
+    : false;
   const remainingDays = daysInMonth - currentDay;
   const paxValue = kpi.pax.value;
   const paxTrend = kpi.pax.trend;
@@ -83,6 +86,14 @@ export function ExecutiveSummary({ noContainer = false }: ExecutiveSummaryProps)
 
   // Generate strategic headline
   const generateHeadline = () => {
+    if (isPast) {
+      if (targetCleared) {
+        return `Strong month — ${formatM(mtdRevenue)} revenue achieved against a ${formatM(monthlyTarget)} target${showStretchGoal ? `, reaching the ${formatM(stretchGoal)} stretch goal` : ''}.`;
+      } else {
+        const gap = monthlyTarget - mtdRevenue;
+        return `Finished ${formatM(gap)} short of the ${formatM(monthlyTarget)} monthly target with ${formatM(mtdRevenue)} in final revenue.`;
+      }
+    }
     if (targetCleared) {
       if (yesterdayBelowAvg) {
         return `We have cleared the ${formatM(monthlyTarget)} monthly target with ${formatM(mtdRevenue)} secured. However, momentum slowed yesterday, widening the gap to the ${formatM(stretchGoal)} stretch goal.`;
@@ -97,6 +108,10 @@ export function ExecutiveSummary({ noContainer = false }: ExecutiveSummaryProps)
 
   // Generate forecast text
   const generateForecast = () => {
+    if (isPast) {
+      const achievedPct = monthlyTarget > 0 ? ((mtdRevenue / monthlyTarget) * 100).toFixed(1) : '0.0';
+      return `Final result: ${formatM(mtdRevenue)} revenue (${achievedPct}% of target). Daily average was ${formatM(avgDailyRevenue)} across the month.`;
+    }
     if (showStretchGoal) {
       return `At our current daily average (${formatM(avgDailyRevenue)}), we are projected to land at ${formatM(projectedMonthEnd)}. To hit ${formatM(stretchGoal)}, we must average ${formatM(requiredPaceForStretch)}/day for the final ${remainingDays} days.`;
     } else {
