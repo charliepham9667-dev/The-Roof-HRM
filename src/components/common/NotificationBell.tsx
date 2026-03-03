@@ -29,7 +29,7 @@ const typeConfig: Record<NotificationType, { label: string; color: string }> = {
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const [testPushState, setTestPushState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
+  const [testPushState, setTestPushState] = useState<'idle' | 'sending' | 'ok' | 'error' | 'no_devices'>('idle');
   const { data: count = 0 } = useUnreadNotificationCount();
   const { data: notifications, isLoading } = useNotifications(10);
   const markRead = useMarkNotificationRead();
@@ -41,7 +41,7 @@ export function NotificationBell() {
     if (!profile?.id) return;
     setTestPushState('sending');
     try {
-      const { error } = await supabase.functions.invoke('send-push', {
+      const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
           user_ids: [profile.id],
           title: '🔔 Test Notification',
@@ -49,11 +49,17 @@ export function NotificationBell() {
           url: '/',
         },
       });
-      setTestPushState(error ? 'error' : 'ok');
+      if (error) {
+        setTestPushState('error');
+      } else if (data?.sent === 0) {
+        setTestPushState('no_devices');
+      } else {
+        setTestPushState('ok');
+      }
     } catch {
       setTestPushState('error');
     } finally {
-      setTimeout(() => setTestPushState('idle'), 4000);
+      setTimeout(() => setTestPushState('idle'), 6000);
     }
   };
 
@@ -176,6 +182,11 @@ export function NotificationBell() {
                   {pushError && (
                     <p className="text-[11px] text-destructive">{pushError}</p>
                   )}
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {isSubscribed
+                      ? 'Pop-up notifications enabled on this device.'
+                      : 'Enable below to get pop-up notifications when you\'re not in the app.'}
+                  </p>
                   <button
                     onClick={isSubscribed ? unsubscribe : subscribe}
                     disabled={pushLoading}
@@ -188,7 +199,7 @@ export function NotificationBell() {
                     ) : (
                       <BellRing className="h-3.5 w-3.5 text-primary" />
                     )}
-                    {isSubscribed ? 'Disable phone notifications' : 'Enable phone notifications'}
+                    {isSubscribed ? 'Disable pop-up notifications' : 'Enable pop-up notifications'}
                   </button>
 
                   {/* Test push button — only visible when subscribed */}
@@ -204,8 +215,9 @@ export function NotificationBell() {
                         <Send className="h-3.5 w-3.5" />
                       )}
                       {testPushState === 'sending' && 'Sending…'}
-                      {testPushState === 'ok' && '✓ Notification sent to your phone!'}
-                      {testPushState === 'error' && '✗ Failed — check console'}
+                      {testPushState === 'ok' && '✓ Sent — check your device!'}
+                      {testPushState === 'no_devices' && 'No devices — tap Enable above, or Disable then Enable'}
+                      {testPushState === 'error' && '✗ Failed'}
                       {testPushState === 'idle' && 'Send test notification'}
                     </button>
                   )}

@@ -21,13 +21,13 @@ export function PushDiagnostics() {
     hasPushApis,
     vapidKeyError,
   } = usePushSubscription();
-  const [testState, setTestState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
+  const [testState, setTestState] = useState<'idle' | 'sending' | 'ok' | 'error' | 'no_devices'>('idle');
 
   const handleTest = async () => {
     if (!profile?.id || !isSubscribed) return;
     setTestState('sending');
     try {
-      const { error: pushErr } = await supabase.functions.invoke('send-push', {
+      const { data, error: pushErr } = await supabase.functions.invoke('send-push', {
         body: {
           user_ids: [profile.id],
           title: 'Test Notification',
@@ -35,11 +35,13 @@ export function PushDiagnostics() {
           url: '/',
         },
       });
-      setTestState(pushErr ? 'error' : 'ok');
+      if (pushErr) setTestState('error');
+      else if (data?.sent === 0) setTestState('no_devices');
+      else setTestState('ok');
     } catch {
       setTestState('error');
     } finally {
-      setTimeout(() => setTestState('idle'), 5000);
+      setTimeout(() => setTestState('idle'), 6000);
     }
   };
 
@@ -49,6 +51,9 @@ export function PushDiagnostics() {
         <Bell className="h-5 w-5 text-primary" />
         Push notification diagnostics
       </h3>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Pop-up notifications (lock screen, banner) require enabling on each device. In-app notifications always show in the bell.
+      </p>
 
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between gap-4">
@@ -119,6 +124,7 @@ export function PushDiagnostics() {
                 )}
                 {testState === 'sending' && 'Sending…'}
                 {testState === 'ok' && '✓ Sent'}
+                {testState === 'no_devices' && 'No devices — re-enable above'}
                 {testState === 'error' && '✗ Failed'}
                 {testState === 'idle' && 'Send test'}
               </button>
