@@ -3,6 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { Loader2 } from 'lucide-react';
 
+// Radix UI Dialogs/Sheets set pointer-events:none and overflow:hidden on
+// the body when open. If the user navigates to /login while a modal was
+// open (e.g. session expired mid-flow), Radix cleanup never fires and
+// the login inputs are completely unresponsive. Nuke all of it on mount.
+function useResetBodyStyles() {
+  useEffect(() => {
+    const b = document.body;
+    const h = document.documentElement;
+
+    // Clear Radix scroll-lock attribute
+    b.removeAttribute('data-scroll-locked');
+    // Clear any pointer-events block (Radix Dialog sets this)
+    b.style.removeProperty('pointer-events');
+    // Clear overflow locks
+    b.style.removeProperty('overflow');
+    b.style.removeProperty('overflowY');
+    b.style.removeProperty('height');
+    b.style.removeProperty('position');
+    b.style.removeProperty('top');
+    b.style.removeProperty('paddingRight');
+    h.style.removeProperty('overflow');
+    h.style.removeProperty('height');
+  }, []);
+}
+
 // iOS PWA standalone mode has a WebKit bug where inputs inside
 // positioned/shadowed containers don't receive focus on tap.
 // The only reliable fix is to call .focus() programmatically on touchend.
@@ -34,6 +59,7 @@ export function Login() {
   const fullNameRef = useRef<HTMLInputElement>(null);
 
   const handleTouchEnd = usePWAInputFix();
+  useResetBodyStyles();
 
   useEffect(() => {
     if (user && profile) {

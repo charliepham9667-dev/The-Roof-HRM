@@ -269,10 +269,11 @@ function MoreDrawer({
   const navigate = useNavigate()
   const sections = DRAWER_CONFIG[navRole] ?? []
 
-  // Close on back-navigation (Android back button / swipe)
+  // Lock body scroll while drawer is open; always restore on unmount
   useEffect(() => {
+    const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
+    return () => { document.body.style.overflow = prev }
   }, [])
 
   function go(url: string) {
