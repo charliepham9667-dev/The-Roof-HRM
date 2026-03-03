@@ -268,23 +268,23 @@ export function VenueManager() {
   }, [tables])
 
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0">
+    <div className="flex flex-col h-full min-h-0">
       {/* ── Page header ── */}
-      <div className="shrink-0">
+      <div className="shrink-0 pb-2">
         {/* Row 1: title + view toggle */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-[28px] font-bold leading-tight text-foreground">Venue Manager</h1>
-            <p className="mt-1 text-sm text-muted-foreground">The Roof · 3F</p>
+            <h1 className="text-xl md:text-[28px] font-bold leading-tight text-foreground">Venue Manager</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">The Roof · 3F</p>
           </div>
 
-          {/* View toggle — moved here from underline tabs */}
-          <div className="flex items-center gap-1 mt-1 shrink-0">
+          {/* View toggle */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => { setActiveTab("floor"); setEditMode(false) }}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors border",
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors border",
                 activeTab === "floor"
                   ? "border-[#78350F]/30 bg-[#78350F]/10 text-[#78350F]"
                   : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary",
@@ -303,7 +303,7 @@ export function VenueManager() {
               type="button"
               onClick={() => { setActiveTab("calendar"); setEditMode(false) }}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors border",
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors border",
                 activeTab === "calendar"
                   ? "border-[#78350F]/30 bg-[#78350F]/10 text-[#78350F]"
                   : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary",
@@ -318,15 +318,14 @@ export function VenueManager() {
           </div>
         </div>
 
-        {/* Row 2: controls toolbar — wraps on mobile */}
-        <div className="flex flex-wrap items-center gap-2 mt-2">
+        {/* Row 2: controls toolbar — hidden on mobile for floor tab (desktop-only controls) */}
+        <div className="hidden md:flex flex-wrap items-center gap-2 mt-2">
           {activeTab === "floor" && !editMode && <Legend />}
 
           {savedNotice && (
             <span className="text-xs font-medium text-green-600 animate-pulse">Layout saved!</span>
           )}
 
-          {/* Table size slider — floor plan only */}
           {activeTab === "floor" && (
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-muted-foreground whitespace-nowrap">Table size</span>
@@ -392,14 +391,6 @@ export function VenueManager() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        {/* Mobile banner — floor plan only visible on md+ */}
-        {activeTab === "floor" && (
-          <div className="md:hidden flex items-center gap-2 rounded-lg border border-info/20 bg-info/8 px-4 py-2.5 text-sm text-info shrink-0">
-            <span>🖥</span>
-            <span>Floor plan available on tablet and desktop</span>
-          </div>
-        )}
-
         <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
 
           {/* Left panel — full width on mobile, sidebar on desktop */}
@@ -407,7 +398,7 @@ export function VenueManager() {
             <div className={cn(
               activeTab === "floor" ? "w-full md:w-auto" : "hidden",
               activeTab === "calendar" && "hidden",
-              "block"
+              "flex flex-col min-h-0 flex-1 md:flex-none overflow-hidden"
             )}>
               <ReservationPanel
                 totalFree={Math.max(0, totalFree)}

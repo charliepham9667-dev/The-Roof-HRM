@@ -363,13 +363,13 @@ export function ReservationPanel({
       </div>
 
       {/* ── MOBILE full-width list (< md) ── */}
-      <div className="flex flex-col gap-3 md:hidden">
-        {/* Stats row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-border bg-card p-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <span className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
-              <span className="text-[10px] tracking-widest font-semibold text-muted-foreground uppercase">Live Status</span>
+      <div className="flex flex-col min-h-0 flex-1 gap-2.5 md:hidden overflow-hidden">
+        {/* Stats row — compact, fixed height */}
+        <div className="grid grid-cols-2 gap-2.5 shrink-0">
+          <div className="rounded-xl border border-border bg-card px-3 py-2.5">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#10b981] animate-pulse" />
+              <span className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase">Live Status</span>
             </div>
             <div className="grid grid-cols-3 gap-1 text-center">
               {[
@@ -384,17 +384,17 @@ export function ReservationPanel({
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-border bg-card p-3 flex flex-col justify-between">
-            <div className="text-[10px] tracking-widest font-semibold text-muted-foreground uppercase mb-1">Tonight</div>
-            <div className="text-xl font-bold text-foreground">{confirmedPax}</div>
-            <div className="text-[10px] text-muted-foreground">confirmed pax</div>
+          <div className="rounded-xl border border-border bg-card px-3 py-2.5 flex flex-col justify-between">
+            <div className="text-[9px] tracking-widest font-semibold text-muted-foreground uppercase">Tonight</div>
+            <div className="text-xl font-bold text-foreground leading-none mt-1">{confirmedPax}</div>
+            <div className="text-[9px] text-muted-foreground mt-0.5">confirmed pax</div>
           </div>
         </div>
 
-        {/* Incoming reservations — grouped list */}
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        {/* Reservations list — fills remaining height and scrolls */}
+        <div className="rounded-xl border border-border bg-card flex flex-col min-h-0 flex-1 overflow-hidden">
+          {/* Header — sticky */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
             <div>
               <div className="text-xs font-semibold text-foreground uppercase tracking-widest">Today's Reservations</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">{dateStr} · {sorted.length} bookings · {totalPax} guests</div>
@@ -411,20 +411,20 @@ export function ReservationPanel({
             )}
           </div>
 
-          {/* List */}
+          {/* Scrollable list */}
           {sorted.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">
+            <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground text-sm">
               No reservations today
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border overflow-y-auto flex-1">
               {sorted.map((r, idx) => (
                 <MobileReservationListItem
                   key={`mob-${r.name}-${r.time}-${idx}`}
                   reservation={r}
                   isAllocated={allocatedIds.has(`res-${r.name}-${r.time}`)}
                   canEdit={canEdit}
-                  onDelete={async () => {}} // delete handled inside card
+                  onDelete={async () => {}}
                 />
               ))}
             </div>
