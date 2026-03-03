@@ -6,8 +6,15 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
-    <link rel="manifest" href="/icons/site.webmanifest" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Use vite-plugin-pwa generated manifest (not the old static one) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS PWA: standalone mode, status bar, splash screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="The Roof" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- viewport-fit=cover for notch; interactive-widget keeps inputs visible when keyboard opens -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
     <title>The Roof HRM</title>
   </head>
   <body>

@@ -121,6 +121,26 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Prevent iOS PWA from blocking scroll/tap on the body */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* iOS PWA: ensure inputs are always tappable and focusable */
+  input, textarea, select, button {
+    -webkit-tap-highlight-color: transparent;
+    /* Never disable touch-action on interactive elements */
+    touch-action: manipulation;
+  }
+
+  /* iOS standalone mode: prevent the body from being the scroll target
+     which can swallow tap events on deeply nested form elements */
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    height: 100%;
+    overflow-y: auto;
   }
 }
 

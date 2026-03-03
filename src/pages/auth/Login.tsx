@@ -49,7 +49,10 @@ export function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div
+      className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-8"
+      style={{ WebkitOverflowScrolling: 'touch', overflowY: 'auto' }}
+    >
       <Card className="w-full max-w-md space-y-6 p-8">
         <div className="space-y-1 text-center">
           <h1 className="font-serif text-xl font-semibold text-foreground">
@@ -74,6 +77,7 @@ export function Login() {
                 id="fullName"
                 type="text"
                 required
+                autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Charlie Pham"
@@ -87,6 +91,8 @@ export function Login() {
               id="email"
               type="email"
               required
+              autoComplete="email"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@venuegroup.com"
@@ -99,6 +105,7 @@ export function Login() {
               id="password"
               type="password"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
