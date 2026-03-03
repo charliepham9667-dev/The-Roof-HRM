@@ -1,9 +1,8 @@
 /// <reference lib="webworker" />
 import { clientsClaim } from 'workbox-core';
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
+import { registerRoute, NavigationRoute } from 'workbox-routing';
 import { NetworkFirst, NetworkOnly } from 'workbox-strategies';
-import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 declare const self: ServiceWorkerGlobalScope;
@@ -14,34 +13,25 @@ clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-// Auth, realtime, storage, and Edge Functions MUST always go to network.
-// Caching these causes login loops and stale 401s on iOS PWA.
+// Navigation requests (HTML page loads): always serve index.html from
+// the precache but use NetworkFirst so a fresh copy is attempted first.
+// This prevents stale HTML referencing old JS hashes after a deployment.
 registerRoute(
-  ({ url }) =>
-    url.hostname.includes('.supabase.co') && (
-      url.pathname.startsWith('/auth/') ||
-      url.pathname.startsWith('/realtime/') ||
-      url.pathname.startsWith('/storage/') ||
-      url.pathname.startsWith('/functions/') ||
-      url.searchParams.has('apikey')
-    ),
-  new NetworkOnly()
+  new NavigationRoute(
+    new NetworkFirst({
+      cacheName: 'navigation',
+      networkTimeoutSeconds: 3,
+      plugins: [new CacheableResponsePlugin({ statuses: [0, 200] })],
+    })
+  )
 );
 
-// Runtime cache for Supabase REST API (Network First, 24h)
-// Auth endpoints above are excluded, so only data queries are cached.
+// ALL Supabase traffic goes to network only — no caching whatsoever.
+// This is the safest approach: avoids stale auth tokens, 401 loops,
+// and broken sessions in iOS PWA standalone mode.
 registerRoute(
-  ({ url }) =>
-    url.hostname.includes('.supabase.co') &&
-    url.pathname.startsWith('/rest/v1/') &&
-    !url.pathname.startsWith('/rest/v1/profiles'),
-  new NetworkFirst({
-    cacheName: 'supabase-api',
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 }),
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
-    ],
-  })
+  ({ url }) => url.hostname.includes('.supabase.co'),
+  new NetworkOnly()
 );
 
 // ── Web Push ──────────────────────────────────────────────────────────────────
