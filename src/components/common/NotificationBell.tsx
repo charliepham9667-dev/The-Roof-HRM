@@ -169,47 +169,60 @@ export function NotificationBell() {
               )}
             </div>
 
-            {/* Push notification opt-in/out */}
-            {isSupported && (
-              <div className="px-4 py-2.5 border-t border-border bg-muted/30 space-y-2">
-                {pushError && (
-                  <p className="text-[11px] text-destructive">{pushError}</p>
-                )}
-                <button
-                  onClick={isSubscribed ? unsubscribe : subscribe}
-                  disabled={pushLoading}
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                >
-                  {pushLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : isSubscribed ? (
-                    <BellOff className="h-3.5 w-3.5" />
-                  ) : (
-                    <BellRing className="h-3.5 w-3.5 text-primary" />
+            {/* Push notification opt-in/out — always shown */}
+            <div className="px-4 py-2.5 border-t border-border bg-muted/30 space-y-2">
+              {isSupported ? (
+                <>
+                  {pushError && (
+                    <p className="text-[11px] text-destructive">{pushError}</p>
                   )}
-                  {isSubscribed ? 'Disable phone notifications' : 'Enable phone notifications'}
-                </button>
-
-                {/* Test push button — only visible when subscribed */}
-                {isSubscribed && (
                   <button
-                    onClick={handleTestPush}
-                    disabled={testPushState === 'sending'}
-                    className="flex items-center gap-2 text-xs transition-colors disabled:opacity-50 text-primary hover:text-primary/80"
+                    onClick={isSubscribed ? unsubscribe : subscribe}
+                    disabled={pushLoading}
+                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                   >
-                    {testPushState === 'sending' ? (
+                    {pushLoading ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : isSubscribed ? (
+                      <BellOff className="h-3.5 w-3.5" />
                     ) : (
-                      <Send className="h-3.5 w-3.5" />
+                      <BellRing className="h-3.5 w-3.5 text-primary" />
                     )}
-                    {testPushState === 'sending' && 'Sending…'}
-                    {testPushState === 'ok' && '✓ Notification sent to your phone!'}
-                    {testPushState === 'error' && '✗ Failed — check console'}
-                    {testPushState === 'idle' && 'Send test notification'}
+                    {isSubscribed ? 'Disable phone notifications' : 'Enable phone notifications'}
                   </button>
-                )}
-              </div>
-            )}
+
+                  {/* Test push button — only visible when subscribed */}
+                  {isSubscribed && (
+                    <button
+                      onClick={handleTestPush}
+                      disabled={testPushState === 'sending'}
+                      className="flex items-center gap-2 text-xs transition-colors disabled:opacity-50 text-primary hover:text-primary/80"
+                    >
+                      {testPushState === 'sending' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
+                      {testPushState === 'sending' && 'Sending…'}
+                      {testPushState === 'ok' && '✓ Notification sent to your phone!'}
+                      {testPushState === 'error' && '✗ Failed — check console'}
+                      {testPushState === 'idle' && 'Send test notification'}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <BellRing className="h-3.5 w-3.5 shrink-0" />
+                    <span>Phone notifications</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+                    To receive push notifications, open this app in Safari and tap{' '}
+                    <strong>Share → Add to Home Screen</strong>, then reopen it from your home screen.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Footer */}
             <div className="px-4 py-3 border-t border-border">
