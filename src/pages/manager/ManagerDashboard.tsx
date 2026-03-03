@@ -911,7 +911,7 @@ export function ManagerDashboard() {
               <div className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">Team on Shift Today</div>
               {todayShifts.length > 0 && (
                 <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                  {todayShifts.length} members
+                  {new Set(todayShifts.map((s: any) => s.staffId)).size} members
                 </span>
               )}
             </div>
@@ -927,7 +927,18 @@ export function ManagerDashboard() {
                     accountant: { accent: '#5C4080', badgeBg: '#F0EAFA' },
                     other:      { accent: '#6B7280', badgeBg: '#F3F4F6' },
                   }
-                  const grouped = todayShifts.reduce<Record<string, typeof todayShifts>>((acc, s) => {
+                  // Deduplicate by staffId — keep earliest start time per person
+                  const seenStaffMgr = new Set<string>()
+                  const dedupedShiftsMgr = todayShifts
+                    .slice()
+                    .sort((a, b) => ((a as any).startTime || '').localeCompare((b as any).startTime || ''))
+                    .filter((s) => {
+                      const id = (s as any).staffId
+                      if (seenStaffMgr.has(id)) return false
+                      seenStaffMgr.add(id)
+                      return true
+                    })
+                  const grouped = dedupedShiftsMgr.reduce<Record<string, typeof todayShifts>>((acc, s) => {
                     const dept = ((s as any).department || 'other').toLowerCase()
                     ;(acc[dept] = acc[dept] || []).push(s)
                     return acc
@@ -982,7 +993,7 @@ export function ManagerDashboard() {
               >
                 <div>
                   <div className="text-[11px] font-semibold text-foreground">View full roster</div>
-                  <div className="text-[10px] text-muted-foreground">See all {todayShifts.length} members scheduled today</div>
+                  <div className="text-[10px] text-muted-foreground">See all {new Set(todayShifts.map((s: any) => s.staffId)).size} members scheduled today</div>
                 </div>
                 <span className="text-[10px] font-bold text-muted-foreground">—</span>
               </button>

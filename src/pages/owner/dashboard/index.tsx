@@ -739,7 +739,7 @@ export default function OwnerDashboardPage() {
               <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Team on Shift Today</div>
               {todayShifts.length > 0 && (
                 <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
-                  {todayShifts.length} members
+                  {new Set(todayShifts.map((s) => s.staffId)).size} members
                 </span>
               )}
             </div>
@@ -755,7 +755,17 @@ export default function OwnerDashboardPage() {
                   accountant: { accent: '#5C4080', badgeBg: '#F0EAFA' },
                   other:      { accent: '#6B7280', badgeBg: '#F3F4F6' },
                 }
-                const grouped = todayShifts.reduce<Record<string, typeof todayShifts>>((acc, s) => {
+                // Deduplicate by staffId — keep the shift with the earliest start time per person
+                const seenStaff = new Set<string>()
+                const dedupedShifts = todayShifts
+                  .slice()
+                  .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+                  .filter((s) => {
+                    if (seenStaff.has(s.staffId)) return false
+                    seenStaff.add(s.staffId)
+                    return true
+                  })
+                const grouped = dedupedShifts.reduce<Record<string, typeof todayShifts>>((acc, s) => {
                   const dept = ((s as any).department || 'other').toLowerCase()
                   ;(acc[dept] = acc[dept] || []).push(s)
                   return acc
@@ -814,7 +824,7 @@ export default function OwnerDashboardPage() {
               >
                 <div>
                   <div className="text-sm font-semibold text-foreground">View full roster</div>
-                  <div className="text-xs text-muted-foreground">See all {todayShifts.length} members scheduled today</div>
+                  <div className="text-xs text-muted-foreground">See all {new Set(todayShifts.map((s) => s.staffId)).size} members scheduled today</div>
                 </div>
                 <span className="text-xs text-muted-foreground">—</span>
               </button>
