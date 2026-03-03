@@ -25,6 +25,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   retryProfile: () => Promise<void>;
+  retryAuth: () => Promise<void>;
   initialize: () => Promise<void>;
   clearError: () => void;
   
@@ -41,6 +42,16 @@ interface AuthState {
 // Flag to prevent multiple initializations
 let isInitializing = false;
 let authListenerSet = false;
+
+/** Reject if promise doesn't resolve within ms — prevents infinite loading when Supabase/network hangs */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms — try refreshing`)), ms),
+    ),
+  ]);
+}
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -59,6 +70,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return;
     set({ error: null, isLoading: true });
     await get().fetchProfile();
+  },
+
+  retryAuth: async () => {
+    set({ error: null });
+    isInitializing = false;
+    set({ initialized: false });
+    await get().initialize();
   },
 
   // Get effective profile (with viewAs override for UI preview)
@@ -104,14 +122,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (isInitializing || get().initialized) {
       return;
     }
-    
     isInitializing = true;
     set({ isLoading: true, error: null });
 
     try {
-      // Get current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      // Get current session (15s timeout — prevents infinite loading if Supabase/network hangs)
+      const { data: { session }, error: sessionError } = await withTimeout(
+        supabase.auth.getSession(),
+        15_000,
+        'getSession',
+      );
+
       if (sessionError) {
         console.error('Session error:', sessionError);
         set({ error: sessionError.message });
@@ -153,11 +174,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const { data, error } = await withTimeout(
+        supabase.from('profiles').select('*').eq('id', user.id).single() as unknown as Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }>,
+        15_000,
+        'fetchProfile',
+      );
 
       if (error) {
         console.error('Fetch profile error:', error);
@@ -176,23 +197,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       if (data) {
+        const row = data as Record<string, unknown>;
         const profile: Profile = {
-          id: data.id,
-          email: data.email,
-          fullName: data.full_name,
-          role: data.role as UserRole,
-          managerType: data.manager_type,
-          avatarUrl: data.avatar_url,
-          phone: data.phone,
-          hireDate: data.hire_date,
-          isActive: data.is_active ?? true,
-          status: (data.status as import('@/types').ProfileStatus) ?? 'active',
-          employmentType: data.employment_type ?? 'full_time',
-          annualLeaveDays: data.annual_leave_days ?? 12,
-          leaveDaysUsed: data.leave_days_used ?? 0,
-          targetHoursWeek: data.target_hours_week ?? 40,
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
+          id: row.id as string,
+          email: row.email as string,
+          fullName: row.full_name as string,
+          role: row.role as UserRole,
+          managerType: row.manager_type as ManagerType | undefined,
+          avatarUrl: row.avatar_url as string | undefined,
+          phone: row.phone as string | undefined,
+          hireDate: row.hire_date as string | undefined,
+          isActive: (row.is_active as boolean) ?? true,
+          status: (row.status as import('@/types').ProfileStatus) ?? 'active',
+          employmentType: (row.employment_type as import('@/types').EmploymentType) ?? 'full_time',
+          annualLeaveDays: (row.annual_leave_days as number) ?? 12,
+          leaveDaysUsed: (row.leave_days_used as number) ?? 0,
+          targetHoursWeek: (row.target_hours_week as number) ?? 40,
+          createdAt: row.created_at as string,
+          updatedAt: row.updated_at as string | undefined,
         };
         set({ profile, error: null, isLoading: false });
       }

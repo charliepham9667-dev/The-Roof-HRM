@@ -406,6 +406,15 @@ export function ScheduleBuilder() {
           created_at: new Date().toISOString(),
         }))
         await supabase.from("notifications").insert(notifications as any)
+        // Web Push to subscribed devices
+        supabase.functions.invoke("send-push", {
+          body: {
+            user_ids: employeeIds,
+            title: "Schedule published",
+            body: `Your schedule for ${weekLabel} has been published`,
+            url: "/staff/my-shifts",
+          },
+        }).catch((err) => console.warn("[ScheduleBuilder] push failed:", err))
       }
 
       toast.success(`Schedule published for ${employeeIds.length} employee${employeeIds.length === 1 ? "" : "s"}`)

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { ChevronRight, FileText, RefreshCw, Shield, Users } from "lucide-react"
 
 import { PageHeader } from "@/components/ui"
+import { PushDiagnostics } from "@/components/settings/PushDiagnostics"
 
 const settingsItems = [
   {
@@ -55,6 +56,11 @@ export default function Settings() {
           </button>
         ))}
       </div>
+
+      <section className="pt-4">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Push notifications</h2>
+        <PushDiagnostics />
+      </section>
     </div>
   )
 }

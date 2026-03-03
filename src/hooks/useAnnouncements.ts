@@ -187,6 +187,16 @@ export function useCreateAnnouncement() {
               relatedId: announcement.id,
             }))
           );
+          // Web Push to subscribed devices
+          const recipientIds = recipients.map((r: any) => r.id);
+          supabase.functions.invoke('send-push', {
+            body: {
+              user_ids: recipientIds,
+              title: announcement.title,
+              body: (announcement.body ?? '').slice(0, 100) || undefined,
+              url: '/announcements',
+            },
+          }).catch((err) => console.warn('[useCreateAnnouncement] push failed:', err));
         }
       } catch {
         // notifications are best-effort

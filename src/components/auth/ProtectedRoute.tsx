@@ -14,6 +14,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
   const error = useAuthStore((s) => s.error);
   const initialize = useAuthStore((s) => s.initialize);
+  const retryAuth = useAuthStore((s) => s.retryAuth);
   const location = useLocation();
 
   useEffect(() => {
@@ -47,6 +48,24 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
+    // Auth init failed (e.g. timeout) — show retry instead of redirect
+    if (error) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background p-4">
+          <div className="flex max-w-sm flex-col items-center gap-4 text-center">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button
+              variant="outline"
+              disabled={isLoading}
+              onClick={() => retryAuth()}
+            >
+              {isLoading ? 'Retrying…' : 'Try again'}
+            </Button>
+            <p className="text-xs text-muted-foreground/50">The Roof Workspace</p>
+          </div>
+        </div>
+      );
+    }
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 

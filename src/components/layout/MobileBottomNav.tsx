@@ -19,6 +19,7 @@ import {
   Building2,
   Users,
   TrendingUp,
+  Settings,
   LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -141,6 +142,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       label: 'Company',
       items: [
         { title: 'Company Profile',      url: '/owner/company',          icon: Building2 },
+        { title: 'Settings',             url: '/settings',               icon: Settings },
       ],
     },
   ],

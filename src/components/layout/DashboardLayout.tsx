@@ -7,6 +7,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { RoleSidebar07 } from './RoleSidebar07';
 import { MobileBottomNav } from './MobileBottomNav';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
+import { PushPromptBanner } from '@/components/common/PushPromptBanner';
 import { useAuthStore } from '@/stores/authStore';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -82,6 +83,7 @@ export function DashboardLayout() {
       <SidebarInset className="min-w-0 overflow-x-hidden">
         <OfflineBanner />
         <Header />
+        <PushPromptBanner />
         <ViewAsPreviewBanner />
         <main className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6 pb-20 md:pb-6">
           <ErrorBoundary>

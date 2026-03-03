@@ -383,6 +383,15 @@ export function useCreateDelegationTask() {
           relatedType: 'task',
           relatedId: task.id,
         }]);
+        // Web Push to assigned user
+        supabase.functions.invoke('send-push', {
+          body: {
+            user_ids: [task.assigned_to],
+            title: `New task: ${task.title}`,
+            body: task.description?.slice(0, 100) || undefined,
+            url: '/manager/tasks',
+          },
+        }).catch((err) => console.warn('[useCreateDelegationTask] push failed:', err));
       }
     },
   });

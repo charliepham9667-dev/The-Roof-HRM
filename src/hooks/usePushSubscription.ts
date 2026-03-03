@@ -21,12 +21,13 @@ export function usePushSubscription() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isSupported =
+  const hasVapidKey = !!VAPID_PUBLIC_KEY;
+  const hasPushApis =
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
     'PushManager' in window &&
-    'Notification' in window &&
-    !!VAPID_PUBLIC_KEY;
+    'Notification' in window;
+  const isSupported = hasVapidKey && hasPushApis;
 
   // Check current subscription state on mount
   useEffect(() => {
@@ -96,5 +97,14 @@ export function usePushSubscription() {
     }
   }, [isSupported, profile?.id]);
 
-  return { isSupported, isSubscribed, isLoading, error, subscribe, unsubscribe };
+  return {
+    isSupported,
+    isSubscribed,
+    isLoading,
+    error,
+    subscribe,
+    unsubscribe,
+    hasVapidKey,
+    hasPushApis,
+  };
 }
