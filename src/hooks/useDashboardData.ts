@@ -107,7 +107,7 @@ export function useRevenueVelocity() {
         .eq('period_start', periodStart)
         .single();
 
-      const monthlyTarget = targetData?.target_value || 750000000; // Default 750M
+      const monthlyTarget = targetData?.target_value || 1200000000; // Default 1.2B
 
       // Get MTD revenue
       const { data: metricsData } = await supabase
