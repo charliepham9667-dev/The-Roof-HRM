@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Check, Loader2, BellOff, BellRing } from 'lucide-react';
+import { Bell, Check, Loader2, BellOff, BellRing, Send } from 'lucide-react';
 import { 
   useNotifications, 
   useUnreadNotificationCount,
@@ -8,6 +8,8 @@ import {
   useMarkAllNotificationsRead 
 } from '../../hooks/useNotifications';
 import { usePushSubscription } from '../../hooks/usePushSubscription';
+import { supabase } from '../../lib/supabase';
+import { useAuthStore } from '../../stores/authStore';
 import type { Notification, NotificationType } from '../../types';
 
 const typeConfig: Record<NotificationType, { label: string; color: string }> = {
@@ -27,11 +29,33 @@ const typeConfig: Record<NotificationType, { label: string; color: string }> = {
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
+  const [testPushState, setTestPushState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const { data: count = 0 } = useUnreadNotificationCount();
   const { data: notifications, isLoading } = useNotifications(10);
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const { isSupported, isSubscribed, isLoading: pushLoading, error: pushError, subscribe, unsubscribe } = usePushSubscription();
+  const profile = useAuthStore((s) => s.profile);
+
+  const handleTestPush = async () => {
+    if (!profile?.id) return;
+    setTestPushState('sending');
+    try {
+      const { error } = await supabase.functions.invoke('send-push', {
+        body: {
+          user_ids: [profile.id],
+          title: '🔔 Test Notification',
+          body: 'Push notifications are working on your device!',
+          url: '/',
+        },
+      });
+      setTestPushState(error ? 'error' : 'ok');
+    } catch {
+      setTestPushState('error');
+    } finally {
+      setTimeout(() => setTestPushState('idle'), 4000);
+    }
+  };
 
   const handleMarkAllRead = () => {
     markAllRead.mutate();
@@ -147,9 +171,9 @@ export function NotificationBell() {
 
             {/* Push notification opt-in/out */}
             {isSupported && (
-              <div className="px-4 py-2.5 border-t border-border bg-muted/30">
+              <div className="px-4 py-2.5 border-t border-border bg-muted/30 space-y-2">
                 {pushError && (
-                  <p className="text-[11px] text-destructive mb-1.5">{pushError}</p>
+                  <p className="text-[11px] text-destructive">{pushError}</p>
                 )}
                 <button
                   onClick={isSubscribed ? unsubscribe : subscribe}
@@ -165,6 +189,25 @@ export function NotificationBell() {
                   )}
                   {isSubscribed ? 'Disable phone notifications' : 'Enable phone notifications'}
                 </button>
+
+                {/* Test push button — only visible when subscribed */}
+                {isSubscribed && (
+                  <button
+                    onClick={handleTestPush}
+                    disabled={testPushState === 'sending'}
+                    className="flex items-center gap-2 text-xs transition-colors disabled:opacity-50 text-primary hover:text-primary/80"
+                  >
+                    {testPushState === 'sending' ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    {testPushState === 'sending' && 'Sending…'}
+                    {testPushState === 'ok' && '✓ Notification sent to your phone!'}
+                    {testPushState === 'error' && '✗ Failed — check console'}
+                    {testPushState === 'idle' && 'Send test notification'}
+                  </button>
+                )}
               </div>
             )}
 
