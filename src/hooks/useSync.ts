@@ -79,15 +79,16 @@ export function useSyncSheets() {
         
         console.log('Calling function at:', functionUrl);
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const bearer = session?.access_token || supabaseAnonKey;
+        // Always use the anon key for edge function calls — user JWTs can expire
+        // mid-session and cause 401s. The anon key is always valid for this function.
+        const bearer = supabaseAnonKey;
         
         const response = await fetch(functionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(supabaseAnonKey ? { apikey: supabaseAnonKey } : {}),
-            ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${bearer}`,
           },
           signal: controller.signal,
           body: JSON.stringify(params),
@@ -96,7 +97,7 @@ export function useSyncSheets() {
         console.log('Response status:', response.status);
         
         const data = await response.json().catch(() => null);
-        const error = response.ok ? null : { message: (data as any)?.error || 'Request failed' };
+        const error = response.ok ? null : { message: (data as any)?.error || `Request failed (HTTP ${response.status})` };
 
         clearTimeout(timeoutId);
         
