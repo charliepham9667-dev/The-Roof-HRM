@@ -306,29 +306,34 @@ export function usePLYears() {
  */
 export function usePLSync() {
   const syncPnl = async (sheetId: string, sheetName: string, csvUrl?: string, yearOverride?: number) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     const { data: { session } } = await supabase.auth.getSession();
-    
+    // Use session token when available, fall back to anon key so requests don't fail with "Bearer undefined"
+    const bearer = session?.access_token || supabaseAnonKey;
+
     const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bright-service`,
+      `${supabaseUrl}/functions/v1/bright-service`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
+          ...(supabaseAnonKey ? { apikey: supabaseAnonKey } : {}),
+          ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
         },
         body: JSON.stringify({
           sheetId,
           sheetName,
           syncType: 'pnl',
-          csvUrl, // Use CSV URL if provided (bypasses Google API cache)
-          yearOverride, // Force all data to this year (handles inconsistent headers)
+          csvUrl,
+          yearOverride,
         }),
       }
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Sync failed');
+      const error = await response.json().catch(() => null);
+      throw new Error((error as any)?.error || 'Sync failed');
     }
 
     return response.json();

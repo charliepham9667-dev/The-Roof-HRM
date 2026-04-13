@@ -30,7 +30,8 @@ const PNL_SHEETS = [
   { 
     value: 'PnL 2026', 
     label: 'P&L 2026 (Current Year)',
-    csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpKJ5tNIx13ACvsiHq0GKrCsTinyt94yItKLybdtkw-ufFfE6NYiSR41bS8lLTBFiTKrqYSBlM55Zm/pub?gid=358626846&single=true&output=csv',
+    // No csvUrl: use Google Sheets API directly so actuals are always live (published CSV caches aggressively)
+    csvUrl: undefined,
     yearOverride: 2026 // Headers have inconsistent years, force all to 2026
   },
 ];
@@ -60,34 +61,36 @@ export function SyncData() {
   const handleDebugQuery = async () => {
     setDebugLoading(true);
     try {
-      // Query March 2025 budget data directly from database
-      const { data, error } = await supabase
+      // Query 2026 actuals and budget data directly from database
+      const { data: data2026, error: error2026 } = await supabase
         .from('pnl_monthly')
-        .select('*')
-        .eq('year', 2025)
-        .eq('month', 3)
-        .eq('data_type', 'budget')
-        .single();
+        .select('year,month,data_type,gross_sales,net_sales,cogs,labor_cost,ebit,synced_at')
+        .eq('year', 2026)
+        .order('month');
 
-      if (error) {
-        setDebugData({ error: error.message });
+      // Also query March 2025 budget for comparison
+      const { data: data2025, error: error2025 } = await supabase
+        .from('pnl_monthly')
+        .select('year,month,data_type,gross_sales,net_sales,synced_at')
+        .eq('year', 2025)
+        .eq('month', 3);
+
+      if (error2026 && error2025) {
+        setDebugData({ error: error2026?.message || error2025?.message });
       } else {
         setDebugData({
-          month: 'March 2025 Budget',
-          labor_cost: data.labor_cost,
-          labor_salary: data.labor_salary,
-          labor_casual: data.labor_casual,
-          labor_insurance: data.labor_insurance,
-          labor_13th_month: data.labor_13th_month,
-          labor_holiday: data.labor_holiday,
-          labor_svc: data.labor_svc,
-          opex: data.opex,
-          opex_marketing: data.opex_marketing,
-          opex_events: data.opex_events,
-          opex_consumables: data.opex_consumables,
-          fixed_costs: data.fixed_costs,
-          fixed_rental: data.fixed_rental,
-          synced_at: data.synced_at,
+          '2026 rows in DB': data2026?.length ?? 0,
+          '2026 data': data2026?.map(r => ({
+            month: r.month,
+            type: r.data_type,
+            gross_sales: r.gross_sales,
+            net_sales: r.net_sales,
+            cogs: r.cogs,
+            labor_cost: r.labor_cost,
+            ebit: r.ebit,
+            synced_at: r.synced_at,
+          })) ?? [],
+          'March 2025 (comparison)': data2025 ?? [],
         });
       }
     } catch (err) {

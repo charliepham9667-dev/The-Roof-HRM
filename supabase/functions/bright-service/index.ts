@@ -129,12 +129,15 @@ function parseMonthHeader(header: string): { month: number; year: number; isActu
   if (!header) return null;
   const str = header.toString().toLowerCase().trim();
   
-  // Match patterns like "jan 26", "feb-26 actual", "mar 25", "apr-25 actual"
-  const match = str.match(/^([a-z]{3,9})[\s\-]?(\d{2,4})(?:\s*(actual))?/i);
+  // Match patterns like "jan 26", "feb-26 actual", "mar 25", "apr-25 actual",
+  // "jan 2026", "february 26", "june-26 actual", "Jan 26 Actual"
+  // Allow 0-2 spaces/dashes between month name and year digits
+  const match = str.match(/^([a-z]{3,9})[\s\-]{0,2}(\d{2,4})/i);
   if (!match) return null;
   
   const monthName = match[1].toLowerCase();
   let year = parseInt(match[2]);
+  // isActual checked anywhere in the string (handles "Jan 25 Actual", "Feb-26 Actual", etc.)
   const isActual = str.includes('actual');
   
   // Convert 2-digit year to 4-digit
@@ -301,22 +304,33 @@ async function handlePnlSync(
 ): Promise<Response> {
   let rows: string[][] = [];
   
-  // If CSV URL provided, fetch from there (bypasses Google API cache)
-  if (csvUrl) {
-    console.log(`P&L Sync: Fetching from CSV URL: ${csvUrl}`);
+  // Prefer gviz CSV export — works without an API key, always returns live data,
+  // and handles public sheets reliably. Fall back to a provided csvUrl, then Sheets API v4.
+  const tabName = sheetName || "PnL 2026";
+  const gvizUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+
+  console.log(`P&L Sync: Fetching via gviz CSV for tab "${tabName}"`);
+  const gvizRes = await fetch(gvizUrl);
+
+  if (gvizRes.ok) {
+    const csvText = await gvizRes.text();
+    rows = parseCSV(csvText);
+    console.log(`P&L Sync: Parsed ${rows.length} rows from gviz`);
+  } else if (csvUrl) {
+    // Fallback to published CSV URL if provided
+    console.log(`P&L Sync: gviz failed (${gvizRes.status}), trying published CSV URL`);
     const res = await fetch(csvUrl);
     if (!res.ok) throw new Error(`CSV fetch error: ${res.status} ${res.statusText}`);
     const csvText = await res.text();
     rows = parseCSV(csvText);
-    console.log(`P&L Sync: Parsed ${rows.length} rows from CSV`);
+    console.log(`P&L Sync: Parsed ${rows.length} rows from published CSV`);
   } else {
-    // Fallback to Google Sheets API
-    const range = `${sheetName || "PnL 2026"}!A1:AZ100`;
+    // Last resort: Google Sheets API v4
+    console.log(`P&L Sync: gviz failed (${gvizRes.status}), trying Sheets API v4`);
+    const range = `${tabName}!A1:AZ100`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?key=${googleApiKey}&valueRenderOption=FORMATTED_VALUE`;
-    
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Sheets API error: ${await res.text()}`);
-    
     const data = await res.json();
     rows = data.values || [];
   }
@@ -338,8 +352,9 @@ async function handlePnlSync(
   
   for (let i = 0; i < Math.min(5, rows.length); i++) {
     const row = rows[i];
-    // Check if any cell looks like a month header - start from column F (index 5) to be safe
-    for (let j = 5; j < Math.min(row.length, 20); j++) {
+    // Check if any cell looks like a month header - start from column E (index 4) to be safe
+    // Scan up to column AD (index 30) to handle sheets with extra columns on the left
+    for (let j = 4; j < Math.min(row.length, 30); j++) {
       const parsed = parseMonthHeader(row[j]);
       if (parsed) {
         headerRow = row;
@@ -370,7 +385,7 @@ async function handlePnlSync(
     });
   }
   
-  // Parse month columns from header (starting from column F/index 5, actual months may be at H/index 7)
+  // Parse month columns from header (starting from column E/index 4, actual months may be at H/index 7)
   interface MonthColumn {
     index: number;
     month: number;
@@ -380,17 +395,36 @@ async function handlePnlSync(
   }
   
   const monthColumns: MonthColumn[] = [];
-  for (let i = 5; i < headerRow.length; i++) {
-    const parsed = parseMonthHeader(headerRow[i]);
+  for (let i = 4; i < headerRow.length; i++) {
+    const cellHeader = headerRow[i];
+    const parsed = parseMonthHeader(cellHeader);
     if (parsed) {
+      const year = yearOverride || parsed.year;
       monthColumns.push({
         index: i,
         month: parsed.month,
         // Use yearOverride if provided (handles inconsistent headers in spreadsheet)
-        year: yearOverride || parsed.year,
+        year,
         isActual: parsed.isActual,
-        header: headerRow[i],
+        header: cellHeader,
       });
+
+      // If this is a budget column (no "Actual" in header) and the very next cell is empty,
+      // treat that adjacent empty column as the corresponding actual column.
+      // This handles the PnL 2026 layout where actuals have no header text.
+      if (!parsed.isActual && i + 1 < headerRow.length) {
+        const nextHeader = (headerRow[i + 1] || '').toString().trim();
+        if (nextHeader === '') {
+          monthColumns.push({
+            index: i + 1,
+            month: parsed.month,
+            year,
+            isActual: true,
+            header: `${cellHeader} Actual (inferred)`,
+          });
+          i++; // Skip the empty column — we've already registered it
+        }
+      }
     }
   }
   
