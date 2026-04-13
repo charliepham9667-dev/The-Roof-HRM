@@ -68,11 +68,12 @@ function transformPnlRow(row: any): PnlMonthly {
     otherIncome: row.other_income || 0,
     otherExpenses: row.other_expenses || 0,
     ebit: row.ebit || 0,
-    // Percentages
-    cogsPercentage: row.cogs_percentage || 0,
-    laborPercentage: row.labor_percentage || 0,
-    grossMargin: row.gross_margin || 0,
-    ebitMargin: row.ebit_margin || 0,
+    // Percentages — always recalculate from raw values using Gross Sales as denominator
+    // so stale DB columns don't show wrong figures after a formula change
+    cogsPercentage: row.gross_sales > 0 ? ((row.cogs || 0) / row.gross_sales) * 100 : (row.cogs_percentage || 0),
+    laborPercentage: row.gross_sales > 0 ? ((row.labor_cost || 0) / row.gross_sales) * 100 : (row.labor_percentage || 0),
+    grossMargin: row.gross_sales > 0 ? ((row.gross_profit || 0) / row.gross_sales) * 100 : (row.gross_margin || 0),
+    ebitMargin: row.gross_sales > 0 ? ((row.ebit || 0) / row.gross_sales) * 100 : (row.ebit_margin || 0),
     // Budget values
     budgetGrossSales: row.budget_gross_sales || 0,
     budgetNetSales: row.budget_net_sales || 0,
