@@ -89,7 +89,7 @@ function transformPnlRow(row: any): PnlMonthly {
 // Calculate YTD summary from monthly data
 function calculateYTDSummary(months: PnlMonthly[]): PnlSummary {
   const totals = months.reduce((acc, m) => ({
-    totalRevenue: acc.totalRevenue + m.netSales,
+    totalRevenue: acc.totalRevenue + m.grossSales,
     totalCogs: acc.totalCogs + m.cogs,
     totalLabor: acc.totalLabor + m.laborCost,
     totalFixed: acc.totalFixed + m.fixedCosts,
@@ -108,6 +108,7 @@ function calculateYTDSummary(months: PnlMonthly[]): PnlSummary {
     ebit: 0,
   });
 
+  // All percentages are calculated as % of Gross Sales
   return {
     ...totals,
     cogsPercentage: totals.totalRevenue > 0 ? (totals.totalCogs / totals.totalRevenue) * 100 : 0,

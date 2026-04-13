@@ -1020,11 +1020,11 @@ async function handlePnlSync(
       data.fixedCosts = calculatedFixed;
     }
     
-    // Calculate percentages
-    const cogsPercentage = data.netSales > 0 ? (data.cogs / data.netSales) * 100 : 0;
-    const laborPercentage = data.netSales > 0 ? (data.laborCost / data.netSales) * 100 : 0;
-    const grossMargin = data.netSales > 0 ? (data.grossProfit / data.netSales) * 100 : 0;
-    const ebitMargin = data.netSales > 0 ? (data.ebit / data.netSales) * 100 : 0;
+    // Calculate percentages — all as % of Gross Sales (not Net Sales)
+    const cogsPercentage = data.grossSales > 0 ? (data.cogs / data.grossSales) * 100 : 0;
+    const laborPercentage = data.grossSales > 0 ? (data.laborCost / data.grossSales) * 100 : 0;
+    const grossMargin = data.grossSales > 0 ? (data.grossProfit / data.grossSales) * 100 : 0;
+    const ebitMargin = data.grossSales > 0 ? (data.ebit / data.grossSales) * 100 : 0;
     
     const upsertData = {
       year: data.year,
