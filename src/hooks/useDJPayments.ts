@@ -1,6 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 
+// ── DJ Profile type ────────────────────────────────────────────────────────────
+
+export interface DJProfile {
+  id: string
+  dj_name: string
+  dj_name_display: string | null
+  dj_type: "foreigner" | "local"
+  payer_type: "foreigner_charlie" | "local_company"
+  base_rate_vnd: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type UpsertDJProfileInput = Pick<DJProfile, "dj_name" | "dj_type" | "payer_type"> &
+  Partial<Pick<DJProfile, "dj_name_display" | "base_rate_vnd" | "notes">>
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface DJPayment {
@@ -329,6 +346,44 @@ export function useCreateDJPayment() {
   })
 }
 
+// ── DJ Profile hooks ──────────────────────────────────────────────────────────
+
+const PROFILE_QK = ["dj_profiles"] as const
+
+export function useDJProfiles() {
+  return useQuery({
+    queryKey: PROFILE_QK,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dj_profiles")
+        .select("*")
+        .order("dj_name")
+      if (error) throw error
+      return (data ?? []) as DJProfile[]
+    },
+  })
+}
+
+export function useUpsertDJProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: UpsertDJProfileInput) => {
+      const { data, error } = await supabase
+        .from("dj_profiles")
+        .upsert({ ...input, dj_name: input.dj_name.toLowerCase() }, { onConflict: "dj_name" })
+        .select()
+        .single()
+      if (error) throw error
+      return data as DJProfile
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PROFILE_QK })
+      // Also refresh payments so any open rows reflect the new profile
+      queryClient.invalidateQueries({ queryKey: QK })
+    },
+  })
+}
+
 // ── Sync hook ─────────────────────────────────────────────────────────────────
 
 export interface DJSyncResult {
@@ -374,6 +429,31 @@ export function useDJPaymentsSync() {
     for (const p of payloads) {
       const key = p.dj_name.toLowerCase().replace(/\$/g, "s")
       if (!KNOWN.has(key)) result.unmappedDJs.push(p.dj_name)
+    }
+
+    // Load saved DJ profiles — these override the hardcoded name-based classification.
+    // This lets you set Amor as "local" and it stays local across all future syncs.
+    const { data: profileRows } = await supabase
+      .from("dj_profiles")
+      .select("dj_name, dj_type, payer_type, base_rate_vnd")
+    const profileMap = new Map<string, { dj_type: "foreigner" | "local"; payer_type: "foreigner_charlie" | "local_company"; base_rate_vnd: number | null }>()
+    for (const p of profileRows ?? []) {
+      profileMap.set(p.dj_name.toLowerCase(), {
+        dj_type: p.dj_type,
+        payer_type: p.payer_type,
+        base_rate_vnd: p.base_rate_vnd,
+      })
+    }
+
+    // Apply saved profiles to payloads before upserting
+    for (const p of payloads) {
+      const nameKey = p.dj_name.toLowerCase().replace(/\$/g, "s")
+      const profile = profileMap.get(nameKey)
+      if (profile) {
+        p.dj_type = profile.dj_type
+        p.payer_type = profile.payer_type
+        if (profile.base_rate_vnd) p.base_rate_vnd = profile.base_rate_vnd
+      }
     }
 
     // Upsert in batches — on conflict(sync_key) update everything EXCEPT

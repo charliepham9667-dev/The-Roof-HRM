@@ -32,12 +32,15 @@ import {
   useUpdateDJPayment,
   useCreateDJPayment,
   useDJPaymentsSync,
+  useDJProfiles,
+  useUpsertDJProfile,
   formatVndAmount,
   formatTimeRange,
   classifyDJType,
   classifyDJPayer,
   isOwnerDJ,
   type DJPayment,
+  type DJProfile,
   type CreateDJPaymentInput,
 } from "@/hooks/useDJPayments"
 
@@ -1098,6 +1101,132 @@ function DJPaymentSheet({
   )
 }
 
+// ── DJ Profiles modal ─────────────────────────────────────────────────────────
+
+function DJProfilesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { data: profiles = [], isLoading } = useDJProfiles()
+  const { data: payments = [] } = useDJPayments()
+  const upsert = useUpsertDJProfile()
+
+  // Build a list of unique DJ names from both profiles + payments
+  const allNames = useMemo(() => {
+    const nameSet = new Set<string>()
+    profiles.forEach(p => nameSet.add(p.dj_name.toLowerCase()))
+    payments.forEach(p => {
+      if (p.dj_name) nameSet.add(p.dj_name.toLowerCase())
+    })
+    // Create display map: prefer profile display name, fall back to payment name casing
+    const displayMap = new Map<string, string>()
+    payments.forEach(p => { if (p.dj_name) displayMap.set(p.dj_name.toLowerCase(), p.dj_name) })
+    profiles.forEach(p => { if (p.dj_name_display) displayMap.set(p.dj_name.toLowerCase(), p.dj_name_display) })
+    return Array.from(nameSet)
+      .filter(n => !isOwnerDJ(n))
+      .sort()
+      .map(name => ({
+        name,
+        display: displayMap.get(name) ?? name,
+        profile: profiles.find(p => p.dj_name.toLowerCase() === name) ?? null,
+      }))
+  }, [profiles, payments])
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-lg mx-4 p-6 space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">DJ Profiles</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Changes here persist across syncs — the spreadsheet won't override them.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none px-1">×</button>
+        </div>
+
+        {isLoading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
+        ) : allNames.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">No DJs found. Sync first to populate.</div>
+        ) : (
+          <div className="divide-y divide-border max-h-96 overflow-y-auto -mx-2 px-2">
+            {allNames.map(({ name, display, profile }) => {
+              const currentType = profile?.dj_type ?? classifyDJType(name)
+              const currentPayer = profile?.payer_type ?? classifyDJPayer(name)
+              const saving = upsert.isPending
+
+              return (
+                <div key={name} className="py-3 flex items-center justify-between gap-4">
+                  <span className="font-medium text-sm text-foreground capitalize min-w-[90px]">{display}</span>
+
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {/* Type toggle */}
+                    <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+                      {(["local", "foreigner"] as const).map(t => (
+                        <button
+                          key={t}
+                          disabled={saving}
+                          onClick={() => upsert.mutate({
+                            dj_name: name,
+                            dj_name_display: display,
+                            dj_type: t,
+                            payer_type: t === "foreigner" ? "foreigner_charlie" : "local_company",
+                          })}
+                          className={cn(
+                            "px-3 py-1.5 font-medium transition-colors",
+                            currentType === t
+                              ? t === "foreigner"
+                                ? "bg-blue-500 text-white"
+                                : "bg-green-500 text-white"
+                              : "bg-card text-muted-foreground hover:bg-muted"
+                          )}
+                        >
+                          {t === "foreigner" ? "✈ Intl" : "🇻🇳 Local"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Payer toggle */}
+                    <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+                      {(["foreigner_charlie", "local_company"] as const).map(pt => (
+                        <button
+                          key={pt}
+                          disabled={saving}
+                          onClick={() => upsert.mutate({
+                            dj_name: name,
+                            dj_name_display: display,
+                            dj_type: currentType,
+                            payer_type: pt,
+                          })}
+                          className={cn(
+                            "px-3 py-1.5 font-medium transition-colors",
+                            currentPayer === pt
+                              ? "bg-[#78350F] text-white"
+                              : "bg-card text-muted-foreground hover:bg-muted"
+                          )}
+                        >
+                          {pt === "foreigner_charlie" ? "Charlie" : "Company"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <p className="text-[11px] text-muted-foreground">
+          <strong>Type</strong> (Intl / Local) controls rate multipliers. <strong>Payer</strong> (Charlie / Company) controls who settles the invoice.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function DJPaymentsTab({ canManage }: { canManage: boolean }) {
   const { data: payments = [], isLoading } = useDJPayments()
   const update = useUpdateDJPayment()
@@ -1108,6 +1237,7 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
   const [payerFilter, setPayerFilter] = useState<"all" | "foreigner_charlie" | "local_company">("all")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<DJPayment | null>(null)
+  const [profilesOpen, setProfilesOpen] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
@@ -1227,16 +1357,29 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
         {syncMsg && (
           <span className="text-[10px] text-muted-foreground border border-border rounded px-2 py-0.5">{syncMsg}</span>
         )}
-        <button
-          type="button"
-          onClick={handleSync}
-          disabled={isSyncing}
-          className="ml-auto flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50 shrink-0"
-        >
-          <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
-          {isSyncing ? "Syncing…" : "Sync Now"}
-        </button>
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setProfilesOpen(true)}
+              className="flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              DJ Profiles
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
+            {isSyncing ? "Syncing…" : "Sync Now"}
+          </button>
+        </div>
       </div>
+
+      <DJProfilesModal open={profilesOpen} onClose={() => setProfilesOpen(false)} />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-5 md:gap-3 shrink-0">
