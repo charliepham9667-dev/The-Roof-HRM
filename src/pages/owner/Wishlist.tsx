@@ -40,7 +40,6 @@ import {
   classifyDJPayer,
   isOwnerDJ,
   type DJPayment,
-  type DJProfile,
   type CreateDJPaymentInput,
 } from "@/hooks/useDJPayments"
 
