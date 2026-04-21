@@ -51,6 +51,25 @@ In Supabase Dashboard:
 4. After creation, go to **Table Editor** > **profiles**
 5. Find your user and set `role` to `owner`
 
+## Ads API Secrets (Google/Meta/TikTok)
+
+Use the interactive helper from repo root:
+
+```bash
+npm run setup:ads-secrets
+```
+
+It will:
+- ask for your Supabase project ref
+- prompt for Google/Meta/TikTok API credentials (hidden input)
+- run `supabase secrets set` for the ads sync edge function
+
+You can also pass project ref directly:
+
+```bash
+npm run setup:ads-secrets -- your_project_ref
+```
+
 ## Schema Overview
 
 ```

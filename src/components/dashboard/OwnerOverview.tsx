@@ -6,6 +6,7 @@ import { MonthlyPerformance } from './MonthlyPerformance';
 import { TargetManager } from './TargetManager';
 import { RevenueVelocity } from './RevenueVelocity';
 import { ExecutiveSummary } from './ExecutiveSummary';
+import { CashPositionPanel } from '@/components/finance/CashPositionPanel';
 import { BAR_COLORS } from '@/lib/chart-colors';
 import {
   Button,
@@ -203,6 +204,9 @@ export function OwnerOverview() {
           </DashboardCardContent>
         </DashboardCard>
       </div>
+
+      {/* Cash Position — daily-ish snapshot from accountant */}
+      <CashPositionPanel />
 
       {/* Target Manager Modal */}
       <TargetManager isOpen={showTargetManager} onClose={() => setShowTargetManager(false)} />

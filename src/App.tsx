@@ -34,6 +34,7 @@ import { CashFlow } from './pages/finance/CashFlow';
 import { CostControl } from './pages/finance/CostControl';
 import { Forecast } from './pages/finance/Forecast';
 import { FinancialSummary } from './pages/finance/FinancialSummary';
+import { SupplierDebt } from './pages/finance/SupplierDebt';
 
 // Staff pages
 const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard').then((m) => ({ default: m.StaffDashboard })));
@@ -250,16 +251,18 @@ export default function App() {
               <ManageChecklists />
             </RoleGuard>
           } />
-          <Route path="owner/venue" element={
+          <Route path="venue" element={
             <RoleGuard allowedRoles={['owner', 'manager', 'staff']}>
               <VenueManager />
             </RoleGuard>
           } />
-          <Route path="owner/wishlist" element={
+          <Route path="owner/venue" element={<Navigate to="/venue" replace />} />
+          <Route path="operations" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <Wishlist />
             </RoleGuard>
           } />
+          <Route path="owner/wishlist" element={<Navigate to="/operations" replace />} />
           <Route path="owner/company" element={
             <RoleGuard allowedRoles={['owner']}>
               <CompanyProfile />
@@ -309,20 +312,17 @@ export default function App() {
               <Forecast />
             </RoleGuard>
           } />
+          <Route path="finance/debt" element={
+            <RoleGuard allowedRoles={['owner']}>
+              <SupplierDebt />
+            </RoleGuard>
+          } />
 
           {/* ============================================ */}
           {/* MANAGER ROUTES (Owner & Manager) */}
           {/* ============================================ */}
-          <Route path="manager/venue" element={
-            <RoleGuard allowedRoles={['owner', 'manager', 'staff']}>
-              <VenueManager />
-            </RoleGuard>
-          } />
-          <Route path="manager/operations" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <Wishlist />
-            </RoleGuard>
-          } />
+          <Route path="manager/venue" element={<Navigate to="/venue" replace />} />
+          <Route path="manager/operations" element={<Navigate to="/operations" replace />} />
           <Route path="manager/dashboard" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <ManagerDashboard />

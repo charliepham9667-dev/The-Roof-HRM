@@ -364,6 +364,22 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Per-function overrides. We disable the gateway-level JWT verifier for
+# user-invoked functions because our auth system uses ES256 signing keys which
+# the gateway verifier does not accept. Each of these functions performs its
+# own auth check (auth.getUser(token)) and role-based authorization internally.
+[functions.ads-sync]
+verify_jwt = false
+
+[functions.bright-service]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
+
+[functions.create-employee]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

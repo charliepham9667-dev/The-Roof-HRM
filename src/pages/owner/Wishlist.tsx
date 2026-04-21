@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
-import { Trash2, Plus, Pencil, Wrench, ShoppingCart, Music2, RefreshCw, Download, ChevronDown, ChevronUp } from "lucide-react"
+import { Trash2, Plus, Pencil, Wrench, ShoppingCart, Music2, RefreshCw, Download, ChevronDown, ChevronUp, FileText, Wallet, Boxes } from "lucide-react"
+import { SheetEmbedTab } from "@/components/operations/SheetEmbedTab"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -1701,7 +1702,7 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
-type Tab = "procurement" | "maintenance" | "dj_payments"
+type Tab = "procurement" | "maintenance" | "dj_payments" | "purchase_request" | "payment_request" | "inventory"
 
 export function Wishlist() {
   const profile = useAuthStore((s) => s.profile)
@@ -1721,16 +1722,16 @@ export function Wishlist() {
       <div className="flex items-start justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-[28px] font-bold leading-tight text-foreground">Operations</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Procurement wishlist, maintenance tracker & DJ payment management</p>
+          <p className="mt-1 text-sm text-muted-foreground">Daily ops workspace: purchasing, maintenance, DJ payouts, and live sheet trackers.</p>
         </div>
       </div>
 
-      {/* Tabs — overflow-x-auto so all 3 are reachable on mobile */}
+      {/* Tabs — overflow-x-auto so all tabs are reachable on mobile */}
       <div className="overflow-x-auto shrink-0 border-b border-border">
         <div className="flex items-center gap-0 min-w-max">
           <button type="button" onClick={() => setActiveTab("procurement")} className={tabCls("procurement")}>
             <ShoppingCart className="h-3.5 w-3.5" />
-            Procurement Wishlist
+            Purchase Wishlist
           </button>
           <button type="button" onClick={() => setActiveTab("maintenance")} className={tabCls("maintenance")}>
             <Wrench className="h-3.5 w-3.5" />
@@ -1740,6 +1741,18 @@ export function Wishlist() {
             <Music2 className="h-3.5 w-3.5" />
             DJ Payments
           </button>
+          <button type="button" onClick={() => setActiveTab("purchase_request")} className={tabCls("purchase_request")}>
+            <FileText className="h-3.5 w-3.5" />
+            Purchase Request
+          </button>
+          <button type="button" onClick={() => setActiveTab("payment_request")} className={tabCls("payment_request")}>
+            <Wallet className="h-3.5 w-3.5" />
+            Payment Request
+          </button>
+          <button type="button" onClick={() => setActiveTab("inventory")} className={tabCls("inventory")}>
+            <Boxes className="h-3.5 w-3.5" />
+            Inventory
+          </button>
         </div>
       </div>
 
@@ -1748,8 +1761,29 @@ export function Wishlist() {
         <ProcurementTab canManage={canManage} />
       ) : activeTab === "maintenance" ? (
         <MaintenanceTab canManage={canManage} />
-      ) : (
+      ) : activeTab === "dj_payments" ? (
         <DJPaymentsTab canManage={canManage} />
+      ) : activeTab === "purchase_request" ? (
+        <SheetEmbedTab
+          kind="purchase_request"
+          title="Purchase Request"
+          description="Live Google Sheet for formal purchase requests (PR). Paste your published sheet link and everyone sees real-time updates."
+          canManage={canManage}
+        />
+      ) : activeTab === "payment_request" ? (
+        <SheetEmbedTab
+          kind="payment_request"
+          title="Payment Request"
+          description="Queue of supplier / vendor payments pending release. Backed by a Google Sheet the finance team can edit directly."
+          canManage={canManage}
+        />
+      ) : (
+        <SheetEmbedTab
+          kind="inventory"
+          title="Inventory"
+          description="Current stock levels and reorder status. Connect the inventory sheet maintained by the bar or kitchen team."
+          canManage={canManage}
+        />
       )}
     </div>
   )

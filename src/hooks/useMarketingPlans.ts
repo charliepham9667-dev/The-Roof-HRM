@@ -112,6 +112,107 @@ export function useDeleteMarketingPlan() {
   })
 }
 
+export type MarketingPlanAssetWithPlan = MarketingPlanAsset & {
+  plan_title: string
+  plan_status: MarketingPlanStatus
+}
+
+/**
+ * Fetch every marketing plan asset across every plan (newest first). Used on
+ * the Marketing Dashboard to surface the brand kit / reference library.
+ */
+export function useAllMarketingPlanAssets(limit = 24) {
+  return useQuery({
+    queryKey: ["marketing-plan-assets-all", limit],
+    queryFn: async (): Promise<MarketingPlanAssetWithPlan[]> => {
+      const { data, error } = await supabase
+        .from("marketing_plan_assets")
+        .select(
+          "id,plan_id,file_path,file_name,mime_type,size_bytes,created_at,marketing_plans(title,status)",
+        )
+        .order("created_at", { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        plan_id: row.plan_id,
+        file_path: row.file_path,
+        file_name: row.file_name,
+        mime_type: row.mime_type,
+        size_bytes: row.size_bytes ? Number(row.size_bytes) : null,
+        created_at: row.created_at,
+        plan_title: row.marketing_plans?.title ?? "Untitled plan",
+        plan_status: (row.marketing_plans?.status ?? "draft") as MarketingPlanStatus,
+      }))
+    },
+  })
+}
+
+/**
+ * Upload a file directly into a fallback "Brand Kit & Reference Library" plan
+ * (auto-created if it doesn't exist yet). Used for the dashboard quick-upload
+ * dropzone where the user doesn't want to pick a specific plan.
+ */
+export function useQuickUploadBrandKitAsset() {
+  const qc = useQueryClient()
+  const profile = useAuthStore((s) => s.profile)
+  return useMutation({
+    mutationFn: async (file: File) => {
+      if (!profile?.id) throw new Error("Not authenticated")
+      const FALLBACK_TITLE = "Brand Kit & Reference Library"
+      const { data: existing, error: findErr } = await supabase
+        .from("marketing_plans")
+        .select("id")
+        .eq("title", FALLBACK_TITLE)
+        .limit(1)
+        .maybeSingle()
+      if (findErr) throw findErr
+      let planId = existing?.id as string | undefined
+      if (!planId) {
+        const { data: created, error: createErr } = await supabase
+          .from("marketing_plans")
+          .insert({
+            title: FALLBACK_TITLE,
+            objective: "Always-on library of brand, campaign and event reference materials.",
+            status: "active",
+            owner_id: profile.id,
+            created_by: profile.id,
+          })
+          .select("id")
+          .single()
+        if (createErr) throw createErr
+        planId = created.id
+      }
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
+      const path = `${planId}/${Date.now()}-${safeName}`
+      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
+        upsert: false,
+        contentType: file.type,
+      })
+      if (uploadError) throw uploadError
+      const { data, error } = await supabase
+        .from("marketing_plan_assets")
+        .insert({
+          plan_id: planId,
+          file_path: path,
+          file_name: file.name,
+          mime_type: file.type || null,
+          size_bytes: file.size,
+          uploaded_by: profile.id,
+        })
+        .select("id,plan_id,file_path,file_name,mime_type,size_bytes,created_at")
+        .single()
+      if (error) throw error
+      return data as MarketingPlanAsset
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["marketing-plan-assets-all"] })
+      qc.invalidateQueries({ queryKey: ["marketing-plans"] })
+    },
+  })
+}
+
 export function useMarketingPlanAssets(planId: string | null) {
   return useQuery({
     queryKey: ["marketing-plan-assets", planId],
