@@ -84,6 +84,12 @@ function getIctParts(now: Date) {
   }
 }
 
+function getIctDateIso(now: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: ICT_TZ }).formatToParts(now)
+  const map = new Map(parts.map((p) => [p.type, p.value]))
+  return `${map.get("year")}-${map.get("month")}-${map.get("day")}`
+}
+
 function pad2(n: number) {
   return String(n).padStart(2, "0")
 }
@@ -181,6 +187,69 @@ function CardShell({
   )
 }
 
+function DashboardHeaderClock({ firstName }: { firstName: string }) {
+  const [tick, setTick] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick(new Date()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const ict = useMemo(() => getIctParts(tick), [tick])
+  const greeting = greetingFromHour(ict.hour)
+  const dateString = `${ict.weekday.toUpperCase()}, ${ict.month.toUpperCase()} ${ict.day}, ${ict.year}`
+  const showClubNight = isClubNight(ict.weekday)
+  const modeLabel = showClubNight ? "Club Night" : "Lounge Day"
+  const hoursLabel = showClubNight ? "Open 14:00 – 02:00" : "Open 14:00 – 01:00"
+
+  return (
+    <div className="rounded-card border border-border bg-card px-4 md:px-6 py-4 shadow-card">
+      <div className="flex flex-col gap-2 md:grid md:grid-cols-3 md:items-center md:gap-4">
+        <div>
+          <div className="font-display text-xl tracking-[4px] text-primary">THE ROOF</div>
+          <div className="mt-0.5 text-sm font-light tracking-widest text-muted-foreground">
+            Da Nang · Club & Lounge
+          </div>
+        </div>
+        <div className="md:text-center">
+          <div className="text-xs tracking-widest text-muted-foreground uppercase truncate">{dateString}</div>
+          <div className="mt-1 font-subheading text-base md:text-lg font-light italic text-foreground">
+            {greeting}, {firstName}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 md:justify-end">
+          <div className="text-xs tracking-wide text-muted-foreground">{hoursLabel}</div>
+          <div className="rounded-sm border border-border px-3 py-1 text-xs tracking-widest font-semibold text-foreground uppercase shrink-0">
+            {modeLabel.toUpperCase()}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HqClockPanel() {
+  const [tick, setTick] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick(new Date()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const ict = useMemo(() => getIctParts(tick), [tick])
+  const timeString = `${pad2(ict.hour)}:${pad2(ict.minute)}:${pad2(ict.second)}`
+
+  return (
+    <div className="grid gap-4">
+      <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
+      <div className="text-center">
+        <div className="font-display text-[26px] tracking-[4px] text-foreground">{timeString}</div>
+        <div className="mt-1 text-xs tracking-wider text-muted-foreground uppercase">ICT · UTC+7</div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Pipeline helpers ──────────────────────────────────────────────────────────
 
 function formatPipelineWhen(dateIso: string, startTime: string | null, endTime: string | null) {
@@ -207,12 +276,17 @@ export function ManagerDashboard() {
   // manager's. We hide personal task mutations in this case.
   const isOwnerPreviewing = profile?.role === "owner" && viewAs?.role === "manager"
 
-  // Live clock
-  const [tick, setTick] = useState(() => new Date())
+  const [todayIso, setTodayIso] = useState(() => getIctDateIso(new Date()))
   useEffect(() => {
-    const id = window.setInterval(() => setTick(new Date()), 1000)
+    const id = window.setInterval(() => setTodayIso(getIctDateIso(new Date())), 60_000)
     return () => window.clearInterval(id)
   }, [])
+  const now = new Date()
+  const todayWeekday = useMemo(
+    () => new Intl.DateTimeFormat("en-US", { timeZone: ICT_TZ, weekday: "long" }).format(new Date(`${todayIso}T12:00:00Z`)),
+    [todayIso],
+  )
+  const showClubNight = isClubNight(todayWeekday)
 
   // ── Check-in / Break state ───────────────────────────────────────────────────
   const clockInMut = useClockIn()
@@ -335,21 +409,6 @@ export function ManagerDashboard() {
 
   const shiftTimerStr = fmtSecs(shiftElapsed)
   const breakTimerStr = fmtSecs(breakElapsed)
-
-  const ict = useMemo(() => getIctParts(tick), [tick])
-  const greeting = greetingFromHour(ict.hour)
-  const dateString = `${ict.weekday.toUpperCase()}, ${ict.month.toUpperCase()} ${ict.day}, ${ict.year}`
-  const timeString = `${pad2(ict.hour)}:${pad2(ict.minute)}:${pad2(ict.second)}`
-
-  const todayIso = useMemo(() => {
-    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: ICT_TZ }).formatToParts(tick)
-    const map = new Map(parts.map((p) => [p.type, p.value]))
-    return `${map.get("year")}-${map.get("month")}-${map.get("day")}`
-  }, [tick])
-
-  const showClubNight = isClubNight(ict.weekday)
-  const modeLabel = showClubNight ? "Club Night" : "Lounge Day"
-  const hoursLabel = showClubNight ? "Open 14:00 – 02:00" : "Open 14:00 – 01:00"
 
   // ── Data hooks ───────────────────────────────────────────────────────────────
   const { data: kpi, isLoading: kpiLoading } = useKPISummary()
@@ -508,7 +567,7 @@ export function ManagerDashboard() {
       { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
     ],
   }
-  const todayPromos = promosByDay[ict.weekday] ?? promosByDay["Monday"]
+  const todayPromos = promosByDay[todayWeekday] ?? promosByDay["Monday"]
 
   // ── Task board ───────────────────────────────────────────────────────────────
   // useAllDelegationTasks fetches tasks assigned TO or delegated BY this user,
@@ -692,28 +751,7 @@ export function ManagerDashboard() {
       <h1 className="sr-only">Manager Dashboard</h1>
 
       {/* ── Section 1: Header (Image 1) ─────────────────────────────────────── */}
-      <div className="rounded-card border border-border bg-card px-4 md:px-6 py-4 shadow-card">
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-3 md:items-center md:gap-4">
-          <div>
-            <div className="font-display text-xl tracking-[4px] text-primary">THE ROOF</div>
-            <div className="mt-0.5 text-sm font-light tracking-widest text-muted-foreground">
-              Da Nang · Club & Lounge
-            </div>
-          </div>
-          <div className="md:text-center">
-            <div className="text-xs tracking-widest text-muted-foreground uppercase truncate">{dateString}</div>
-            <div className="mt-1 font-subheading text-base md:text-lg font-light italic text-foreground">
-              {greeting}, {firstName}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 md:justify-end">
-            <div className="text-xs tracking-wide text-muted-foreground">{hoursLabel}</div>
-            <div className="rounded-sm border border-border px-3 py-1 text-xs tracking-widest font-semibold text-foreground uppercase shrink-0">
-              {modeLabel.toUpperCase()}
-            </div>
-          </div>
-        </div>
-      </div>
+      <DashboardHeaderClock firstName={firstName} />
 
       {/* ── Check-In Strip ──────────────────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
@@ -853,13 +891,7 @@ export function ManagerDashboard() {
       {/* HQ + Weather row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[320px_1fr] min-w-0">
         <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />} className="min-w-0">
-          <div className="grid gap-4">
-            <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
-            <div className="text-center">
-              <div className="font-display text-[26px] tracking-[4px] text-foreground">{timeString}</div>
-              <div className="mt-1 text-xs tracking-wider text-muted-foreground uppercase">ICT · UTC+7</div>
-            </div>
-          </div>
+          <HqClockPanel />
         </CardShell>
 
         <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />} className="min-w-0 overflow-hidden">
@@ -958,7 +990,7 @@ export function ManagerDashboard() {
                             {shifts.map((shift) => {
                               const initials = (shift.staffName || "?")
                                 .split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()
-                              const isActive = isOnShiftNow(shift.shiftDate, shift.startTime, shift.endTime, tick)
+                              const isActive = isOnShiftNow(shift.shiftDate, shift.startTime, shift.endTime, now)
                               return (
                                 <div key={shift.id} className="flex items-center gap-2 py-1.5 pl-3 border-b border-border last:border-0" style={{ borderLeft: `2px solid ${theme.accent}22`, marginLeft: '3px', paddingLeft: '8px' }}>
                                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white" style={{ background: theme.accent }}>
