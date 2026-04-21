@@ -52,13 +52,24 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('@supabase')) return 'vendor-supabase'
-            if (id.includes('recharts')) return 'vendor-charts'
-            if (id.includes('@dnd-kit')) return 'vendor-dnd'
-            if (id.includes('react-router')) return 'vendor-router'
-            return 'vendor'
-          }
+          if (!id.includes("node_modules")) return
+
+          const modulePath = id.split("node_modules/")[1] || ""
+          const packageName = modulePath.startsWith("@")
+            ? modulePath.split("/").slice(0, 2).join("/")
+            : modulePath.split("/")[0]
+
+          if (packageName.startsWith("@supabase")) return "vendor-supabase"
+          if (packageName === "recharts") return "vendor-charts"
+          if (packageName.startsWith("@dnd-kit")) return "vendor-dnd"
+          if (packageName === "react-router" || packageName === "react-router-dom") return "vendor-router"
+          if (packageName.startsWith("@radix-ui") || packageName === "cmdk" || packageName === "vaul") return "vendor-ui"
+          if (packageName.startsWith("@tanstack")) return "vendor-tanstack"
+          if (packageName === "date-fns" || packageName === "react-day-picker") return "vendor-date"
+          if (packageName === "lucide-react") return "vendor-icons"
+          if (packageName === "react" || packageName === "react-dom" || packageName === "scheduler") return "vendor-react"
+
+          return "vendor"
         },
       },
     },
