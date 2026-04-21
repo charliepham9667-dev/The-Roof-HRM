@@ -469,8 +469,24 @@ export default function MarketingDashboard() {
             {" · "}Brand Command Center
           </p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-sm border border-border text-xs text-muted-foreground uppercase tracking-wider font-semibold self-start mt-1">
-          Club Night
+        <div className="flex items-center gap-2 self-start mt-1">
+          <button
+            type="button"
+            onClick={() => navigate("/marketing/plans")}
+            className="rounded-sm border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary"
+          >
+            Marketing Plans
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/marketing/integrations")}
+            className="rounded-sm border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary"
+          >
+            Ads Integrations
+          </button>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-sm border border-border text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+            Club Night
+          </div>
         </div>
       </div>
 

@@ -98,10 +98,10 @@ const TAB_CONFIG: Record<NavRole, TabDef[]> = {
   ],
   staff: [
     { to: '/staff/dashboard',           icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/staff/my-shifts',           icon: Calendar,        label: 'Schedule' },
+    { to: '/staff/calendar',            icon: Calendar,        label: 'Briefing' },
     { to: '/staff/check-in',            icon: Clock,           label: 'Check In', primary: true },
     { to: '/staff/announcements',       icon: MessageSquare,   label: 'Chat',     isBadgedChat: true },
-    { to: '/staff/tasks',               icon: CheckSquare,     label: 'Tasks' },
+    { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
   ],
 }
 
@@ -250,8 +250,35 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Common Hub',
       items: [
+        { title: 'Marketing Plans',      url: '/marketing/plans',         icon: ClipboardList },
+        { title: 'Ads Integrations',     url: '/marketing/integrations',  icon: BarChart3 },
         { title: 'Resources',            url: '/manager/resources',      icon: FolderOpen },
         { title: 'Announcements & Chat', url: '/manager/announcements',  icon: Megaphone },
+      ],
+    },
+  ],
+  staff: [
+    {
+      label: 'My Work',
+      items: [
+        { title: 'My Shifts',            url: '/staff/my-shifts',         icon: Calendar },
+        { title: 'My Tasks',             url: '/staff/tasks',             icon: CheckSquare },
+        { title: 'My Checklists',        url: '/staff/checklists',        icon: ClipboardList },
+      ],
+    },
+    {
+      label: 'HR',
+      items: [
+        { title: 'Leave Requests',       url: '/staff/leave',             icon: Clock },
+        { title: 'Payslips',             url: '/staff/payslips',          icon: DollarSign },
+        { title: 'Profile',              url: '/staff/profile',           icon: Users },
+      ],
+    },
+    {
+      label: 'Common Hub',
+      items: [
+        { title: 'Resources',            url: '/staff/resources',         icon: FolderOpen },
+        { title: 'Announcements & Chat', url: '/staff/announcements',    icon: Megaphone },
       ],
     },
   ],

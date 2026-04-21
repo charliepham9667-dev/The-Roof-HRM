@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useShifts, useTodayShifts } from '@/hooks/useShifts';
 import { useRoofCalendarWeekData } from '@/hooks/useWeekAtGlanceCsv';
+import { useEvents } from '@/hooks/useEvents';
+import type { CalendarEvent } from '@/types';
 
 // ─── Helpers (ICT-safe, matches owner dashboard exactly) ──────────────────────
 
@@ -51,6 +53,58 @@ function formatPipelineWhen(dateIso: string, startTime: string | null, endTime: 
 
 function getInitials(name: string) {
   return (name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function timeStringToMinutes(raw: string | null | undefined) {
+  const val = String(raw || "").trim()
+  const m = val.match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return null
+  return Number(m[1]) * 60 + Number(m[2])
+}
+
+function addDaysIso(iso: string, days: number) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + days))
+  return dt.toISOString().slice(0, 10)
+}
+
+function mapDbEventToRows(event: CalendarEvent, weekStartIso: string, weekEndIso: string) {
+  const startIso = event.startDate
+  const endIso = event.endDate || event.startDate
+  const effectiveStart = startIso < weekStartIso ? weekStartIso : startIso
+  const effectiveEnd = endIso > weekEndIso ? weekEndIso : endIso
+  if (effectiveEnd < effectiveStart) return []
+
+  const out: Array<{
+    dateIso: string
+    eventName: string | null
+    startTime: string | null
+    endTime: string | null
+    startMinutes: number | null
+    dj1: string | null
+    dj2: string | null
+    genre: string | null
+    promotion: string | null
+    status: string | null
+  }> = []
+
+  let cursor = effectiveStart
+  while (cursor <= effectiveEnd) {
+    out.push({
+      dateIso: cursor,
+      eventName: event.title || null,
+      startTime: event.startTime || null,
+      endTime: event.endTime || null,
+      startMinutes: timeStringToMinutes(event.startTime),
+      dj1: null,
+      dj2: null,
+      genre: null,
+      promotion: null,
+      status: "db",
+    })
+    cursor = addDaysIso(cursor, 1)
+  }
+  return out
 }
 
 // ─── Fixed promotions data (identical to owner dashboard) ─────────────────────
@@ -101,11 +155,26 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
   }, [todayIso, weekOffset]);
 
   const isCurrentWeek = weekOffset === 0;
+  const weekStartIso = weekDates[0]?.iso ?? todayIso
+  const weekEndIso = weekDates[6]?.iso ?? todayIso
 
   // ── CSV Data (same hook as owner dashboard) ───────────────────────────────
   const { data: roofCalendar, isLoading: weekCsvLoading, error: weekCsvError } = useRoofCalendarWeekData();
   const weekCsv = roofCalendar?.byDate ?? [];
-  const roofEvents = roofCalendar?.events ?? [];
+  const csvEvents = roofCalendar?.events ?? [];
+  const { data: dbWeekEvents = [] } = useEvents(weekStartIso, weekEndIso)
+  const roofEvents = useMemo(() => {
+    const dbRows = dbWeekEvents.flatMap((event) => mapDbEventToRows(event, weekStartIso, weekEndIso))
+    const merged = [...csvEvents]
+    const seen = new Set(csvEvents.map((e) => `${e.dateIso}|${e.eventName ?? ''}|${e.startTime ?? ''}|${e.endTime ?? ''}`))
+    for (const row of dbRows) {
+      const key = `${row.dateIso}|${row.eventName ?? ''}|${row.startTime ?? ''}|${row.endTime ?? ''}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      merged.push(row)
+    }
+    return merged
+  }, [csvEvents, dbWeekEvents, weekStartIso, weekEndIso])
 
   const weekByDate = useMemo(() => {
     const map = new Map<string, (typeof weekCsv)[number]>();
@@ -269,6 +338,11 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
         <p className="text-sm text-muted-foreground mt-1">
           Tonight's event details, pipeline, and team on shift
         </p>
+        {weekCsvError && (
+          <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Live calendar feed is unavailable. Showing available events from internal data where possible.
+          </div>
+        )}
       </div>
 
       {/* ══ SECTION 1 — TONIGHT'S BRIEFING ══════════════════════════════════ */}

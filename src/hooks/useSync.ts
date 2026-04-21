@@ -79,9 +79,11 @@ export function useSyncSheets() {
         
         console.log('Calling function at:', functionUrl);
 
-        // Always use the anon key for edge function calls — user JWTs can expire
-        // mid-session and cause 401s. The anon key is always valid for this function.
-        const bearer = supabaseAnonKey;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const bearer = sessionData.session?.access_token;
+        if (!bearer) {
+          throw new Error('You must be logged in to run sync jobs.');
+        }
         
         const response = await fetch(functionUrl, {
           method: 'POST',

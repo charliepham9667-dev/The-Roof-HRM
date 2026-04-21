@@ -160,7 +160,8 @@ serve(async (req) => {
     if (callerError || !callerProfile) {
       return json({ error: "Caller profile not found." }, 403);
     }
-    if (!["owner", "manager"].includes(String(callerProfile.role))) {
+    const callerRole = String(callerProfile.role);
+    if (!["owner", "manager"].includes(callerRole)) {
       return json(
         { error: "Forbidden – only owners and managers can add employees." },
         403,
@@ -181,6 +182,12 @@ serve(async (req) => {
     }
     if (!["owner", "manager", "staff"].includes(role)) {
       return json({ error: "Invalid role – must be owner, manager, or staff." }, 400);
+    }
+    if (callerRole === "manager" && role !== "staff") {
+      return json(
+        { error: "Forbidden – managers can only create staff accounts." },
+        403,
+      );
     }
 
     // ── check if email already exists (profiles OR auth) ────────────

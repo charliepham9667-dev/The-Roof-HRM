@@ -339,20 +339,21 @@ export function useRoofCalendarWeekData() {
   return useQuery({
     queryKey: ["roof-calendar-week-data", rawUrl],
     queryFn: async (): Promise<RoofCalendarWeekData> => {
-      if (!rawUrl) return { byDate: [], events: [] }
-      const url = buildFetchUrl(rawUrl)
-      try {
-        const res = await fetch(url, { cache: "no-store" })
-        if (!res.ok) return { byDate: [], events: [] }
-        const text = await res.text()
-        // If we got an HTML error page instead of CSV, return empty
-        if (text.trim().startsWith("<!")) return { byDate: [], events: [] }
-        return { byDate: parseWeekCsv(text), events: parseRoofCalendarEvents(text) }
-      } catch {
-        return { byDate: [], events: [] }
+      if (!rawUrl) {
+        throw new Error("Missing VITE_HQ_WEEK_AT_A_GLANCE_CSV_URL configuration.")
       }
+      const url = buildFetchUrl(rawUrl)
+      const res = await fetch(url, { cache: "no-store" })
+      if (!res.ok) {
+        throw new Error(`Calendar feed request failed (${res.status}).`)
+      }
+      const text = await res.text()
+      if (text.trim().startsWith("<!")) {
+        throw new Error("Calendar feed returned HTML instead of CSV.")
+      }
+      return { byDate: parseWeekCsv(text), events: parseRoofCalendarEvents(text) }
     },
-    enabled: Boolean(rawUrl),
+    enabled: true,
     staleTime: 1000 * 60 * 5,
   })
 }

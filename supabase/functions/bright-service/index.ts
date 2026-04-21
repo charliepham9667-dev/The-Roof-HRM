@@ -7,6 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
+function getBearerToken(req: Request): string | null {
+  const header = req.headers.get("authorization") || req.headers.get("Authorization") || "";
+  const m = header.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] ?? null;
+}
+
 function parseDate(dateStr: string): string | null {
   if (!dateStr) return null;
   const parts = dateStr.split(".");
@@ -1199,13 +1205,47 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { sheetId, sheetName, syncType = 'sales', action, year, month, dataType, updates, csvUrl, yearOverride } = body;
-    
+    const bearerToken = getBearerToken(req);
+    if (!bearerToken) {
+      return new Response(JSON.stringify({ success: false, error: "Missing Authorization bearer token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    const { data: authData, error: authError } = await supabase.auth.getUser(bearerToken);
+    if (authError || !authData?.user) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized caller" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: callerProfile, error: callerError } = await supabase
+      .from("profiles")
+      .select("role,status,is_active")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+    if (
+      callerError ||
+      !callerProfile ||
+      !callerProfile.is_active ||
+      callerProfile.status !== "active" ||
+      !["owner", "manager"].includes(String(callerProfile.role))
+    ) {
+      return new Response(JSON.stringify({ success: false, error: "Forbidden – only active owners/managers can run sync jobs" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json();
+    const { sheetId, sheetName, syncType = 'sales', action, year, month, dataType, updates, csvUrl, yearOverride } = body;
 
     // Handle debug query to inspect stored data
     if (action === 'debug_query') {

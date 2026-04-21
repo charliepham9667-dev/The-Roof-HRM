@@ -47,4 +47,24 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 750,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('@supabase')) return 'vendor-supabase'
+            if (id.includes('recharts')) return 'vendor-charts'
+            if (id.includes('@dnd-kit')) return 'vendor-dnd'
+            if (id.includes('react-router')) return 'vendor-router'
+            return 'vendor'
+          }
+        },
+      },
+    },
+  },
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.ts"],
+  },
 })

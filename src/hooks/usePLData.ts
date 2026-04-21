@@ -310,8 +310,11 @@ export function usePLSync() {
   const syncPnl = async (sheetId: string, sheetName: string, csvUrl?: string, yearOverride?: number) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    // Always use the anon key — user JWTs can expire mid-session causing 401s
-    const bearer = supabaseAnonKey;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const bearer = sessionData.session?.access_token;
+    if (!bearer) {
+      throw new Error('You must be logged in to run sync jobs.');
+    }
 
     const response = await fetch(
       `${supabaseUrl}/functions/v1/bright-service`,

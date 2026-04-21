@@ -28,6 +28,7 @@ import {
   Separator,
 } from "@/components/ui"
 import { useEvents, useCreateEvent, useDeleteEvent } from '../../hooks/useEvents';
+import { getTodayIsoInTimezone, toIsoDateInTimezone } from '@/lib/date';
 import type { CalendarEvent, EventType } from '../../types';
 
 const eventTypeConfig: Record<EventType, { label: string; color: string; bg: string }> = {
@@ -51,8 +52,8 @@ export function Calendar() {
   const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
   const { data: events, isLoading } = useEvents(
-    firstDay.toISOString().split('T')[0],
-    lastDay.toISOString().split('T')[0]
+    toIsoDateInTimezone(firstDay),
+    toIsoDateInTimezone(lastDay)
   );
 
   const navigateMonth = (delta: number) => {
@@ -67,7 +68,7 @@ export function Calendar() {
   const calendarDays = buildCalendarDays(currentDate);
 
   const getEventsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toIsoDateInTimezone(date);
     return events?.filter(e => {
       const start = e.startDate;
       const end = e.endDate || e.startDate;
@@ -433,7 +434,7 @@ function EventForm({ onClose }: { onClose: () => void }) {
   const [formData, setFormData] = useState({
     title: '',
     eventType: 'meeting' as EventType,
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: getTodayIsoInTimezone(),
     endDate: '',
     startTime: '',
     endTime: '',

@@ -26,6 +26,21 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught:", error, errorInfo)
+    try {
+      if (typeof window !== "undefined" && navigator.sendBeacon) {
+        const payload = JSON.stringify({
+          type: "react_error_boundary",
+          message: error.message,
+          stack: error.stack,
+          componentStack: errorInfo.componentStack,
+          path: window.location.pathname,
+          timestamp: new Date().toISOString(),
+        })
+        navigator.sendBeacon("/api/client-error", payload)
+      }
+    } catch {
+      // Keep boundary resilient even if telemetry fails.
+    }
   }
 
   render() {

@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -21,10 +21,10 @@ import { WorkforceOverview } from './pages/owner/WorkforceOverview';
 import { ManagerPerformance } from './pages/owner/ManagerPerformance';
 import { TaskDelegation } from './pages/owner/TaskDelegation';
 import { TeamDirectory } from './pages/owner/TeamDirectory';
-import { Calendar } from './pages/owner/Calendar';
 import { Resources } from './pages/owner/Resources';
 import { OrgChart } from './pages/owner/OrgChart';
 import { EmployeeDetail } from "@/pages/team/EmployeeDetail"
+const OwnerCalendar = lazy(() => import('./pages/owner/Calendar').then((m) => ({ default: m.Calendar })));
 
 // Finance pages
 import { PLPerformance } from './pages/finance/PLPerformance';
@@ -36,13 +36,13 @@ import { Forecast } from './pages/finance/Forecast';
 import { FinancialSummary } from './pages/finance/FinancialSummary';
 
 // Staff pages
-import { StaffDashboard } from './pages/staff/StaffDashboard';
-import { MyShifts } from './pages/staff/MyShifts';
-import { Profile } from './pages/staff/Profile';
-import { Tasks } from './pages/staff/Tasks';
-import { Leave } from './pages/staff/Leave';
-import { Payslips } from './pages/staff/Payslips';
-import { CheckIn } from './pages/staff/CheckIn';
+const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard').then((m) => ({ default: m.StaffDashboard })));
+const MyShifts = lazy(() => import('./pages/staff/MyShifts').then((m) => ({ default: m.MyShifts })));
+const Profile = lazy(() => import('./pages/staff/Profile').then((m) => ({ default: m.Profile })));
+const Tasks = lazy(() => import('./pages/staff/Tasks').then((m) => ({ default: m.Tasks })));
+const Leave = lazy(() => import('./pages/staff/Leave').then((m) => ({ default: m.Leave })));
+const Payslips = lazy(() => import('./pages/staff/Payslips').then((m) => ({ default: m.Payslips })));
+const CheckIn = lazy(() => import('./pages/staff/CheckIn').then((m) => ({ default: m.CheckIn })));
 
 // Manager pages (lazy load heaviest)
 const ManagerDashboard = lazy(() => import('./pages/manager').then((m) => ({ default: m.ManagerDashboard })));
@@ -54,23 +54,24 @@ const ScheduleBuilder = lazy(() => import('./pages/manager/ScheduleBuilder').the
 import { Incidents } from './pages/manager/Incidents';
 import { Onboarding } from './pages/manager/Onboarding';
 import { ManagerMyTasks } from './pages/manager/MyTasks';
-import { StaffMyTasks } from './pages/staff/MyTasks';
+const StaffMyTasks = lazy(() => import('./pages/staff/MyTasks').then((m) => ({ default: m.StaffMyTasks })));
 import { ManageChecklists } from './pages/manager/ManageChecklists';
 import { FloorIssues } from './pages/manager/FloorIssues';
 import { ManagerCalendar } from './pages/manager/Calendar';
 import { StaffCalendar } from './pages/staff/Calendar';
 
 // Venue & Wishlist pages
-import { VenueManager } from './pages/owner/VenueManager';
-import { Wishlist } from './pages/owner/Wishlist';
+const VenueManager = lazy(() => import('./pages/owner/VenueManager').then((m) => ({ default: m.VenueManager })));
+const Wishlist = lazy(() => import('./pages/owner/Wishlist').then((m) => ({ default: m.Wishlist })));
 
 // Admin pages
-import { SyncData } from './pages/admin/SyncData';
+const SyncData = lazy(() => import('./pages/admin/SyncData').then((m) => ({ default: m.SyncData })));
 
 // Common pages
-import { AnnouncementsFeed, AnnouncementDetail } from './pages/common/AnnouncementsFeed';
-import { ResourcesHub } from './pages/common/ResourcesHub';
-import { KnowledgeBase } from './pages/common/KnowledgeBase';
+const AnnouncementsFeed = lazy(() => import('./pages/common/AnnouncementsFeed').then((m) => ({ default: m.AnnouncementsFeed })));
+const AnnouncementDetail = lazy(() => import('./pages/common/AnnouncementsFeed').then((m) => ({ default: m.AnnouncementDetail })));
+const ResourcesHub = lazy(() => import('./pages/common/ResourcesHub').then((m) => ({ default: m.ResourcesHub })));
+const KnowledgeBase = lazy(() => import('./pages/common/KnowledgeBase').then((m) => ({ default: m.KnowledgeBase })));
 import DesignSystemPage from './pages/DesignSystem';
 
 // Settings pages
@@ -80,9 +81,11 @@ import { SOPSettings } from './pages/settings/SOPs';
 import Settings from '@/pages/Settings';
 
 // Marketing pages
-import DJSchedule from '@/pages/marketing/DJSchedule';
-import ContentCalendar from '@/pages/marketing/ContentCalendar';
-import MarketingDashboard from '@/pages/marketing/MarketingDashboard';
+const DJSchedule = lazy(() => import('@/pages/marketing/DJSchedule'));
+const ContentCalendar = lazy(() => import('@/pages/marketing/ContentCalendar'));
+const MarketingDashboard = lazy(() => import('@/pages/marketing/MarketingDashboard'));
+const MarketingPlans = lazy(() => import('@/pages/marketing/MarketingPlans'));
+const AdsIntegrations = lazy(() => import('@/pages/marketing/AdsIntegrations'));
 
 /**
  * Smart dashboard redirect based on role
@@ -139,12 +142,29 @@ function DashboardRedirect() {
   return <Navigate to="/owner/dashboard" replace />;
 }
 
+function CalendarRedirect() {
+  const profile = useAuthStore((s) => s.profile);
+  const viewAs = useAuthStore((s) => s.viewAs);
+
+  const effectiveRole = viewAs?.role || profile?.role;
+  if (effectiveRole === 'staff') return <Navigate to="/staff/calendar" replace />;
+  if (effectiveRole === 'manager') return <Navigate to="/manager/calendar" replace />;
+  return <Navigate to="/owner/calendar" replace />;
+}
+
 /**
  * Main App Component
  */
 export default function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <Suspense
+        fallback={
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-primary" />
+          </div>
+        }
+      >
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
@@ -207,7 +227,7 @@ export default function App() {
           } />
           <Route path="owner/calendar" element={
             <RoleGuard allowedRoles={['owner']}>
-              <Calendar />
+              <OwnerCalendar />
             </RoleGuard>
           } />
           <Route path="owner/resources" element={
@@ -441,7 +461,7 @@ export default function App() {
           <Route path="announcements/:id" element={<AnnouncementDetail />} />
           <Route path="chat" element={<Navigate to="/announcements?tab=chat" replace />} />
           <Route path="resources" element={<ResourcesHub />} />
-          <Route path="calendar" element={<Navigate to="/manager/calendar" replace />} />
+          <Route path="calendar" element={<CalendarRedirect />} />
           <Route path="kb" element={<KnowledgeBase />} />
           <Route path="design-system" element={<DesignSystemPage />} />
 
@@ -461,6 +481,16 @@ export default function App() {
           <Route path="marketing/content-calendar" element={
             <RoleGuard allowedRoles={['owner', 'manager']} allowedManagerTypes={['marketing']}>
               <ContentCalendar />
+            </RoleGuard>
+          } />
+          <Route path="marketing/plans" element={
+            <RoleGuard allowedRoles={['owner', 'manager']} allowedManagerTypes={['marketing']}>
+              <MarketingPlans />
+            </RoleGuard>
+          } />
+          <Route path="marketing/integrations" element={
+            <RoleGuard allowedRoles={['owner', 'manager']} allowedManagerTypes={['marketing']}>
+              <AdsIntegrations />
             </RoleGuard>
           } />
           <Route path="marketing/schedule" element={
@@ -504,6 +534,7 @@ export default function App() {
           } />
         </Route>
       </Routes>
+      </Suspense>
     </ThemeProvider>
   );
 }

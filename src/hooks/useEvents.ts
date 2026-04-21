@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+import { getTodayIsoInTimezone, toIsoDateInTimezone } from '../lib/date';
 import type { CalendarEvent, EventType, EventChecklistItem, EventMarketingStatus } from '../types';
 
 // Get events for a date range
@@ -23,10 +24,10 @@ export function useEvents(startDate: string, endDate: string) {
 
 // Get upcoming events (next 30 days)
 export function useUpcomingEvents(limit: number = 10) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayIsoInTimezone();
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + 30);
-  const endDate = futureDate.toISOString().split('T')[0];
+  const endDate = toIsoDateInTimezone(futureDate);
 
   return useQuery({
     queryKey: ['events', 'upcoming', limit],
@@ -49,7 +50,7 @@ export function useUpcomingEvents(limit: number = 10) {
 // Get today's event (first active event starting today)
 export function useTodaysEvent() {
   const profile = useAuthStore((s) => s.profile)
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayIsoInTimezone()
 
   return useQuery({
     queryKey: ['events', 'today', today],

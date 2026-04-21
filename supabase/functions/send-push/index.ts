@@ -8,6 +8,12 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function getBearerToken(req: Request): string | null {
+  const header = req.headers.get("authorization") || req.headers.get("Authorization") || ""
+  const m = header.match(/^Bearer\s+(.+)$/i)
+  return m?.[1] ?? null
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
@@ -27,6 +33,14 @@ serve(async (req: Request) => {
       );
     }
 
+    const bearerToken = getBearerToken(req)
+    if (!bearerToken) {
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization bearer token" }),
+        { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      )
+    }
+
     const { user_ids, title, body, url = '/' }: {
       user_ids: string[];
       title: string;
@@ -42,6 +56,33 @@ serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: authData, error: authError } = await supabase.auth.getUser(bearerToken)
+    if (authError || !authData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized caller" }),
+        { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      )
+    }
+
+    const { data: callerProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role,status,is_active")
+      .eq("id", authData.user.id)
+      .maybeSingle()
+
+    if (
+      profileError ||
+      !callerProfile ||
+      !callerProfile.is_active ||
+      callerProfile.status !== "active" ||
+      !["owner", "manager"].includes(String(callerProfile.role))
+    ) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden – only active owners/managers can send push notifications" }),
+        { status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      )
+    }
 
     // Fetch all push subscriptions for the target users
     const { data: subscriptions, error: fetchErr } = await supabase

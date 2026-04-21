@@ -29,6 +29,7 @@ import {
   CalendarDays,
   Bell,
   ClipboardList,
+  Link,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/authStore';
@@ -97,6 +98,17 @@ const ownerSections: NavSection[] = [
     ],
   },
   {
+    title: 'Marketing',
+    icon: Megaphone,
+    defaultOpen: false,
+    items: [
+      { to: '/marketing/dashboard', label: 'Marketing Dashboard', icon: Megaphone },
+      { to: '/marketing/content-calendar', label: 'Content Calendar', icon: CalendarDays },
+      { to: '/marketing/plans', label: 'Marketing Plans', icon: ClipboardList },
+      { to: '/marketing/integrations', label: 'Ads Integrations', icon: Link },
+    ],
+  },
+  {
     title: 'Admin',
     icon: Settings,
     defaultOpen: false,
@@ -137,6 +149,19 @@ const getManagerSections = (managerType: ManagerType): NavSection[] => {
         { to: '/manager/leave', label: 'Leave Requests', icon: Clock },
       ],
     },
+    ...(managerType === 'marketing'
+      ? [{
+          title: 'Marketing',
+          icon: Megaphone,
+          defaultOpen: true,
+          items: [
+            { to: '/marketing/dashboard', label: 'Marketing Dashboard', icon: Megaphone },
+            { to: '/marketing/content-calendar', label: 'Content Calendar', icon: CalendarDays },
+            { to: '/marketing/plans', label: 'Marketing Plans', icon: ClipboardList },
+            { to: '/marketing/integrations', label: 'Ads Integrations', icon: Link },
+          ],
+        }]
+      : []),
     {
       title: 'Communication',
       icon: Megaphone,
