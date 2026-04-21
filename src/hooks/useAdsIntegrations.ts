@@ -13,6 +13,30 @@ export type MarketingIntegration = {
   created_at: string
 }
 
+export type MarketingSyncRun = {
+  id: string
+  platform: AdsPlatform | "all"
+  status: "running" | "completed" | "failed" | "partial"
+  started_at: string
+  completed_at: string | null
+  rows_upserted: number
+  error_message: string | null
+}
+
+export type AdsManualMetricInput = {
+  platform: AdsPlatform
+  account_id: string
+  campaign_id: string
+  campaign_name: string
+  metric_date: string
+  spend?: number
+  impressions?: number
+  clicks?: number
+  conversions?: number
+  revenue?: number
+  raw_payload?: Record<string, unknown>
+}
+
 export function useMarketingIntegrations() {
   return useQuery({
     queryKey: ["marketing-integrations"],
@@ -67,7 +91,8 @@ export function useUpsertMarketingIntegration() {
 export function useRunAdsSync() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (platform: AdsPlatform | "all" = "all") => {
+    mutationFn: async (input: { platform?: AdsPlatform | "all"; manualRows?: AdsManualMetricInput[] } = {}) => {
+      const platform = input.platform || "all"
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
       if (!token) throw new Error("You must be logged in to sync ads data.")
@@ -80,7 +105,10 @@ export function useRunAdsSync() {
           apikey: anonKey,
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ platform }),
+        body: JSON.stringify({
+          platform,
+          manual_rows: input.manualRows || [],
+        }),
       })
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(payload?.error || "Failed to run ads sync")
@@ -89,6 +117,21 @@ export function useRunAdsSync() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ads-campaigns-daily"] })
       qc.invalidateQueries({ queryKey: ["marketing-sync-runs"] })
+    },
+  })
+}
+
+export function useMarketingSyncRuns() {
+  return useQuery({
+    queryKey: ["marketing-sync-runs"],
+    queryFn: async (): Promise<MarketingSyncRun[]> => {
+      const { data, error } = await supabase
+        .from("marketing_sync_runs")
+        .select("id,platform,status,started_at,completed_at,rows_upserted,error_message")
+        .order("started_at", { ascending: false })
+        .limit(20)
+      if (error) throw error
+      return (data || []) as MarketingSyncRun[]
     },
   })
 }
