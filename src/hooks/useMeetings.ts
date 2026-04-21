@@ -37,27 +37,6 @@ function mapMeeting(row: any): Meeting {
   }
 }
 
-export function useMeetings() {
-  const profile = useAuthStore((s) => s.profile)
-
-  const { data = [], isLoading, error } = useQuery({
-    queryKey: ["meetings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("meetings")
-        .select("*")
-        .order("meeting_date", { ascending: true })
-        .order("start_time", { ascending: true })
-
-      if (error) throw error
-      return (data || []).map(mapMeeting)
-    },
-    enabled: !!profile,
-  })
-
-  return { meetings: data as Meeting[], isLoading, error }
-}
-
 export function useTodaysMeetings() {
   const profile = useAuthStore((s) => s.profile)
   const today = new Date().toISOString().split("T")[0]

@@ -9,10 +9,12 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Link2,
   Megaphone,
   Pencil,
   Sparkles,
   Trash2,
+  Wallet,
   Zap,
 } from "lucide-react"
 
@@ -675,6 +677,57 @@ export default function OwnerDashboardPage() {
     <div className="space-y-6 min-w-0 w-full">
       {/* Header */}
       <DashboardHeaderClock firstName={firstName} />
+
+      {/* Owner quick actions — optimized for daily operating rhythm */}
+      <div className="rounded-card border border-border bg-card p-3 shadow-card">
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Quick Actions</div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <button
+            type="button"
+            onClick={() => navigate("/finance/summary")}
+            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+              Log Cash
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/finance/debt")}
+            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
+          >
+            <span className="inline-flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              Log Debt
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/operations")}
+            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Activity className="h-4 w-4 text-muted-foreground" />
+              Open Operations
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/marketing/integrations")}
+            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-muted-foreground" />
+              Open Integrations
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+      </div>
 
       {/* HQ row */}
       <div className="grid gap-4 w-full min-w-0 md:grid-cols-2 lg:grid-cols-[320px_1fr]">

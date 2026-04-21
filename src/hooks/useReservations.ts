@@ -52,26 +52,6 @@ export function useReservations(startDate: string, endDate: string) {
   });
 }
 
-// Get single reservation
-export function useReservation(reservationId: string | null) {
-  return useQuery({
-    queryKey: ['reservation', reservationId],
-    queryFn: async (): Promise<Reservation | null> => {
-      if (!reservationId) return null;
-
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('*')
-        .eq('id', reservationId)
-        .single();
-
-      if (error) throw error;
-      return mapReservation(data);
-    },
-    enabled: !!reservationId,
-  });
-}
-
 // Create reservation
 export function useCreateReservation() {
   const queryClient = useQueryClient();
@@ -244,41 +224,6 @@ export function useDeleteReservation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-    },
-  });
-}
-
-// Get reservation stats for a period
-export function useReservationStats(startDate: string, endDate: string) {
-  return useQuery({
-    queryKey: ['reservation-stats', startDate, endDate],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('status, party_size')
-        .gte('reservation_date', startDate)
-        .lte('reservation_date', endDate);
-
-      if (error) throw error;
-
-      const stats = {
-        total: data?.length || 0,
-        confirmed: 0,
-        completed: 0,
-        noShow: 0,
-        cancelled: 0,
-        totalGuests: 0,
-      };
-
-      (data || []).forEach((r: any) => {
-        stats.totalGuests += r.party_size;
-        if (r.status === 'confirmed' || r.status === 'pending') stats.confirmed++;
-        else if (r.status === 'completed' || r.status === 'seated') stats.completed++;
-        else if (r.status === 'no_show') stats.noShow++;
-        else if (r.status === 'cancelled') stats.cancelled++;
-      });
-
-      return stats;
     },
   });
 }

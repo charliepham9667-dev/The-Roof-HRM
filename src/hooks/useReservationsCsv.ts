@@ -183,13 +183,6 @@ export function useTodayReservationsCsv() {
   return { data: todayReservations, ...rest }
 }
 
-/** Returns all upcoming (future) reservations from the CSV, excluding past */
-export function useUpcomingReservationsCsv() {
-  const { data: all, ...rest } = useReservationsCsv()
-  const upcoming = (all || []).filter((r) => r.status === 'upcoming')
-  return { data: upcoming, ...rest }
-}
-
 /** Total confirmed pax for today (sum of numberOfGuests for today's reservations) */
 export function useTodayPaxConfirmed() {
   const { data: todayReservations, isLoading } = useTodayReservationsCsv()

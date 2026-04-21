@@ -1534,7 +1534,7 @@ export function ManagerDashboard() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => navigate("/owner/wishlist")}
+                        onClick={() => navigate("/operations")}
                         className="shrink-0 flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-[10px] tracking-wider text-muted-foreground uppercase hover:border-primary/30 hover:text-primary transition-colors whitespace-nowrap"
                       >
                         <ArrowUpRight className="h-3 w-3" /> Escalate

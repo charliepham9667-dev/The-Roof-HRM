@@ -459,41 +459,6 @@ export function useDeleteTaskTemplate() {
   });
 }
 
-// Get task completion stats for a date range (for managers)
-export function useTaskCompletionStats(startDate: string, endDate: string) {
-  return useQuery({
-    queryKey: ['task-completion-stats', startDate, endDate],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('task_completions')
-        .select(`
-          *,
-          profiles:staff_id (full_name, email, job_role),
-          task_templates (name, task_type)
-        `)
-        .gte('completion_date', startDate)
-        .lte('completion_date', endDate)
-        .order('completion_date', { ascending: false });
-
-      if (error) throw error;
-
-      return (data || []).map((row: any) => ({
-        ...mapTaskCompletion(row),
-        staff: row.profiles ? {
-          id: row.staff_id,
-          fullName: row.profiles.full_name,
-          email: row.profiles.email,
-          jobRole: row.profiles.job_role,
-        } : undefined,
-        template: row.task_templates ? {
-          name: row.task_templates.name,
-          taskType: row.task_templates.task_type,
-        } : undefined,
-      }));
-    },
-  });
-}
-
 // Helper mappers
 function mapTaskTemplate(row: any): TaskTemplate {
   return {

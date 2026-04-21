@@ -358,11 +358,3 @@ export function useRoofCalendarWeekData() {
   })
 }
 
-export function useWeekAtGlanceCsv() {
-  const q = useRoofCalendarWeekData()
-  return {
-    ...q,
-    data: q.data?.byDate ?? [],
-  }
-}
-

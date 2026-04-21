@@ -39,6 +39,7 @@ import {
   // Finance icons
   DollarSign,
   TrendingUp,
+  TrendingDown,
   // Team icons
   Users,
   UserCog,
@@ -82,7 +83,7 @@ const navigationGroups: NavGroup[] = [
   // OWNER NAV (matches requested sidebar structure)
   // =========================================================
   {
-    label: 'Core',
+    label: 'Overview',
     roles: ['owner'],
     items: [
       {
@@ -91,42 +92,24 @@ const navigationGroups: NavGroup[] = [
         icon: LayoutDashboard,
         roles: ['owner'],
       },
-      {
-        title: 'Venue Manager',
-        url: '/owner/venue',
-        icon: MapPin,
-        roles: ['owner'],
-      },
+    ],
+  },
+  {
+    label: 'Run The Venue',
+    roles: ['owner'],
+    items: [
       {
         title: 'Operations',
-        url: '/owner/wishlist',
+        url: '/operations',
         icon: ShoppingCart,
         roles: ['owner'],
       },
-    ],
-  },
-  {
-    label: 'Finance',
-    roles: ['owner'],
-    items: [
       {
-        title: 'Summary',
-        url: '/finance/summary',
-        icon: DollarSign,
+        title: 'Venue Manager',
+        url: '/venue',
+        icon: MapPin,
         roles: ['owner'],
       },
-      {
-        title: 'P&L Support',
-        url: '/finance/pl',
-        icon: TrendingUp,
-        roles: ['owner'],
-      },
-    ],
-  },
-  {
-    label: 'Team',
-    roles: ['owner'],
-    items: [
       {
         title: 'Team Overview',
         url: '/owner/team-directory',
@@ -137,6 +120,30 @@ const navigationGroups: NavGroup[] = [
         title: 'Schedule',
         url: '/owner/schedule',
         icon: Calendar,
+        roles: ['owner'],
+      },
+    ],
+  },
+  {
+    label: 'Finance',
+    roles: ['owner'],
+    items: [
+      {
+        title: 'Finance Snapshot',
+        url: '/finance/summary',
+        icon: DollarSign,
+        roles: ['owner'],
+      },
+      {
+        title: 'Debt Tracker',
+        url: '/finance/debt',
+        icon: TrendingDown,
+        roles: ['owner'],
+      },
+      {
+        title: 'P&L Performance',
+        url: '/finance/pl',
+        icon: TrendingUp,
         roles: ['owner'],
       },
     ],
@@ -157,10 +164,16 @@ const navigationGroups: NavGroup[] = [
         icon: Calendar,
         roles: ['owner'],
       },
+      {
+        title: 'Integrations',
+        url: '/marketing/integrations',
+        icon: BarChart3,
+        roles: ['owner'],
+      },
     ],
   },
   {
-    label: 'Common Hub',
+    label: 'Workspace',
     roles: ['owner'],
     items: [
       {
@@ -181,12 +194,6 @@ const navigationGroups: NavGroup[] = [
         icon: Megaphone,
         roles: ['owner'],
       },
-    ],
-  },
-  {
-    label: 'Company',
-    roles: ['owner'],
-    items: [
       {
         title: 'Company Profile',
         url: '/owner/company',
@@ -229,13 +236,13 @@ const navigationGroups: NavGroup[] = [
     items: [
       {
         title: 'Venue Manager',
-        url: '/manager/venue',
+        url: '/venue',
         icon: MapPin,
         roles: ['floor_manager'],
       },
       {
         title: 'Operations',
-        url: '/manager/operations',
+        url: '/operations',
         icon: ShoppingCart,
         roles: ['floor_manager'],
       },
@@ -329,13 +336,13 @@ const navigationGroups: NavGroup[] = [
     items: [
       {
         title: 'Venue Manager',
-        url: '/manager/venue',
+        url: '/venue',
         icon: MapPin,
         roles: ['bar_manager'],
       },
       {
         title: 'Operations',
-        url: '/manager/operations',
+        url: '/operations',
         icon: ShoppingCart,
         roles: ['bar_manager'],
       },
@@ -429,13 +436,13 @@ const navigationGroups: NavGroup[] = [
     items: [
       {
         title: 'Venue Manager',
-        url: '/manager/venue',
+        url: '/venue',
         icon: MapPin,
         roles: ['manager'],
       },
       {
         title: 'Operations',
-        url: '/manager/operations',
+        url: '/operations',
         icon: ShoppingCart,
         roles: ['manager'],
       },

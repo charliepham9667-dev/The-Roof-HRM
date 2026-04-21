@@ -155,34 +155,6 @@ export function usePLData(year?: number, dataType: 'actual' | 'budget' = 'actual
 }
 
 /**
- * Fetch P&L data for a specific month
- */
-export function usePLMonthData(year: number, month: number) {
-  return useQuery({
-    queryKey: ['pnl-month', year, month],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pnl_monthly')
-        .select('*')
-        .eq('year', year)
-        .eq('month', month);
-
-      if (error) throw error;
-
-      const actual = data?.find(d => d.data_type === 'actual');
-      const budget = data?.find(d => d.data_type === 'budget');
-
-      return {
-        actual: actual ? transformPnlRow(actual) : null,
-        budget: budget ? transformPnlRow(budget) : null,
-        monthName: MONTH_NAMES[month - 1],
-      };
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-}
-
-/**
  * Compare P&L data between two years (YoY comparison)
  */
 export function usePLComparison(currentYear: number, previousYear: number) {

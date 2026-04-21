@@ -26,21 +26,6 @@ export function useResources(category?: ResourceCategory) {
   });
 }
 
-// Get resources grouped by category
-export function useResourcesByCategory() {
-  const { data: resources } = useResources();
-
-  const grouped = resources?.reduce((acc, resource) => {
-    if (!acc[resource.category]) {
-      acc[resource.category] = [];
-    }
-    acc[resource.category].push(resource);
-    return acc;
-  }, {} as Record<ResourceCategory, ResourceLink[]>) || {};
-
-  return grouped;
-}
-
 // Create resource
 export function useCreateResource() {
   const queryClient = useQueryClient();
@@ -72,39 +57,6 @@ export function useCreateResource() {
       return data;
     },
     retry: 0,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resources'] });
-    },
-  });
-}
-
-// Update resource
-export function useUpdateResource() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, ...input }: Partial<ResourceLink> & { id: string }) => {
-      const updateData: any = { updated_at: new Date().toISOString() };
-
-      if (input.title !== undefined) updateData.title = input.title;
-      if (input.titleVi !== undefined) updateData.title_vi = input.titleVi;
-      if (input.description !== undefined) updateData.description = input.description;
-      if (input.url !== undefined) updateData.url = input.url;
-      if (input.category !== undefined) updateData.category = input.category;
-      if (input.subcategory !== undefined) updateData.subcategory = input.subcategory;
-      if (input.icon !== undefined) updateData.icon = input.icon;
-      if (input.sortOrder !== undefined) updateData.sort_order = input.sortOrder;
-
-      const { data, error } = await supabase
-        .from('resource_links')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
     },

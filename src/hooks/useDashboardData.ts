@@ -813,25 +813,6 @@ export function useGoogleReviews() {
   });
 }
 
-export function useGoogleAuth() {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  
-  const authorize = () => {
-    // Redirect to Google auth endpoint
-    window.location.href = `${supabaseUrl}/functions/v1/google-auth`;
-  };
-
-  const syncReviews = async () => {
-    const response = await fetch(`${supabaseUrl}/functions/v1/sync-google-reviews`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    return response.json();
-  };
-
-  return { authorize, syncReviews };
-}
-
 // =============================================
 // Compliance
 // =============================================

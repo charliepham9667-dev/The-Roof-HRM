@@ -19,7 +19,9 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'owner/calendar':       ['Owner',     'Calendar'],
   'owner/venue-calendar': ['Venue',     'Venue Calendar'],
   'owner/venue':          ['Venue',     'Venue Manager'],
+  'venue':                ['Venue',     'Venue Manager'],
   'owner/wishlist':       ['Operations','Operations'],
+  'operations':           ['Operations','Operations'],
   'owner/resources':      ['Common',    'Resources'],
   'owner/announcements':  ['Common',    'Announcements'],
   'owner/schedule':       ['Team',      'Schedule'],
@@ -27,7 +29,7 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'owner/company':        ['Company',   'Company Profile'],
   'weekly-focus':         ['Owner',     'Weekly Focus'],
   // Finance
-  'finance/summary':      ['Finance',   'Financial Summary'],
+  'finance/summary':      ['Finance',   'Finance Snapshot'],
   'finance/pl':           ['Finance',   'P&L Performance'],
   'finance/reports':      ['Finance',   'Report Builder'],
   'finance/category':     ['Finance',   'Category Drilldown'],
@@ -63,7 +65,6 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'staff/calendar':       ['Schedule',  'Venue Briefing'],
   // Marketing
   'marketing/dashboard':      ['Marketing', 'Dashboard'],
-  'marketing/calendar':       ['Marketing', 'Content Calendar'],
   'marketing/content-calendar':['Marketing','Content Calendar'],
   'marketing/dj-schedule':    ['Marketing', 'DJ Schedule'],
   'marketing/schedule':       ['Marketing', 'Schedule'],

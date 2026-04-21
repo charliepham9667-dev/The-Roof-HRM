@@ -19,6 +19,7 @@ import {
   Building2,
   Users,
   TrendingUp,
+  TrendingDown,
   Settings,
   LucideIcon,
 } from 'lucide-react'
@@ -62,21 +63,21 @@ function resolveNavRole(role: UserRole, managerType?: ManagerType | null): NavRo
 const TAB_CONFIG: Record<NavRole, TabDef[]> = {
   owner: [
     { to: '/owner/dashboard',           icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/operations',                icon: ShoppingCart,    label: 'Operations' },
     { to: '/finance/summary',           icon: DollarSign,      label: 'Finance' },
     { to: '/marketing/dashboard',       icon: BarChart3,       label: 'Marketing' },
-    { to: '/owner/schedule',            icon: Calendar,        label: 'Schedule' },
     { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
   ],
   floor_manager: [
     { to: '/manager/dashboard',         icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/manager/operations',        icon: ShoppingCart,    label: 'Operations' },
+    { to: '/operations',                icon: ShoppingCart,    label: 'Operations' },
     { to: '/manager/calendar',          icon: Calendar,        label: 'Briefing' },
     { to: '/manager/schedule',          icon: Calendar,        label: 'Schedule' },
     { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
   ],
   bar_manager: [
     { to: '/manager/dashboard',         icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/manager/operations',        icon: ShoppingCart,    label: 'Operations' },
+    { to: '/operations',                icon: ShoppingCart,    label: 'Operations' },
     { to: '/manager/calendar',          icon: Calendar,        label: 'Briefing' },
     { to: '/manager/schedule',          icon: Calendar,        label: 'Schedule' },
     { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
@@ -84,7 +85,7 @@ const TAB_CONFIG: Record<NavRole, TabDef[]> = {
   // Generic manager fallback (no managerType)
   manager: [
     { to: '/manager/dashboard',         icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/manager/operations',        icon: ShoppingCart,    label: 'Operations' },
+    { to: '/operations',                icon: ShoppingCart,    label: 'Operations' },
     { to: '/manager/schedule',          icon: Calendar,        label: 'Schedule' },
     { to: '/manager/announcements',     icon: MessageSquare,   label: 'Chat',     isBadgedChat: true },
     { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
@@ -110,37 +111,34 @@ const TAB_CONFIG: Record<NavRole, TabDef[]> = {
 const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
   owner: [
     {
-      label: 'Core',
+      label: 'Run The Venue',
       items: [
-        { title: 'Venue Manager',        url: '/owner/venue',            icon: MapPin },
-        { title: 'Operations',           url: '/owner/wishlist',         icon: ShoppingCart },
-        { title: 'Finance P&L',          url: '/finance/pl',             icon: TrendingUp },
+        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
+        { title: 'Team Overview',        url: '/owner/team-directory',   icon: Users },
+        { title: 'Schedule',             url: '/owner/schedule',         icon: Calendar },
       ],
     },
     {
-      label: 'Team',
+      label: 'Finance',
       items: [
-        { title: 'Team Overview',        url: '/owner/team-directory',   icon: Users },
-        { title: 'Schedule',             url: '/owner/schedule',         icon: Calendar },
+        { title: 'P&L Performance',      url: '/finance/pl',             icon: TrendingUp },
+        { title: 'Debt Tracker',         url: '/finance/debt',           icon: TrendingDown },
       ],
     },
     {
       label: 'Marketing',
       items: [
         { title: 'Content Calendar',     url: '/marketing/content-calendar', icon: Calendar },
+        { title: 'Plans',                url: '/marketing/plans',        icon: ClipboardList },
+        { title: 'Integrations',         url: '/marketing/integrations', icon: BarChart3 },
       ],
     },
     {
-      label: 'Common Hub',
+      label: 'Workspace',
       items: [
         { title: 'Manage Checklists',    url: '/owner/checklists',       icon: ClipboardList },
         { title: 'Resources',            url: '/owner/resources',        icon: FolderOpen },
         { title: 'Announcements & Chat', url: '/owner/announcements',    icon: Megaphone },
-      ],
-    },
-    {
-      label: 'Company',
-      items: [
         { title: 'Company Profile',      url: '/owner/company',          icon: Building2 },
         { title: 'Settings',             url: '/settings',               icon: Settings },
       ],
@@ -150,7 +148,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Management',
       items: [
-        { title: 'Venue Manager',        url: '/manager/venue',          icon: MapPin },
+        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
         { title: 'Floor Issues',         url: '/manager/floor-issues',   icon: AlertTriangle },
       ],
     },
@@ -181,7 +179,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Management',
       items: [
-        { title: 'Venue Manager',        url: '/manager/venue',          icon: MapPin },
+        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
         { title: 'Floor Issues',         url: '/manager/floor-issues',   icon: AlertTriangle },
       ],
     },
@@ -212,7 +210,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Management',
       items: [
-        { title: 'Venue Manager',        url: '/manager/venue',          icon: MapPin },
+        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
         { title: 'Floor Issues',         url: '/manager/floor-issues',   icon: AlertTriangle },
       ],
     },
@@ -251,7 +249,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       label: 'Common Hub',
       items: [
         { title: 'Marketing Plans',      url: '/marketing/plans',         icon: ClipboardList },
-        { title: 'Ads Integrations',     url: '/marketing/integrations',  icon: BarChart3 },
+        { title: 'Integrations',         url: '/marketing/integrations',  icon: BarChart3 },
         { title: 'Resources',            url: '/manager/resources',      icon: FolderOpen },
         { title: 'Announcements & Chat', url: '/manager/announcements',  icon: Megaphone },
       ],

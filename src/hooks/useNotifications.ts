@@ -81,30 +81,6 @@ export function useMarkNotificationRead() {
   });
 }
 
-// Create a notification (used by various triggers)
-export function useCreateNotification() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: CreateNotificationInput) => {
-      const { error } = await supabase.from('notifications').insert({
-        user_id: input.userId,
-        title: input.title,
-        body: input.body,
-        notification_type: input.notificationType,
-        related_type: input.relatedType,
-        related_id: input.relatedId,
-        scheduled_for: input.scheduledFor,
-        created_at: new Date().toISOString(),
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
-}
-
 // Create multiple notifications at once (fan-out)
 export async function insertNotifications(inputs: CreateNotificationInput[]) {
   if (inputs.length === 0) return;
