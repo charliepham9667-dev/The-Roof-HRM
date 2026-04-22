@@ -1,0 +1,28 @@
+-- Fix infinite recursion on public.profiles introduced by
+-- 20260422143000_rls_remediation.sql.
+--
+-- Root cause:
+--   The policy "Owner can update any profile" is defined as
+--     USING (is_owner()) WITH CHECK (is_owner())
+--   is_owner() is a LANGUAGE sql STABLE SECURITY DEFINER function whose body
+--   does SELECT ... FROM profiles. Postgres inlines STABLE SQL functions into
+--   policy expressions; when inlined, the SECURITY DEFINER context is dropped
+--   and the inner SELECT on profiles evaluates profiles' own RLS policies,
+--   producing the recursion detected at runtime.
+--
+-- Historical note:
+--   Migration 20260227100000_fix_profiles_rls_staff_access.sql fixed the
+--   equivalent issue for SELECT by replacing is_owner()-based SELECT with
+--   USING (true). The UPDATE counterpart ("Owner can update any profile") was
+--   dropped out-of-band in the remote DB (see `supabase db push` NOTICE
+--   stating it did not exist on re-run), which is why the bug only resurfaced
+--   after the remediation migration re-created it.
+--
+-- Fix:
+--   Drop the recursion-prone policy. "Users can update own profile" (USING id
+--   = auth.uid()) remains and handles the common case. Cross-profile admin
+--   writes should use the service role (Edge Functions / admin SDK), which is
+--   consistent with the COO operating rule that HRM/AIOS never auto-writes to
+--   profiles.
+
+DROP POLICY IF EXISTS "Owner can update any profile" ON public.profiles;

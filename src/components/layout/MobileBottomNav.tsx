@@ -130,7 +130,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       items: [
         { title: 'Content Calendar',     url: '/marketing/content-calendar', icon: Calendar },
         { title: 'Plans',                url: '/marketing/plans',        icon: ClipboardList },
-        { title: 'Integrations',         url: '/marketing/integrations', icon: BarChart3 },
       ],
     },
     {

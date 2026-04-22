@@ -39,62 +39,73 @@ DROP POLICY IF EXISTS "Targets writable by owner" ON public.targets;
 DROP POLICY IF EXISTS "Targets viewable by all authenticated" ON public.targets;
 DROP POLICY IF EXISTS "Targets manageable by owner" ON public.targets;
 
--- 3) Recreate intended baseline policies (idempotent).
+-- 3) Recreate intended baseline policies (fully idempotent — drop the target
+--    name first in case an earlier migration or partial run already created it).
+DROP POLICY IF EXISTS "Profiles viewable by all authenticated" ON public.profiles;
 CREATE POLICY "Profiles viewable by all authenticated"
   ON public.profiles FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   TO authenticated
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
 
-CREATE POLICY "Owner can update any profile"
-  ON public.profiles FOR UPDATE
-  TO authenticated
-  USING (is_owner())
-  WITH CHECK (is_owner());
+-- Intentionally NOT re-creating "Owner can update any profile" here:
+-- is_owner() queries profiles and causes infinite recursion when inlined into
+-- a policy on profiles itself. Cross-profile admin writes go through the
+-- service role. See migration 20260422210000_fix_profiles_rls_recursion.sql.
+DROP POLICY IF EXISTS "Owner can update any profile" ON public.profiles;
 
+DROP POLICY IF EXISTS "Metrics viewable by all authenticated" ON public.daily_metrics;
 CREATE POLICY "Metrics viewable by all authenticated"
   ON public.daily_metrics FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Metrics manageable by owner" ON public.daily_metrics;
 CREATE POLICY "Metrics manageable by owner"
   ON public.daily_metrics FOR ALL
   TO authenticated
   USING (is_owner())
   WITH CHECK (is_owner());
 
+DROP POLICY IF EXISTS "Reviews viewable by all authenticated" ON public.reviews;
 CREATE POLICY "Reviews viewable by all authenticated"
   ON public.reviews FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Reviews manageable by owner" ON public.reviews;
 CREATE POLICY "Reviews manageable by owner"
   ON public.reviews FOR ALL
   TO authenticated
   USING (is_owner())
   WITH CHECK (is_owner());
 
+DROP POLICY IF EXISTS "Compliance viewable by all authenticated" ON public.compliance_items;
 CREATE POLICY "Compliance viewable by all authenticated"
   ON public.compliance_items FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Compliance manageable by managers" ON public.compliance_items;
 CREATE POLICY "Compliance manageable by managers"
   ON public.compliance_items FOR ALL
   TO authenticated
   USING (is_manager_or_owner())
   WITH CHECK (is_manager_or_owner());
 
+DROP POLICY IF EXISTS "Targets viewable by all authenticated" ON public.targets;
 CREATE POLICY "Targets viewable by all authenticated"
   ON public.targets FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Targets manageable by owner" ON public.targets;
 CREATE POLICY "Targets manageable by owner"
   ON public.targets FOR ALL
   TO authenticated

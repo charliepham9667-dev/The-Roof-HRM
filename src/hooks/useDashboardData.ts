@@ -84,6 +84,76 @@ export interface RevenueVelocityData {
 
 export interface MonthParam { year: number; month: number } // month is 0-indexed
 
+export interface RevenueLookbackDailyRow {
+  date: string;
+  revenue: number;
+  pax: number;
+  avgSpend: number;
+}
+
+export interface RevenueLookbackDailySales {
+  rows: RevenueLookbackDailyRow[];
+  hasData: boolean;
+}
+
+export function useRevenueLookbackDailySales() {
+  return useQuery({
+    queryKey: ['revenue-lookback-daily-sales'],
+    queryFn: async (): Promise<RevenueLookbackDailySales> => {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const start = new Date(today);
+      start.setDate(start.getDate() - 30);
+
+      const startISO = formatLocalISODate(start);
+      const todayISO = formatLocalISODate(today);
+
+      const { data, error } = await supabase
+        .from('daily_metrics')
+        .select('date, revenue, pax, avg_spend')
+        .gte('date', startISO)
+        .lt('date', todayISO)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      const metricsByDate = new Map<string, { revenue: number; pax: number; totalSpend: number }>();
+      (data || []).forEach((row) => {
+        const date = String(row.date);
+        const revenue = Number(row.revenue || 0);
+        const pax = Number(row.pax || 0);
+        const avgSpend = Number(row.avg_spend || 0);
+        const prev = metricsByDate.get(date) || { revenue: 0, pax: 0, totalSpend: 0 };
+        metricsByDate.set(date, {
+          revenue: prev.revenue + revenue,
+          pax: prev.pax + pax,
+          totalSpend: prev.totalSpend + (avgSpend * pax),
+        });
+      });
+
+      const rows: RevenueLookbackDailyRow[] = []
+      for (let i = 1; i <= 30; i++) {
+        const d = new Date(today)
+        d.setDate(d.getDate() - i)
+        const iso = formatLocalISODate(d)
+        const dayMetrics = metricsByDate.get(iso) || { revenue: 0, pax: 0, totalSpend: 0 }
+        rows.push({
+          date: iso,
+          revenue: dayMetrics.revenue,
+          pax: dayMetrics.pax,
+          avgSpend: dayMetrics.pax > 0 ? dayMetrics.totalSpend / dayMetrics.pax : 0,
+        })
+      }
+
+      return {
+        rows,
+        hasData: (data || []).length > 0,
+      };
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 export function useRevenueVelocity(selectedMonth?: MonthParam) {
   const now = new Date();
   const viewYear = selectedMonth?.year ?? now.getFullYear();
@@ -217,6 +287,50 @@ export function useSyncStatus() {
       };
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export interface RlsAuditStatus {
+  lastAuditAt: string | null;
+  status: 'completed' | 'failed' | 'running' | 'pending' | null;
+  daysAgo: number;
+  isStale: boolean; // true if > 10 days or never run
+}
+
+// Last RLS/drift audit run. Logged to sync_logs with sync_type = 'rls_audit'.
+export function useLastRlsAuditStatus() {
+  return useQuery({
+    queryKey: ['rls-audit-status'],
+    queryFn: async (): Promise<RlsAuditStatus> => {
+      const { data, error } = await supabase
+        .from('sync_logs')
+        .select('completed_at, status')
+        .eq('sync_type', 'rls_audit')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data?.completed_at) {
+        return {
+          lastAuditAt: null,
+          status: null,
+          daysAgo: -1,
+          isStale: true,
+        };
+      }
+
+      const completedAt = new Date(data.completed_at);
+      const now = new Date();
+      const daysAgo = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+      return {
+        lastAuditAt: data.completed_at,
+        status: data.status,
+        daysAgo,
+        isStale: daysAgo > 10,
+      };
+    },
+    staleTime: 1000 * 60 * 15,
   });
 }
 

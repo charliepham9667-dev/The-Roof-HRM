@@ -17,6 +17,7 @@ Use it when you need to understand how something works, fix something that's bro
 
 | File | When to open it |
 |---|---|
+| [daily-ops.md](daily-ops.md) | **Start here.** One-page operator cheat sheet: daily loop, retired workflows, freeze period. |
 | [system-architecture.md](system-architecture.md) | Understanding the full picture — what exists, how data flows, what's broken |
 | [aios-capabilities.md](aios-capabilities.md) | What AIOS can and cannot do; MCP tools; hard constraints |
 | [automation-playbooks.md](automation-playbooks.md) | Step-by-step: daily revenue, Friday weekly close, monthly reporting |
@@ -27,6 +28,7 @@ Use it when you need to understand how something works, fix something that's bro
 | [runbook.md](runbook.md) | Day-1 checklist, failure recovery, backfill procedures |
 | [kpi-definitions.md](kpi-definitions.md) | Canonical KPI dictionary — formula, source, threshold, reliability |
 | [implementation-roadmap.md](implementation-roadmap.md) | 30/60/90-day plan with phase gates and risk register |
+| [automation-blueprint.md](automation-blueprint.md) | Concept + execution plan for running AIOS and HRM together, conservatively automated |
 
 ---
 
@@ -87,16 +89,18 @@ Two Edge Functions have unknown cron schedules:
 
 If you're reading this for the first time and don't know where to start:
 
+0. **`daily-ops.md`** — one-page operator cheat sheet; the only file needed for daily work
 1. **`system-architecture.md`** — understand the full picture and current gaps
 2. **`data-contracts.md`** — understand the 4 key tables (especially `operations_sheet_links`)
 3. **`runbook.md`** — run the Day-1 startup checklist
 4. **`automation-playbooks.md`** — understand the 3 main workflows
 5. **`kpi-definitions.md`** — bookmark for when you need to understand a threshold
 6. **`implementation-roadmap.md`** — plan what to fix next
-7. **`alerts-and-escalation.md`** — reference when setting up proactive alerting
-8. **`integration-map.md`** — reference when debugging a broken integration
-9. **`access-and-security.md`** — reference before writing any automation that touches production data
-10. **`aios-capabilities.md`** — reference when unsure if AIOS can do something
+7. **`automation-blueprint.md`** — read after the roadmap to see how AIOS and HRM are meant to operate together, tier by tier
+8. **`alerts-and-escalation.md`** — reference when setting up proactive alerting
+9. **`integration-map.md`** — reference when debugging a broken integration
+10. **`access-and-security.md`** — reference before writing any automation that touches production data
+11. **`aios-capabilities.md`** — reference when unsure if AIOS can do something
 
 ---
 

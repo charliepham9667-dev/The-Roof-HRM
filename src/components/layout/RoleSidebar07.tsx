@@ -164,12 +164,6 @@ const navigationGroups: NavGroup[] = [
         icon: Calendar,
         roles: ['owner'],
       },
-      {
-        title: 'Integrations',
-        url: '/marketing/integrations',
-        icon: BarChart3,
-        roles: ['owner'],
-      },
     ],
   },
   {
@@ -198,6 +192,18 @@ const navigationGroups: NavGroup[] = [
         title: 'Company Profile',
         url: '/owner/company',
         icon: Building2,
+        roles: ['owner'],
+      },
+    ],
+  },
+  {
+    label: 'Settings',
+    roles: ['owner'],
+    items: [
+      {
+        title: 'Settings',
+        url: '/settings',
+        icon: Settings,
         roles: ['owner'],
       },
     ],

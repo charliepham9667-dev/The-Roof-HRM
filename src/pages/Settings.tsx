@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom"
-import { ChevronRight, FileText, RefreshCw, Shield, Users } from "lucide-react"
+import { ChevronRight, FileText, Plug, RefreshCw, Shield, Users } from "lucide-react"
 
 import { PageHeader } from "@/components/ui"
 import { PushDiagnostics } from "@/components/settings/PushDiagnostics"
@@ -28,6 +28,12 @@ const settingsItems = [
     description: "Configure data synchronization settings",
     icon: RefreshCw,
     href: "/admin/sync",
+  },
+  {
+    title: "Integrations",
+    description: "Manage connected marketing and ads platforms",
+    icon: Plug,
+    href: "/marketing/integrations",
   },
 ]
 

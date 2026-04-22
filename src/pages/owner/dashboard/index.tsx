@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ElementType } from "react"
+import { Fragment, useEffect, useMemo, useState, type ElementType } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Activity,
@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SectionTitle } from "@/components/ui/section-title"
 import { useStaffList, useTodayShifts, isOnShiftNow } from "@/hooks/useShifts"
-import { useGoogleReviews, useKPISummary, useRevenueVelocity } from "@/hooks/useDashboardData"
+import { useGoogleReviews, useKPISummary, useRevenueLookbackDailySales, useRevenueVelocity } from "@/hooks/useDashboardData"
 import {
   useExecutiveDashboardDailyInput,
   useMonthlyTarget,
@@ -49,6 +49,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
 import { useCreateMaintenanceTask } from "@/hooks/useMaintenanceTasks"
 import { TaskDescriptionEditor, SubTodoListEditor } from "@/components/tasks"
+import { AutomationStatusStrip } from "@/components/owner-dashboard/AutomationStatusStrip"
 
 const ICT_TZ = "Asia/Ho_Chi_Minh"
 
@@ -87,6 +88,37 @@ function getIctDateIso(now: Date) {
 
 function pad2(n: number) {
   return String(n).padStart(2, "0")
+}
+
+function getIsoWeekMeta(dateIso: string) {
+  const [year, month, day] = dateIso.split("-").map(Number)
+  const utcDate = new Date(Date.UTC(year, month - 1, day))
+  const dayOfWeek = utcDate.getUTCDay() || 7 // Sunday => 7
+
+  const thursday = new Date(utcDate)
+  thursday.setUTCDate(utcDate.getUTCDate() + 4 - dayOfWeek)
+  const isoYear = thursday.getUTCFullYear()
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1))
+  const week = Math.ceil((((thursday.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+
+  const weekStart = new Date(utcDate)
+  weekStart.setUTCDate(utcDate.getUTCDate() - (dayOfWeek - 1))
+  const weekEnd = new Date(weekStart)
+  weekEnd.setUTCDate(weekStart.getUTCDate() + 6)
+
+  const formatWeekDay = (d: Date) =>
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: ICT_TZ,
+    })
+
+  return {
+    week,
+    isoYear,
+    key: `${isoYear}-W${week}`,
+    rangeLabel: `${formatWeekDay(weekStart)} – ${formatWeekDay(weekEnd)}`,
+  }
 }
 
 function formatCompactVnd(value: number) {
@@ -370,8 +402,10 @@ export default function OwnerDashboardPage() {
   const now = new Date()
 
   const periodStartIso = `${todayIso.slice(0, 7)}-01`
+  const [salesRange, setSalesRange] = useState<3 | 7 | 14 | 30>(7)
   const { data: kpi, isLoading: kpiLoading } = useKPISummary()
   const { data: velocity, isLoading: velocityLoading } = useRevenueVelocity()
+  const { data: revenueLookback, isLoading: revenueLookbackLoading } = useRevenueLookbackDailySales()
   const { data: googleReviews } = useGoogleReviews()
   const { data: dailyInput, isLoading: _dailyInputLoading } = useExecutiveDashboardDailyInput(todayIso)
   const upsertDailyInput = useUpsertExecutiveDashboardDailyInput()
@@ -677,6 +711,9 @@ export default function OwnerDashboardPage() {
     <div className="space-y-6 min-w-0 w-full">
       {/* Header */}
       <DashboardHeaderClock firstName={firstName} />
+
+      {/* Automation status — one glance: sheet sync, RLS audit, open alerts */}
+      <AutomationStatusStrip />
 
       {/* Owner quick actions — optimized for daily operating rhythm */}
       <div className="rounded-card border border-border bg-card p-3 shadow-card">
@@ -1046,6 +1083,23 @@ export default function OwnerDashboardPage() {
                 : momentumGood
                   ? "border-success/25 bg-success/8 text-success"
                   : "border-warning/25 bg-warning/8 text-warning"
+            const lookbackRows = revenueLookback?.rows ?? []
+            const filteredLookbackRows = lookbackRows.slice(0, salesRange)
+            const showLookbackValues = !revenueLookbackLoading && Boolean(revenueLookback?.hasData)
+            const salesRangeFilters: Array<3 | 7 | 14 | 30> = [3, 7, 14, 30]
+            const weeklySummaries = filteredLookbackRows.reduce((acc, row) => {
+              const weekMeta = getIsoWeekMeta(row.date)
+              const prev = acc.get(weekMeta.key) ?? {
+                week: weekMeta.week,
+                rangeLabel: weekMeta.rangeLabel,
+                totalSales: 0,
+                totalPax: 0,
+              }
+              prev.totalSales += row.revenue
+              prev.totalPax += row.pax
+              acc.set(weekMeta.key, prev)
+              return acc
+            }, new Map<string, { week: number; rangeLabel: string; totalSales: number; totalPax: number }>())
 
             // Smart insight sentence
             const insight = (() => {
@@ -1146,6 +1200,119 @@ export default function OwnerDashboardPage() {
                     <div className="text-xs font-semibold text-foreground">
                       {csvPaxLoading ? "—" : csvPaxConfirmed > 0 ? csvPaxConfirmed : "—"}
                     </div>
+                  </div>
+                </div>
+
+                {/* Previous sales table with range filters */}
+                <div className="mb-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="text-[9.5px] uppercase tracking-widest text-muted-foreground">
+                      Previous sales
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {salesRangeFilters.map((range) => (
+                        <button
+                          key={range}
+                          type="button"
+                          onClick={() => setSalesRange(range)}
+                          className={cn(
+                            "rounded-sm border px-2 py-1 text-[10px] tracking-widest uppercase transition-colors",
+                            salesRange === range
+                              ? "border-primary/30 bg-primary/10 text-primary"
+                              : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/30 hover:text-secondary-foreground"
+                          )}
+                        >
+                          {range}D
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="overflow-hidden rounded-md border border-border bg-secondary/30">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/50">
+                          <th className="px-3 py-2 text-left text-[9.5px] font-medium uppercase tracking-widest text-muted-foreground">
+                            Date
+                          </th>
+                          <th className="px-3 py-2 text-right text-[9.5px] font-medium uppercase tracking-widest text-muted-foreground">
+                            Total Sales
+                          </th>
+                          <th className="px-3 py-2 text-right text-[9.5px] font-medium uppercase tracking-widest text-muted-foreground">
+                            Pax
+                          </th>
+                          <th className="px-3 py-2 text-right text-[9.5px] font-medium uppercase tracking-widest text-muted-foreground">
+                            Avg Spending
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {showLookbackValues ? (
+                          <>
+                            {filteredLookbackRows.map((row, index) => {
+                              const currentWeek = getIsoWeekMeta(row.date)
+                              const prevWeek = index > 0 ? getIsoWeekMeta(filteredLookbackRows[index - 1].date) : null
+                              const showWeekDivider = !prevWeek || prevWeek.key !== currentWeek.key
+
+                              return (
+                                <Fragment key={row.date}>
+                                  {showWeekDivider && (
+                                    <tr key={`divider-${currentWeek.key}`} className="border-b border-border/60 bg-secondary/40">
+                                      <td className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                                        Week {currentWeek.week} · {currentWeek.rangeLabel}
+                                      </td>
+                                      <td className="px-3 py-1.5 text-right text-[10px] font-medium text-foreground">
+                                        {formatCompactVnd(weeklySummaries.get(currentWeek.key)?.totalSales ?? 0)} đ
+                                      </td>
+                                      <td className="px-3 py-1.5 text-right text-[10px] font-medium text-foreground">
+                                        {(weeklySummaries.get(currentWeek.key)?.totalPax ?? 0).toLocaleString()}
+                                      </td>
+                                      <td className="px-3 py-1.5 text-right text-[10px] font-medium text-foreground">
+                                        {(() => {
+                                          const summary = weeklySummaries.get(currentWeek.key)
+                                          if (!summary || summary.totalPax <= 0) return "0 đ"
+                                          return `${formatCompactVnd(summary.totalSales / summary.totalPax)} đ`
+                                        })()}
+                                      </td>
+                                    </tr>
+                                  )}
+                                  <tr key={row.date} className="border-b border-border/60 last:border-0">
+                                    <td className="px-3 py-2 text-foreground">
+                                      {new Date(`${row.date}T00:00:00`).toLocaleDateString("en-US", {
+                                        weekday: "long",
+                                        month: "short",
+                                        day: "numeric",
+                                        timeZone: ICT_TZ,
+                                      })}
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-medium text-foreground">
+                                      {formatCompactVnd(row.revenue)} đ
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-medium text-foreground">
+                                      {row.pax.toLocaleString()}
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-medium text-foreground">
+                                      {formatCompactVnd(row.avgSpend)} đ
+                                    </td>
+                                  </tr>
+                                </Fragment>
+                              )
+                            })}
+                          </>
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-3 text-center text-muted-foreground">
+                              —
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>Window</span>
+                    <span className="font-medium text-secondary-foreground">
+                      Last {salesRange} days (excluding today)
+                    </span>
                   </div>
                 </div>
 
