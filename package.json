@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "setup:ads-secrets": "bash ./scripts/setup-ads-secrets.sh"
+    "setup:ads-secrets": "bash ./scripts/setup-ads-secrets.sh",
+    "audit:rls": "bash ./scripts/supabase-rls-audit.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
