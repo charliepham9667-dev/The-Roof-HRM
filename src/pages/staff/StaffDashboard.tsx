@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, ListChecks, AlertTriangle, CloudSun, Zap, CheckSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, AlertTriangle, CloudSun, Zap, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../../stores/authStore';
 import { useShifts, useUpcomingShiftReminder } from '../../hooks/useShifts';
-import { useAnnouncements } from '../../hooks/useAnnouncements';
 import { useClockIn, useClockOut, useClockStatus } from '../../hooks/useClockRecords';
-import { useMyTaskTemplates, useTaskCompletion, useToggleTaskItem } from '../../hooks/useTasks';
 import { useMyAssignedTasks } from '../../hooks/useDelegationTasks';
 import { cn } from '@/lib/utils';
-import type { TaskTemplate, DelegationTask } from '../../types';
+import type { DelegationTask } from '../../types';
 
 interface BreakEntry { start: Date; end: Date; durationSecs: number }
 
@@ -121,127 +119,6 @@ function SRow({ icon, label, children }: { icon: string; label: string; children
   );
 }
 
-// ─── task row ────────────────────────────────────────────────────────────────
-
-
-// ─── checklist panel ─────────────────────────────────────────────────────────
-
-function ChecklistPanel({ role }: { role: string }) {
-  const [tab, setTab] = useState<'opening' | 'closing'>(() => {
-    const h = new Date().getHours();
-    return h < 16 ? 'opening' : 'closing';
-  });
-  const { data: templates, isLoading, isError: templatesError, refetch: refetchTemplates } = useMyTaskTemplates(tab);
-  const roleLabel = capitalize(role) || 'Your Role';
-
-  // aggregate progress across all templates
-
-  return (
-    <Panel>
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <div>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
-            Daily Checklist — {roleLabel}
-          </span>
-        </div>
-        <div className="flex gap-1.5">
-          {(['opening', 'closing'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-full px-3 py-0.5 text-[11px] font-medium capitalize transition-colors ${
-                tab === t
-                  ? 'bg-foreground text-background'
-                  : 'border border-border text-muted-foreground hover:bg-muted/50'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {isLoading && !templatesError ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      ) : templatesError ? (
-        <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <p className="text-sm text-muted-foreground">Unable to load tasks.</p>
-          <button onClick={() => refetchTemplates()} className="text-xs underline text-muted-foreground hover:text-foreground">Retry</button>
-        </div>
-      ) : !templates?.length ? (
-        <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-center">
-          <ListChecks className="h-6 w-6 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No {tab} checklist for your role</p>
-        </div>
-      ) : (
-        templates.map((tpl) => <ChecklistTemplate key={tpl.id} template={tpl} />)
-      )}
-    </Panel>
-  );
-}
-
-function ChecklistTemplate({ template }: { template: TaskTemplate }) {
-  const { data: completion } = useTaskCompletion(template.id);
-  const toggle = useToggleTaskItem();
-  const done = completion?.completedTasks ?? [];
-  const total = template.tasks.length;
-  const count = done.length;
-  const pct = total ? Math.round((count / total) * 100) : 0;
-  const isDone = (name: string) => done.some((t) => t.taskName === name);
-
-  return (
-    <div>
-      {/* progress header */}
-      <div className="flex items-center gap-3 px-4 pt-3 pb-2">
-        <div className="flex-1">
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {template.name}
-            </span>
-            <span className="font-mono text-[10px] text-muted-foreground">{count} / {total}</span>
-          </div>
-          <div className="h-[3px] overflow-hidden rounded-full bg-muted">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${pct === 100 ? 'bg-success' : 'bg-primary'}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* items */}
-      <div>
-        {template.tasks.map((task, i) => {
-          const checked = isDone(task.name);
-          return (
-            <div
-              key={i}
-              onClick={() => toggle.mutate({ template, currentCompletedTasks: done, taskName: task.name })}
-              className="flex cursor-pointer items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-muted/20 transition-colors"
-            >
-              {/* checkbox */}
-              <div className={`flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[3px] border transition-all ${
-                checked ? 'border-success bg-success' : 'border-border bg-card'
-              }`}>
-                {checked && (
-                  <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                    <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-              <span className={`flex-1 text-[12px] leading-snug ${checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                {task.name}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── main dashboard ───────────────────────────────────────────────────────────
 
 export function StaffDashboard() {
@@ -251,7 +128,6 @@ export function StaffDashboard() {
   const todayStr = now.toISOString().split('T')[0];
 
   const { data: shifts } = useShifts(now);
-  const { data: announcements } = useAnnouncements();
   useUpcomingShiftReminder();
   const clockInMut = useClockIn();
   const clockOutMut = useClockOut();
@@ -342,8 +218,6 @@ export function StaffDashboard() {
   const initials = (profile?.fullName || 'ST').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   const dateLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
-  const recentAnns = (announcements || []).slice(0, 3);
-
   type PromoType = 'all_night' | 'timed' | 'conditional';
   type PromoItem = { icon: string; label: string; sub: string; hours: string; type: PromoType };
   const promosByDay: Record<string, PromoItem[]> = {
@@ -663,25 +537,20 @@ export function StaffDashboard() {
 
         {/* Tasks */}
         <Panel>
-          <PanelHeader title="Tasks — Today" right={<Pill variant="amber">Daily checklist</Pill>} />
-          <div
-            onClick={() => navigate('/staff/checklists')}
-            className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
-          >
-            <ListChecks className="h-5 w-5 text-muted-foreground" />
-            <div className="flex-1">
-              <p className="text-[13px] font-medium text-foreground">View your daily checklist</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Opening &amp; closing tasks for {capitalize(userRole)}</p>
-            </div>
-            <span className="text-muted-foreground text-xs">→</span>
+          <PanelHeader
+            title="Tasks — Today"
+            right={<Pill variant="amber">{delegatedTasks.length} assigned</Pill>}
+          />
+          <div className="px-4 py-3 text-[12px] text-muted-foreground">
+            Manage your assigned work in My Tasks. Checklist tracking has moved to Zalo.
           </div>
-          <div className="border-t border-border px-4 py-2">
+          <div className="border-t border-border px-4 py-2.5">
             <Button
               variant="outline"
-              onClick={() => navigate('/staff/checklists')}
+              onClick={() => navigate('/staff/tasks')}
               className="w-full h-auto py-2 text-[12px] font-medium"
             >
-              Open Checklist
+              Open My Tasks
             </Button>
           </div>
         </Panel>
@@ -786,47 +655,6 @@ export function StaffDashboard() {
         </Panel>
       </div>
 
-      {/* My Checklist & Announcements */}
-      <SectionLabel>My Checklist &amp; Announcements</SectionLabel>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
-
-        {/* Checklist */}
-        <ChecklistPanel role={userRole} />
-
-        {/* Announcements */}
-        <Panel>
-          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">Announcements</span>
-            <button onClick={() => navigate('/announcements')} className="text-[11px] font-medium text-primary underline hover:no-underline">
-              View all
-            </button>
-          </div>
-          {recentAnns.length > 0 ? (
-            recentAnns.map((ann) => (
-              <div
-                key={ann.id}
-                onClick={() => navigate(`/announcements/${ann.id}`)}
-                className="cursor-pointer border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/20 transition-colors"
-              >
-                <div className="mb-1 flex items-center gap-1.5">
-                  <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${ann.isRead ? 'bg-muted-foreground/50' : 'bg-success'}`} />
-                  <span className="text-[12px] font-semibold text-foreground">{ann.author?.fullName || 'Staff'}</span>
-                  <span className="ml-auto font-mono text-[11px] text-muted-foreground">
-                    {new Date(ann.publishedAt || ann.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                  </span>
-                </div>
-                <p className="line-clamp-2 pl-[13px] text-[12px] leading-relaxed text-muted-foreground">{ann.body}</p>
-              </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center py-8 text-[13px] text-muted-foreground">
-              No announcements
-            </div>
-          )}
-        </Panel>
-
-      </div>
     </div>
   );
 }

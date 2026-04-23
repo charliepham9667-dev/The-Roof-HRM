@@ -40,7 +40,6 @@ import { SupplierDebt } from './pages/finance/SupplierDebt';
 const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard').then((m) => ({ default: m.StaffDashboard })));
 const MyShifts = lazy(() => import('./pages/staff/MyShifts').then((m) => ({ default: m.MyShifts })));
 const Profile = lazy(() => import('./pages/staff/Profile').then((m) => ({ default: m.Profile })));
-const Tasks = lazy(() => import('./pages/staff/Tasks').then((m) => ({ default: m.Tasks })));
 const Leave = lazy(() => import('./pages/staff/Leave').then((m) => ({ default: m.Leave })));
 const Payslips = lazy(() => import('./pages/staff/Payslips').then((m) => ({ default: m.Payslips })));
 const CheckIn = lazy(() => import('./pages/staff/CheckIn').then((m) => ({ default: m.CheckIn })));
@@ -56,7 +55,6 @@ import { Incidents } from './pages/manager/Incidents';
 import { Onboarding } from './pages/manager/Onboarding';
 import { ManagerMyTasks } from './pages/manager/MyTasks';
 const StaffMyTasks = lazy(() => import('./pages/staff/MyTasks').then((m) => ({ default: m.StaffMyTasks })));
-import { ManageChecklists } from './pages/manager/ManageChecklists';
 import { FloorIssues } from './pages/manager/FloorIssues';
 import { ManagerCalendar } from './pages/manager/Calendar';
 import { StaffCalendar } from './pages/staff/Calendar';
@@ -69,8 +67,6 @@ const Wishlist = lazy(() => import('./pages/owner/Wishlist').then((m) => ({ defa
 const SyncData = lazy(() => import('./pages/admin/SyncData').then((m) => ({ default: m.SyncData })));
 
 // Common pages
-const AnnouncementsFeed = lazy(() => import('./pages/common/AnnouncementsFeed').then((m) => ({ default: m.AnnouncementsFeed })));
-const AnnouncementDetail = lazy(() => import('./pages/common/AnnouncementsFeed').then((m) => ({ default: m.AnnouncementDetail })));
 const ResourcesHub = lazy(() => import('./pages/common/ResourcesHub').then((m) => ({ default: m.ResourcesHub })));
 const KnowledgeBase = lazy(() => import('./pages/common/KnowledgeBase').then((m) => ({ default: m.KnowledgeBase })));
 import DesignSystemPage from './pages/DesignSystem';
@@ -236,21 +232,13 @@ export default function App() {
               <Resources />
             </RoleGuard>
           } />
-          <Route path="owner/announcements" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <AnnouncementsFeed />
-            </RoleGuard>
-          } />
           <Route path="owner/schedule" element={
             <RoleGuard allowedRoles={['owner']}>
               <ScheduleBuilder />
             </RoleGuard>
           } />
-          <Route path="owner/checklists" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <ManageChecklists />
-            </RoleGuard>
-          } />
+          <Route path="owner/announcements" element={<Navigate to="/owner/resources" replace />} />
+          <Route path="owner/checklists" element={<Navigate to="/owner/tasks" replace />} />
           <Route path="venue" element={
             <RoleGuard allowedRoles={['owner', 'manager', 'staff']}>
               <VenueManager />
@@ -338,11 +326,6 @@ export default function App() {
               <LeaveApproval />
             </RoleGuard>
           } />
-          <Route path="manager/announcements" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <AnnouncementsFeed />
-            </RoleGuard>
-          } />
           <Route path="manager/shift-summary" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <ShiftSummary />
@@ -378,11 +361,8 @@ export default function App() {
               <ManagerMyTasks />
             </RoleGuard>
           } />
-          <Route path="manager/checklists" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <ManageChecklists />
-            </RoleGuard>
-          } />
+          <Route path="manager/announcements" element={<Navigate to="/manager/resources" replace />} />
+          <Route path="manager/checklists" element={<Navigate to="/manager/tasks" replace />} />
           <Route path="manager/floor-issues" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <FloorIssues />
@@ -445,21 +425,21 @@ export default function App() {
           <Route path="staff/calendar" element={<StaffCalendar />} />
           <Route path="staff/profile" element={<Profile />} />
           <Route path="profile" element={<Navigate to="/staff/profile" replace />} />
-          <Route path="staff/checklists" element={<Tasks />} />
-          <Route path="checklists" element={<Navigate to="/staff/checklists" replace />} />
           <Route path="staff/tasks" element={<StaffMyTasks />} />
           <Route path="tasks" element={<Navigate to="/staff/tasks" replace />} />
+          <Route path="staff/checklists" element={<Navigate to="/staff/tasks" replace />} />
+          <Route path="staff/announcements" element={<Navigate to="/staff/resources" replace />} />
           <Route path="staff/leave" element={<Leave />} />
           <Route path="leave" element={<Navigate to="/staff/leave" replace />} />
           <Route path="staff/resources" element={<ResourcesHub />} />
-          <Route path="staff/announcements" element={<AnnouncementsFeed />} />
 
           {/* ============================================ */}
           {/* COMMON ROUTES (All authenticated users) */}
           {/* ============================================ */}
-          <Route path="announcements" element={<AnnouncementsFeed />} />
-          <Route path="announcements/:id" element={<AnnouncementDetail />} />
-          <Route path="chat" element={<Navigate to="/announcements?tab=chat" replace />} />
+          <Route path="announcements" element={<Navigate to="/resources" replace />} />
+          <Route path="announcements/:id" element={<Navigate to="/resources" replace />} />
+          <Route path="chat" element={<Navigate to="/resources" replace />} />
+          <Route path="checklists" element={<Navigate to="/tasks" replace />} />
           <Route path="resources" element={<ResourcesHub />} />
           <Route path="calendar" element={<CalendarRedirect />} />
           <Route path="kb" element={<KnowledgeBase />} />

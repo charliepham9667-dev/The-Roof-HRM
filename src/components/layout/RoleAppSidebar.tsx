@@ -7,7 +7,6 @@ import {
   DollarSign,
   FileText,
   LifeBuoy,
-  MessageSquare,
   Network,
   Shield,
   Spline,
@@ -110,8 +109,6 @@ function buildOwnerNav(): RoleNav {
       collapsible: true,
       defaultOpen: false,
       items: [
-        <SidebarNavLink key="ann" label="Announcements" href="/announcements" icon={MessageSquare} />,
-        <SidebarNavLink key="chat" label="Messaging" href="/chat" icon={MessageSquare} />,
         <SidebarNavLink key="res" label="Resource Library" href="/resources" icon={FileText} />,
         <SidebarNavLink key="cal" label="Event Calendar" href="/calendar" icon={CalendarDays} />,
         <SidebarNavLink key="kb" label="Knowledge Base" href="/kb" icon={Building2} />,
@@ -160,7 +157,6 @@ function buildManagerNav(): RoleNav {
         <SidebarNavLink key="leave" label="Leave / PTO Approval" href="/manager/leave" icon={ClipboardList} />,
         <SidebarNavLink key="incidents" label="Incident Reporting" href="/manager/incidents" icon={Wrench} />,
         <SidebarNavLink key="onboarding" label="Onboarding / Offboarding" href="/manager/onboarding" icon={Users} />,
-        <SidebarNavLink key="checklists" label="Checklist Oversight" href="/tasks" icon={ClipboardList} />,
       ],
     },
     {
@@ -168,8 +164,6 @@ function buildManagerNav(): RoleNav {
       collapsible: true,
       defaultOpen: false,
       items: [
-        <SidebarNavLink key="ann" label="Announcements" href="/announcements" icon={MessageSquare} />,
-        <SidebarNavLink key="chat" label="Messaging" href="/chat" icon={MessageSquare} />,
         <SidebarNavLink key="res" label="Resource Library" href="/resources" icon={FileText} />,
         <SidebarNavLink key="cal" label="Event Calendar" href="/calendar" icon={CalendarDays} />,
         <SidebarNavLink key="kb" label="Knowledge Base" href="/kb" icon={Building2} />,
@@ -206,8 +200,6 @@ function buildStaffNav(): RoleNav {
       collapsible: true,
       defaultOpen: false,
       items: [
-        <SidebarNavLink key="ann" label="Announcements" href="/announcements" icon={MessageSquare} />,
-        <SidebarNavLink key="chat" label="Messaging" href="/chat" icon={MessageSquare} />,
         <SidebarNavLink key="res" label="Resource Library" href="/resources" icon={FileText} />,
         <SidebarNavLink key="cal" label="Event Calendar" href="/calendar" icon={CalendarDays} />,
         <SidebarNavLink key="kb" label="Knowledge Base" href="/kb" icon={Building2} />,

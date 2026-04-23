@@ -28,10 +28,8 @@ import {
   // Navigation icons
   LayoutDashboard,
   CheckSquare,
-  ClipboardList,
   Clock,
   Calendar,
-  Megaphone,
   FolderOpen,
   BarChart3,
   MapPin,
@@ -171,21 +169,9 @@ const navigationGroups: NavGroup[] = [
     roles: ['owner'],
     items: [
       {
-        title: 'Manage Checklists',
-        url: '/owner/checklists',
-        icon: ClipboardList,
-        roles: ['owner'],
-      },
-      {
         title: 'Resources',
         url: '/owner/resources',
         icon: FolderOpen,
-        roles: ['owner'],
-      },
-      {
-        title: 'Announcements & Chat',
-        url: '/owner/announcements',
-        icon: Megaphone,
         roles: ['owner'],
       },
       {
@@ -289,21 +275,9 @@ const navigationGroups: NavGroup[] = [
     roles: ['floor_manager'],
     items: [
       {
-        title: 'Manage Checklists',
-        url: '/manager/checklists',
-        icon: ClipboardList,
-        roles: ['floor_manager'],
-      },
-      {
         title: 'Resources',
         url: '/manager/resources',
         icon: FolderOpen,
-        roles: ['floor_manager'],
-      },
-      {
-        title: 'Announcements & Chat',
-        url: '/manager/announcements',
-        icon: Megaphone,
         roles: ['floor_manager'],
       },
     ],
@@ -389,21 +363,9 @@ const navigationGroups: NavGroup[] = [
     roles: ['bar_manager'],
     items: [
       {
-        title: 'Manage Checklists',
-        url: '/manager/checklists',
-        icon: ClipboardList,
-        roles: ['bar_manager'],
-      },
-      {
         title: 'Resources',
         url: '/manager/resources',
         icon: FolderOpen,
-        roles: ['bar_manager'],
-      },
-      {
-        title: 'Announcements & Chat',
-        url: '/manager/announcements',
-        icon: Megaphone,
         roles: ['bar_manager'],
       },
     ],
@@ -489,21 +451,9 @@ const navigationGroups: NavGroup[] = [
     roles: ['manager'],
     items: [
       {
-        title: 'Manage Checklists',
-        url: '/manager/checklists',
-        icon: ClipboardList,
-        roles: ['manager'],
-      },
-      {
         title: 'Resources',
         url: '/manager/resources',
         icon: FolderOpen,
-        roles: ['manager'],
-      },
-      {
-        title: 'Announcements & Chat',
-        url: '/manager/announcements',
-        icon: Megaphone,
         roles: ['manager'],
       },
     ],
@@ -582,12 +532,6 @@ const navigationGroups: NavGroup[] = [
         icon: FolderOpen,
         roles: ['marketing_manager'],
       },
-      {
-        title: 'Announcements & Chat',
-        url: '/manager/announcements',
-        icon: Megaphone,
-        roles: ['marketing_manager'],
-      },
     ],
   },
 
@@ -608,12 +552,6 @@ const navigationGroups: NavGroup[] = [
         title: 'My Tasks',
         url: '/staff/tasks',
         icon: CheckSquare,
-        roles: ['staff'],
-      },
-      {
-        title: 'Daily Checklist',
-        url: '/staff/checklists',
-        icon: ClipboardList,
         roles: ['staff'],
       },
       {
@@ -650,12 +588,6 @@ const navigationGroups: NavGroup[] = [
         title: 'Resources',
         url: '/staff/resources',
         icon: FolderOpen,
-        roles: ['staff'],
-      },
-      {
-        title: 'Announcements & Chat',
-        url: '/staff/announcements',
-        icon: Megaphone,
         roles: ['staff'],
       },
     ],

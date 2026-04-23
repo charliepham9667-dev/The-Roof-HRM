@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Calendar,
   Clock,
-  MessageSquare,
   CheckSquare,
   DollarSign,
   BarChart3,
@@ -15,7 +14,6 @@ import {
   AlertTriangle,
   ClipboardList,
   FolderOpen,
-  Megaphone,
   Building2,
   Users,
   TrendingUp,
@@ -24,8 +22,6 @@ import {
   LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { useStaffList } from '@/hooks/useShifts'
-import { useDMListMetadata } from '@/hooks/useChatReadReceipts'
 import { cn } from '@/lib/utils'
 import type { UserRole, ManagerType } from '@/types'
 
@@ -38,7 +34,6 @@ interface TabDef {
   icon: LucideIcon
   label: string
   primary?: boolean
-  isBadgedChat?: boolean
 }
 
 interface DrawerSection {
@@ -87,7 +82,7 @@ const TAB_CONFIG: Record<NavRole, TabDef[]> = {
     { to: '/manager/dashboard',         icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/operations',                icon: ShoppingCart,    label: 'Operations' },
     { to: '/manager/schedule',          icon: Calendar,        label: 'Schedule' },
-    { to: '/manager/announcements',     icon: MessageSquare,   label: 'Chat',     isBadgedChat: true },
+    { to: '/manager/tasks',             icon: CheckSquare,     label: 'Tasks' },
     { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
   ],
   marketing_manager: [
@@ -101,7 +96,7 @@ const TAB_CONFIG: Record<NavRole, TabDef[]> = {
     { to: '/staff/dashboard',           icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/staff/calendar',            icon: Calendar,        label: 'Briefing' },
     { to: '/staff/check-in',            icon: Clock,           label: 'Check In', primary: true },
-    { to: '/staff/announcements',       icon: MessageSquare,   label: 'Chat',     isBadgedChat: true },
+    { to: '/staff/tasks',               icon: CheckSquare,     label: 'Tasks' },
     { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
   ],
 }
@@ -135,9 +130,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Workspace',
       items: [
-        { title: 'Manage Checklists',    url: '/owner/checklists',       icon: ClipboardList },
         { title: 'Resources',            url: '/owner/resources',        icon: FolderOpen },
-        { title: 'Announcements & Chat', url: '/owner/announcements',    icon: Megaphone },
         { title: 'Company Profile',      url: '/owner/company',          icon: Building2 },
         { title: 'Settings',             url: '/settings',               icon: Settings },
       ],
@@ -161,9 +154,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Common Hub',
       items: [
-        { title: 'Manage Checklists',    url: '/manager/checklists',     icon: ClipboardList },
         { title: 'Resources',            url: '/manager/resources',      icon: FolderOpen },
-        { title: 'Announcements & Chat', url: '/manager/announcements',  icon: Megaphone },
       ],
     },
     {
@@ -192,9 +183,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Common Hub',
       items: [
-        { title: 'Manage Checklists',    url: '/manager/checklists',     icon: ClipboardList },
         { title: 'Resources',            url: '/manager/resources',      icon: FolderOpen },
-        { title: 'Announcements & Chat', url: '/manager/announcements',  icon: Megaphone },
       ],
     },
     {
@@ -223,7 +212,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Common Hub',
       items: [
-        { title: 'Manage Checklists',    url: '/manager/checklists',     icon: ClipboardList },
         { title: 'Resources',            url: '/manager/resources',      icon: FolderOpen },
       ],
     },
@@ -250,7 +238,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
         { title: 'Marketing Plans',      url: '/marketing/plans',         icon: ClipboardList },
         { title: 'Integrations',         url: '/marketing/integrations',  icon: BarChart3 },
         { title: 'Resources',            url: '/manager/resources',      icon: FolderOpen },
-        { title: 'Announcements & Chat', url: '/manager/announcements',  icon: Megaphone },
       ],
     },
   ],
@@ -260,7 +247,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       items: [
         { title: 'My Shifts',            url: '/staff/my-shifts',         icon: Calendar },
         { title: 'My Tasks',             url: '/staff/tasks',             icon: CheckSquare },
-        { title: 'My Checklists',        url: '/staff/checklists',        icon: ClipboardList },
       ],
     },
     {
@@ -275,7 +261,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       label: 'Common Hub',
       items: [
         { title: 'Resources',            url: '/staff/resources',         icon: FolderOpen },
-        { title: 'Announcements & Chat', url: '/staff/announcements',    icon: Megaphone },
       ],
     },
   ],
@@ -286,11 +271,9 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
 function MoreDrawer({
   navRole,
   onClose,
-  chatUnread,
 }: {
   navRole: NavRole
   onClose: () => void
-  chatUnread: number
 }) {
   const navigate = useNavigate()
   const sections = DRAWER_CONFIG[navRole] ?? []
@@ -349,7 +332,6 @@ function MoreDrawer({
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const Icon = item.icon
-                  const isChatItem = item.url.includes('announcements')
                   return (
                     <button
                       key={item.url}
@@ -359,11 +341,6 @@ function MoreDrawer({
                     >
                       <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
                       <span className="text-[14px] font-medium text-foreground">{item.title}</span>
-                      {isChatItem && chatUnread > 0 && (
-                        <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                          {chatUnread > 99 ? '99+' : chatUnread}
-                        </span>
-                      )}
                     </button>
                   )
                 })}
@@ -387,17 +364,6 @@ export function MobileBottomNav() {
   // Close More drawer on route change
   useEffect(() => { setMoreOpen(false) }, [location.pathname])
 
-  // Unread chat badge
-  const { data: staffList = [] } = useStaffList()
-  const peerIds = staffList
-    .filter((s) => s.id !== profile?.id)
-    .map((s) => s.id)
-  const { data: dmMetadata = {} } = useDMListMetadata(profile?.id, peerIds)
-  const chatUnread = Object.values(dmMetadata).reduce(
-    (sum, m) => sum + (m.unread || 0),
-    0,
-  )
-
   // Resolve effective role
   const effectiveRole = viewAs?.role || profile?.role
   const effectiveManagerType = viewAs?.managerType || profile?.managerType
@@ -412,7 +378,6 @@ export function MobileBottomNav() {
         <MoreDrawer
           navRole={navRole}
           onClose={() => setMoreOpen(false)}
-          chatUnread={chatUnread}
         />
       )}
 
@@ -465,11 +430,6 @@ export function MobileBottomNav() {
               >
                 <Icon className="h-5 w-5 shrink-0" />
                 <span>{tab.label}</span>
-                {tab.isBadgedChat && chatUnread > 0 && (
-                  <span className="absolute right-[calc(50%-14px)] top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white leading-none">
-                    {chatUnread > 99 ? '99+' : chatUnread}
-                  </span>
-                )}
               </NavLink>
             )
           })}

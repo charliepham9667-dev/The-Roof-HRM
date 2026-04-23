@@ -23,9 +23,7 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'owner/wishlist':       ['Operations','Operations'],
   'operations':           ['Operations','Operations'],
   'owner/resources':      ['Common',    'Resources'],
-  'owner/announcements':  ['Common',    'Announcements'],
   'owner/schedule':       ['Team',      'Schedule'],
-  'owner/checklists':     ['Owner',     'Checklists'],
   'owner/company':        ['Company',   'Company Profile'],
   'weekly-focus':         ['Owner',     'Weekly Focus'],
   // Finance
@@ -42,7 +40,6 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'manager/operations':   ['Operations','Operations'],
   'manager/reservations': ['Manager',   'Reservations'],
   'manager/leave':        ['Team',      'Leave Approval'],
-  'manager/announcements':['Common',    'Announcements'],
   'manager/shift-summary':['Team',      'Shift Summary'],
   'manager/promotions':   ['Manager',   'Promotions'],
   'manager/events':       ['Manager',   'Events'],
@@ -50,7 +47,6 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'manager/floor-issues': ['Manager',   'Floor Issues'],
   'manager/onboarding':   ['Team',      'Onboarding'],
   'manager/tasks':        ['Manager',   'My Tasks'],
-  'manager/checklists':   ['Manager',   'Checklists'],
   'manager/calendar':     ['Venue',     'Venue Briefing'],
   'manager/incidents':    ['Manager',   'Incidents'],
   'manager/resources':    ['Common',    'Resources'],
@@ -70,7 +66,6 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'marketing/schedule':       ['Marketing', 'Schedule'],
   'marketing/tasks':          ['Marketing', 'My Tasks'],
   // Common / Settings
-  'announcements':        ['Common',    'Announcements'],
   'resources':            ['Common',    'Resources'],
   'settings':             ['Settings',  'Settings'],
   'settings/permissions': ['Settings',  'Permissions'],
@@ -86,7 +81,6 @@ function getBreadcrumb(pathname: string): [string, string] {
   if (BREADCRUMB_MAP[stripped]) return BREADCRUMB_MAP[stripped]
   // Try prefix match (e.g. "team/123" → "team/:userId")
   if (stripped.startsWith('team/')) return ['Team', 'Employee Detail']
-  if (stripped.startsWith('announcements/')) return ['Common', 'Announcement']
   // Fallback: capitalise the last path segment
   const parts = stripped.split('/')
   const last = parts[parts.length - 1]

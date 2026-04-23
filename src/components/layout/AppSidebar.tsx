@@ -41,7 +41,6 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
-  MessageSquare,
   Settings,
   TrendingUp,
   UserCog,
@@ -106,8 +105,6 @@ const ownerNavSections: OwnerNavSection[] = [
     icon: FolderOpen,
     items: [
       { title: "Resources", url: "/resources", icon: FolderOpen },
-      { title: "Announcements", url: "/announcements", icon: Megaphone },
-      { title: "Chat", url: "/chat", icon: MessageSquare },
     ],
   },
 ]
@@ -137,7 +134,6 @@ const managerStaffNavGroups: NavGroup[] = [
       { title: "Dashboard", url: "/manager/dashboard", icon: LayoutDashboard, roles: ["manager"] },
       { title: "Dashboard", url: "/staff/dashboard", icon: LayoutDashboard, roles: ["staff"] },
       { title: "My Tasks", url: "/tasks", icon: CheckSquare, roles: ["manager", "staff"] },
-      { title: "Daily Checklist", url: "/weekly-focus", icon: Clock, roles: ["manager"] },
     ],
   },
   {
@@ -146,7 +142,6 @@ const managerStaffNavGroups: NavGroup[] = [
     items: [
       { title: "Schedule", url: "/calendar", icon: Calendar, roles: ["manager"] },
       { title: "My Shifts", url: "/my-shifts", icon: Calendar, roles: ["staff"] },
-      { title: "Announcements", url: "/announcements", icon: Megaphone, roles: ["manager", "staff"] },
       { title: "Resources", url: "/resources", icon: FolderOpen, roles: ["manager", "staff"] },
     ],
   },
@@ -157,7 +152,6 @@ const managerStaffNavGroups: NavGroup[] = [
       { title: "Task Delegation", url: "/owner/tasks", icon: CheckSquare, roles: ["manager"] },
       { title: "Schedule Builder", url: "/manager/schedule", icon: Calendar, roles: ["manager"] },
       { title: "Leave Approval", url: "/manager/leave", icon: UserCog, roles: ["manager"] },
-      { title: "Post Announcement", url: "/manager/announcements", icon: Megaphone, roles: ["manager"] },
     ],
   },
   {
