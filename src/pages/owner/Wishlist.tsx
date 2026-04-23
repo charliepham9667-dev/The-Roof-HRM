@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
 import { Trash2, Plus, Pencil, Wrench, ShoppingCart, Music2, RefreshCw, Download, ChevronDown, ChevronUp, FileText, Wallet, Boxes } from "lucide-react"
 import { SheetEmbedTab } from "@/components/operations/SheetEmbedTab"
+import { RequestOverviewPanel } from "@/components/operations/RequestOverviewPanel"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -1764,19 +1765,27 @@ export function Wishlist() {
       ) : activeTab === "dj_payments" ? (
         <DJPaymentsTab canManage={canManage} />
       ) : activeTab === "purchase_request" ? (
-        <SheetEmbedTab
-          kind="purchase_request"
-          title="Purchase Request"
-          description="Live Google Sheet for formal purchase requests (PR). Paste your published sheet link and everyone sees real-time updates."
-          canManage={canManage}
-        />
+        <div className="flex flex-col gap-3 flex-1 min-h-0">
+          <RequestOverviewPanel kind="purchase_request" />
+          <SheetEmbedTab
+            kind="purchase_request"
+            title="Purchase Request"
+            description="Live Google Sheet for formal purchase requests (PR). Paste your published sheet link and everyone sees real-time updates."
+            canManage={canManage}
+            fullView
+          />
+        </div>
       ) : activeTab === "payment_request" ? (
-        <SheetEmbedTab
-          kind="payment_request"
-          title="Payment Request"
-          description="Queue of supplier / vendor payments pending release. Backed by a Google Sheet the finance team can edit directly."
-          canManage={canManage}
-        />
+        <div className="flex flex-col gap-3 flex-1 min-h-0">
+          <RequestOverviewPanel kind="payment_request" />
+          <SheetEmbedTab
+            kind="payment_request"
+            title="Payment Request"
+            description="Queue of supplier / vendor payments pending release. Backed by a Google Sheet the finance team can edit directly."
+            canManage={canManage}
+            fullView
+          />
+        </div>
       ) : (
         <SheetEmbedTab
           kind="inventory"

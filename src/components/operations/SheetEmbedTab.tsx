@@ -24,6 +24,7 @@ type Props = {
   title: string
   description: string
   canManage: boolean
+  fullView?: boolean
 }
 
 function formatRelativeTime(iso: string | null | undefined): string {
@@ -41,7 +42,7 @@ function formatRelativeTime(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString()
 }
 
-export function SheetEmbedTab({ kind, title, description, canManage }: Props) {
+export function SheetEmbedTab({ kind, title, description, canManage, fullView = false }: Props) {
   const { data: link, isLoading } = useOperationsSheetLink(kind)
   const upsert = useUpsertOperationsSheetLink()
   const remove = useDeleteOperationsSheetLink()
@@ -89,7 +90,7 @@ export function SheetEmbedTab({ kind, title, description, canManage }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3 flex-1 min-h-0">
+    <div className={fullView ? "flex flex-col gap-3" : "flex flex-col gap-3 flex-1 min-h-0"}>
       <div className="flex flex-wrap items-start justify-between gap-3 shrink-0">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -133,7 +134,13 @@ export function SheetEmbedTab({ kind, title, description, canManage }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-[520px] rounded-card border border-border bg-card shadow-card overflow-hidden">
+      <div
+        className={
+          fullView
+            ? "min-h-[520px] rounded-card border border-border bg-card shadow-card overflow-visible"
+            : "flex-1 min-h-[520px] rounded-card border border-border bg-card shadow-card overflow-hidden"
+        }
+      >
         {isLoading ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading...
@@ -143,7 +150,11 @@ export function SheetEmbedTab({ kind, title, description, canManage }: Props) {
             key={iframeKey}
             title={link.sheet_title || title}
             src={link.embed_url}
-            className="w-full h-full min-h-[520px] border-0"
+            className={
+              fullView
+                ? "w-full h-[1100px] border-0"
+                : "w-full h-full min-h-[520px] border-0"
+            }
             loading="lazy"
           />
         ) : (
