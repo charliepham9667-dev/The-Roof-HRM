@@ -4,6 +4,8 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { ThemeProvider } from '@/components/theme-provider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { UpdateAvailableBanner } from '@/components/UpdateAvailableBanner';
 import { useAuthStore } from './stores/authStore';
 
 // Auth pages
@@ -14,11 +16,6 @@ import { PendingApproval } from './pages/auth/PendingApproval';
 const Dashboard = lazy(() => import('./pages/owner/Dashboard').then((m) => ({ default: m.Dashboard })));
 import { CompanyProfile } from './pages/owner/CompanyProfile';
 import { Staffing } from './pages/owner/Staffing';
-import { Alerts } from './pages/owner/Alerts';
-import { WeeklyFocus } from './pages/owner/WeeklyFocus';
-import { MyDashboard } from './pages/owner/MyDashboard';
-import { WorkforceOverview } from './pages/owner/WorkforceOverview';
-import { ManagerPerformance } from './pages/owner/ManagerPerformance';
 import { TaskDelegation } from './pages/owner/TaskDelegation';
 import { TeamDirectory } from './pages/owner/TeamDirectory';
 import { Resources } from './pages/owner/Resources';
@@ -28,11 +25,6 @@ const OwnerCalendar = lazy(() => import('./pages/owner/Calendar').then((m) => ({
 
 // Finance pages
 import { PLPerformance } from './pages/finance/PLPerformance';
-import { ReportBuilder } from './pages/finance/ReportBuilder';
-import { CategoryDrilldown } from './pages/finance/CategoryDrilldown';
-import { CashFlow } from './pages/finance/CashFlow';
-import { CostControl } from './pages/finance/CostControl';
-import { Forecast } from './pages/finance/Forecast';
 import { FinancialSummary } from './pages/finance/FinancialSummary';
 import { SupplierDebt } from './pages/finance/SupplierDebt';
 
@@ -41,18 +33,12 @@ const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard').then((m
 const MyShifts = lazy(() => import('./pages/staff/MyShifts').then((m) => ({ default: m.MyShifts })));
 const Profile = lazy(() => import('./pages/staff/Profile').then((m) => ({ default: m.Profile })));
 const Leave = lazy(() => import('./pages/staff/Leave').then((m) => ({ default: m.Leave })));
-const Payslips = lazy(() => import('./pages/staff/Payslips').then((m) => ({ default: m.Payslips })));
 const CheckIn = lazy(() => import('./pages/staff/CheckIn').then((m) => ({ default: m.CheckIn })));
 
 // Manager pages (lazy load heaviest)
 const ManagerDashboard = lazy(() => import('./pages/manager').then((m) => ({ default: m.ManagerDashboard })));
 import { Reservations, LeaveApproval } from './pages/manager';
-import { ShiftSummary } from './pages/manager/ShiftSummary';
-import { Promotions } from './pages/manager/Promotions';
-import { Events } from './pages/manager/Events';
 const ScheduleBuilder = lazy(() => import('./pages/manager/ScheduleBuilder').then((m) => ({ default: m.ScheduleBuilder })));
-import { Incidents } from './pages/manager/Incidents';
-import { Onboarding } from './pages/manager/Onboarding';
 import { ManagerMyTasks } from './pages/manager/MyTasks';
 const StaffMyTasks = lazy(() => import('./pages/staff/MyTasks').then((m) => ({ default: m.StaffMyTasks })));
 import { FloorIssues } from './pages/manager/FloorIssues';
@@ -68,13 +54,9 @@ const SyncData = lazy(() => import('./pages/admin/SyncData').then((m) => ({ defa
 
 // Common pages
 const ResourcesHub = lazy(() => import('./pages/common/ResourcesHub').then((m) => ({ default: m.ResourcesHub })));
-const KnowledgeBase = lazy(() => import('./pages/common/KnowledgeBase').then((m) => ({ default: m.KnowledgeBase })));
 import DesignSystemPage from './pages/DesignSystem';
 
 // Settings pages
-import { PermissionsSettings } from './pages/settings/Permissions';
-import { RolesSettings } from './pages/settings/Roles';
-import { SOPSettings } from './pages/settings/SOPs';
 import Settings from '@/pages/Settings';
 
 // Marketing pages
@@ -155,6 +137,8 @@ function CalendarRedirect() {
 export default function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <ErrorBoundary>
+      <UpdateAvailableBanner />
       <Suspense
         fallback={
           <div className="flex min-h-[60vh] items-center justify-center">
@@ -187,16 +171,6 @@ export default function App() {
               <Dashboard />
             </RoleGuard>
           } />
-          <Route path="owner/my-dashboard" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <MyDashboard />
-            </RoleGuard>
-          } />
-          <Route path="owner/alerts" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <Alerts />
-            </RoleGuard>
-          } />
           <Route path="owner/tasks" element={
             <RoleGuard allowedRoles={['owner']}>
               <TaskDelegation />
@@ -215,11 +189,6 @@ export default function App() {
           <Route path="owner/org-chart" element={
             <RoleGuard allowedRoles={['owner']}>
               <OrgChart />
-            </RoleGuard>
-          } />
-          <Route path="owner/workforce" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <WorkforceOverview />
             </RoleGuard>
           } />
           <Route path="owner/calendar" element={
@@ -256,11 +225,6 @@ export default function App() {
               <CompanyProfile />
             </RoleGuard>
           } />
-          <Route path="weekly-focus" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <WeeklyFocus />
-            </RoleGuard>
-          } />
 
           {/* ============================================ */}
           {/* FINANCE ROUTES (Owner only) */}
@@ -273,31 +237,6 @@ export default function App() {
           <Route path="finance/pl" element={
             <RoleGuard allowedRoles={['owner']}>
               <PLPerformance />
-            </RoleGuard>
-          } />
-          <Route path="finance/reports" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <ReportBuilder />
-            </RoleGuard>
-          } />
-          <Route path="finance/category" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <CategoryDrilldown />
-            </RoleGuard>
-          } />
-          <Route path="finance/cashflow" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <CashFlow />
-            </RoleGuard>
-          } />
-          <Route path="finance/costs" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <CostControl />
-            </RoleGuard>
-          } />
-          <Route path="finance/forecast" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <Forecast />
             </RoleGuard>
           } />
           <Route path="finance/debt" element={
@@ -326,34 +265,9 @@ export default function App() {
               <LeaveApproval />
             </RoleGuard>
           } />
-          <Route path="manager/shift-summary" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <ShiftSummary />
-            </RoleGuard>
-          } />
-          <Route path="manager/promotions" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <Promotions />
-            </RoleGuard>
-          } />
-          <Route path="manager/events" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <Events />
-            </RoleGuard>
-          } />
           <Route path="manager/schedule" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <ScheduleBuilder />
-            </RoleGuard>
-          } />
-          <Route path="manager/incidents" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <Incidents />
-            </RoleGuard>
-          } />
-          <Route path="manager/onboarding" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <Onboarding />
             </RoleGuard>
           } />
           <Route path="manager/tasks" element={
@@ -392,24 +306,9 @@ export default function App() {
           {/* ============================================ */}
           {/* OPS ROUTES (Owner & Manager) */}
           {/* ============================================ */}
-          <Route path="ops/workforce" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <WorkforceOverview />
-            </RoleGuard>
-          } />
           <Route path="ops/staffing" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <Staffing />
-            </RoleGuard>
-          } />
-          <Route path="ops/managers" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <ManagerPerformance />
-            </RoleGuard>
-          } />
-          <Route path="alerts" element={
-            <RoleGuard allowedRoles={['owner', 'manager']}>
-              <Alerts />
             </RoleGuard>
           } />
 
@@ -417,7 +316,6 @@ export default function App() {
           {/* STAFF ROUTES (All authenticated users) */}
           {/* ============================================ */}
           <Route path="staff/dashboard" element={<StaffDashboard />} />
-          <Route path="staff/payslips" element={<Payslips />} />
           <Route path="staff/check-in" element={<CheckIn />} />
           <Route path="check-in" element={<Navigate to="/staff/check-in" replace />} />
           <Route path="staff/my-shifts" element={<MyShifts />} />
@@ -442,7 +340,6 @@ export default function App() {
           <Route path="checklists" element={<Navigate to="/tasks" replace />} />
           <Route path="resources" element={<ResourcesHub />} />
           <Route path="calendar" element={<CalendarRedirect />} />
-          <Route path="kb" element={<KnowledgeBase />} />
           <Route path="design-system" element={<DesignSystemPage />} />
 
           {/* ============================================ */}
@@ -497,24 +394,10 @@ export default function App() {
               <Settings />
             </RoleGuard>
           } />
-          <Route path="settings/permissions" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <PermissionsSettings />
-            </RoleGuard>
-          } />
-          <Route path="settings/roles" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <RolesSettings />
-            </RoleGuard>
-          } />
-          <Route path="settings/sops" element={
-            <RoleGuard allowedRoles={['owner']}>
-              <SOPSettings />
-            </RoleGuard>
-          } />
         </Route>
       </Routes>
       </Suspense>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

@@ -33,37 +33,6 @@ function useClock() {
   return now;
 }
 
-// ─── analog clock ────────────────────────────────────────────────────────────
-
-function AnalogClock({ date }: { date: Date }) {
-  const h = (date.getHours() % 12) * 30 + date.getMinutes() * 0.5;
-  const m = date.getMinutes() * 6 + date.getSeconds() * 0.1;
-  const s = date.getSeconds() * 6;
-  const hand = (deg: number, len: number) => ({
-    x2: 26 + len * Math.sin((deg * Math.PI) / 180),
-    y2: 26 - len * Math.cos((deg * Math.PI) / 180),
-  });
-  return (
-    <svg width="56" height="56" viewBox="0 0 52 52">
-      <circle cx="26" cy="26" r="24.5" fill="none" stroke="var(--border-color)" strokeWidth="1.5" />
-      {Array.from({ length: 12 }).map((_, i) => {
-        const a = (i * 30 * Math.PI) / 180;
-        return (
-          <line key={i}
-            x1={26 + 20 * Math.sin(a)} y1={26 - 20 * Math.cos(a)}
-            x2={26 + 23 * Math.sin(a)} y2={26 - 23 * Math.cos(a)}
-            stroke="currentColor" strokeWidth="1" className="text-muted-foreground/40"
-          />
-        );
-      })}
-      <line x1="26" y1="26" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-foreground" {...hand(h, 11)} />
-      <line x1="26" y1="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-foreground" {...hand(m, 16)} />
-      <line x1="26" y1="26" stroke="currentColor" strokeWidth="1" strokeLinecap="round" className="text-primary" {...hand(s, 19)} />
-      <circle cx="26" cy="26" r="2.5" className="fill-foreground" />
-    </svg>
-  );
-}
-
 // ─── section label ────────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -444,18 +413,8 @@ export function StaffDashboard() {
 
       {/* ── CONTENT ─────────────────────────────────────────────────────────── */}
 
-      {/* Clock + Weather row */}
-      <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-3.5">
-
-        {/* Clock card */}
-        <Panel className="flex flex-col items-center gap-2 px-3.5 py-4">
-          <span className="self-start flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground"><Zap className="h-3 w-3 shrink-0" /> HQ — Da Nang</span>
-          <AnalogClock date={now} />
-          <span className="font-mono text-[22px] font-medium tabular-nums text-foreground">
-            {pad(now.getHours())}:{pad(now.getMinutes())}:{pad(now.getSeconds())}
-          </span>
-          <span className="text-[10px] text-muted-foreground">ICT · UTC+7</span>
-        </Panel>
+      {/* Weather row */}
+      <div className="grid grid-cols-1 gap-3.5">
 
         {/* Weather placeholder */}
         <Panel className="flex items-center px-5 py-4">

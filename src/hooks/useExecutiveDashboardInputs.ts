@@ -30,6 +30,46 @@ export function useMonthlyTarget(metric: "revenue" | "pax", periodStartIso: stri
   })
 }
 
+// Returns a record keyed by month number (1..12) mapping to target_value (or
+// null when no row exists). One round trip per (metric, year).
+export function useMonthlyTargetsForYear(
+  metric: "revenue" | "pax",
+  year: number,
+) {
+  return useQuery({
+    queryKey: ["targets", metric, "monthly", "year", year],
+    queryFn: async (): Promise<Record<number, number | null>> => {
+      const startIso = `${year}-01-01`
+      const endIso = `${year + 1}-01-01`
+      const { data, error } = await supabase
+        .from("targets")
+        .select("period_start, target_value")
+        .eq("metric", metric)
+        .eq("period", "monthly")
+        .gte("period_start", startIso)
+        .lt("period_start", endIso)
+
+      if (error) throw error
+
+      const map: Record<number, number | null> = {}
+      for (let m = 1; m <= 12; m += 1) map[m] = null
+      for (const row of data || []) {
+        const ps = String((row as any).period_start || "")
+        const monthStr = ps.slice(5, 7)
+        const month = Number(monthStr)
+        if (Number.isFinite(month) && month >= 1 && month <= 12) {
+          map[month] = (row as any).target_value
+            ? Number((row as any).target_value)
+            : null
+        }
+      }
+      return map
+    },
+    enabled: Number.isFinite(year),
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
 function mapRow(row: any): ExecutiveDashboardDailyInput {
   return {
     date: row.date,

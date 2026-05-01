@@ -365,6 +365,17 @@ function OverviewTab({ userId }: { userId?: string }) {
         <InfoRow label="Department" value={profile.department || "—"} />
         <InfoRow label="Supervisor" value={managerName || "—"} />
         <InfoRow label="Employment type" value={titleCaseEmploymentType(profile.employment_type) || "—"} />
+        <InfoRow
+          label="Contract status"
+          value={
+            profile.contract_signed
+              ? `Signed${profile.contract_signed_date ? ` (${profile.contract_signed_date})` : ""}`
+              : "Unsigned"
+          }
+        />
+        <InfoRow label="Contract type" value={profile.contract_type || "—"} />
+        <InfoRow label="Contract start" value={profile.contract_start_date || "—"} />
+        <InfoRow label="Contract end" value={profile.contract_end_date || "—"} />
       </div>
     </div>
   )
@@ -387,6 +398,11 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
     address: "",
     emergency_contact_name: "",
     emergency_contact_phone: "",
+    contract_signed: false,
+    contract_signed_date: "",
+    contract_start_date: "",
+    contract_end_date: "",
+    contract_type: "",
   })
 
   useEffect(() => {
@@ -403,6 +419,11 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
       address: profile.address || "",
       emergency_contact_name: profile.emergency_contact_name || "",
       emergency_contact_phone: profile.emergency_contact_phone || "",
+      contract_signed: profile.contract_signed === true,
+      contract_signed_date: profile.contract_signed_date || "",
+      contract_start_date: profile.contract_start_date || "",
+      contract_end_date: profile.contract_end_date || "",
+      contract_type: profile.contract_type || "",
     })
   }, [profile?.id])
 
@@ -442,6 +463,11 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
               address: draft.address || null,
               emergency_contact_name: draft.emergency_contact_name || null,
               emergency_contact_phone: draft.emergency_contact_phone || null,
+              contract_signed: draft.contract_signed,
+              contract_signed_date: draft.contract_signed_date || null,
+              contract_start_date: draft.contract_start_date || null,
+              contract_end_date: draft.contract_end_date || null,
+              contract_type: draft.contract_type || null,
             })
           }
           className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -542,6 +568,60 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
         <div className="grid gap-2">
           <Label>Emergency contact phone</Label>
           <Input value={draft.emergency_contact_phone} onChange={(e) => setDraft((s) => ({ ...s, emergency_contact_phone: e.target.value }))} placeholder="—" />
+        </div>
+
+        <div className="md:col-span-2">
+          <Separator className="my-2" />
+          <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Contract
+          </h4>
+        </div>
+        <div className="grid gap-2">
+          <Label>Contract signed</Label>
+          <Select
+            value={draft.contract_signed ? "yes" : "no"}
+            onValueChange={(v) => setDraft((s) => ({ ...s, contract_signed: v === "yes" }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="yes">Yes — signed</SelectItem>
+              <SelectItem value="no">No — unsigned</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label>Contract type</Label>
+          <Input
+            value={draft.contract_type}
+            onChange={(e) => setDraft((s) => ({ ...s, contract_type: e.target.value }))}
+            placeholder="e.g. 1-year, probation, casual"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label>Contract signed date</Label>
+          <Input
+            type="date"
+            value={draft.contract_signed_date}
+            onChange={(e) => setDraft((s) => ({ ...s, contract_signed_date: e.target.value }))}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label>Contract start date</Label>
+          <Input
+            type="date"
+            value={draft.contract_start_date}
+            onChange={(e) => setDraft((s) => ({ ...s, contract_start_date: e.target.value }))}
+          />
+        </div>
+        <div className="grid gap-2 md:col-span-2">
+          <Label>Contract end date</Label>
+          <Input
+            type="date"
+            value={draft.contract_end_date}
+            onChange={(e) => setDraft((s) => ({ ...s, contract_end_date: e.target.value }))}
+          />
         </div>
       </div>
 

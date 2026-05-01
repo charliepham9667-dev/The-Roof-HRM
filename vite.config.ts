@@ -1,9 +1,36 @@
 import path from "path"
+import { execSync } from "node:child_process"
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/**
+ * Resolve a short commit SHA at build time. Prefer Vercel's injected env
+ * vars; fall back to local `git` for dev builds; last resort is "dev".
+ */
+function getCommitSha(): string {
+  const fromEnv =
+    process.env.VITE_GIT_SHA ||
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.COMMIT_REF
+  if (fromEnv) return fromEnv.slice(0, 7)
+  try {
+    return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim()
+  } catch {
+    return "dev"
+  }
+}
+
+const APP_COMMIT = getCommitSha()
+const APP_BUILT_AT = new Date().toISOString().slice(0, 10)
+
 export default defineConfig({
+  define: {
+    __APP_COMMIT__: JSON.stringify(APP_COMMIT),
+    __APP_BUILT_AT__: JSON.stringify(APP_BUILT_AT),
+  },
   plugins: [
     react(),
     VitePWA({

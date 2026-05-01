@@ -69,6 +69,56 @@ type DirectoryProfile = {
   manager_type?: string | null
   department?: string | null
   reports_to?: string | null
+  contract_signed?: boolean | null
+  contract_signed_date?: string | null
+  contract_start_date?: string | null
+  contract_end_date?: string | null
+  contract_type?: string | null
+}
+
+type ContractStatus = "signed" | "expiring" | "unsigned"
+
+function getContractStatus(person: DirectoryProfile): {
+  status: ContractStatus
+  daysToExpiry?: number
+} {
+  if (!person.contract_signed) return { status: "unsigned" }
+  if (person.contract_end_date) {
+    const end = new Date(person.contract_end_date)
+    const now = new Date()
+    const days = Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    if (days < 30) return { status: "expiring", daysToExpiry: days }
+  }
+  return { status: "signed" }
+}
+
+function ContractBadge({ person }: { person: DirectoryProfile }) {
+  const { status, daysToExpiry } = getContractStatus(person)
+  if (status === "signed") {
+    return (
+      <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#E6F4EC", color: "#2E7D52", border: "1px solid #90CBA8" }}>
+        Contract: Signed
+      </span>
+    )
+  }
+  if (status === "expiring") {
+    const label =
+      daysToExpiry === undefined
+        ? "Expiring"
+        : daysToExpiry < 0
+          ? `Expired ${Math.abs(daysToExpiry)}d ago`
+          : `Expires ${daysToExpiry}d`
+    return (
+      <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#FBF5E6", color: "#7A5820", border: "1px solid #D8CAAC" }}>
+        Contract: {label}
+      </span>
+    )
+  }
+  return (
+    <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#FAE8E8", color: "#8B3030", border: "1px solid #D8A0A0" }}>
+      Contract: Unsigned
+    </span>
+  )
 }
 
 // ── Department theme ───────────────────────────────────────────────────────────
@@ -136,11 +186,12 @@ export function TeamDirectory() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [shiftFilter, setShiftFilter] = useState<string>("all")
-  const [view, setView] = useState<"list" | "org" | "pending">("list")
+  const [view, setView] = useState<"list" | "org" | "pending" | "contracts">("list")
+  const [contractsFilter, setContractsFilter] = useState<"all" | "signed" | "unsigned" | "expiring">("all")
   const [addOpen, setAddOpen] = useState(false)
   const [approveTarget, setApproveTarget] = useState<{ id: string; name: string; email: string } | null>(null)
 
-  const { data: staffList, isLoading } = useStaffList()
+  const { data: staffList, isLoading, isError: staffError, error: staffErrorObj } = useStaffList()
   const { data: todayShifts } = useTodayShifts(todayIso)
   const { data: pendingProfiles, isLoading: pendingLoading } = usePendingProfiles()
   const { data: weekShifts = [] } = useShifts(new Date())
@@ -195,6 +246,7 @@ export function TeamDirectory() {
     total: allStaff.length,
     onNow: onShiftNowIds.size,
     managers: allStaff.filter((s) => s.role === "manager" || s.role === "owner").length,
+    contractsSigned: allStaff.filter((s) => s.contract_signed === true).length,
   }), [allStaff, onShiftNowIds])
 
   const filteredStaff = useMemo(() => {
@@ -299,6 +351,24 @@ export function TeamDirectory() {
                 </span>
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => setView("contracts")}
+              style={{
+                padding: "5px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif",
+                background: view === "contracts" ? "#FDFAF5" : "transparent",
+                color: view === "contracts" ? "#1A1814" : "#7A7260",
+                boxShadow: view === "contracts" ? "0 1px 3px rgba(0,0,0,.07)" : "none",
+              }}
+            >
+              <CheckCircle size={12} />
+              Contracts
+              {stats.total > 0 && stats.contractsSigned < stats.total && (
+                <span style={{ background: "#8B3030", color: "#fff", borderRadius: 10, fontSize: 10, fontWeight: 700, padding: "1px 6px", lineHeight: 1.4 }}>
+                  {stats.total - stats.contractsSigned}
+                </span>
+              )}
+            </button>
           </div>
         </div>
         <Button
@@ -311,8 +381,26 @@ export function TeamDirectory() {
         </Button>
       </div>
 
+      {staffError ? (
+        <div
+          role="alert"
+          style={{
+            margin: "8px 13px 0",
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            color: "#991B1B",
+            fontSize: 13,
+          }}
+        >
+          <strong style={{ fontWeight: 600 }}>Couldn't load staff list.</strong>{" "}
+          {(staffErrorObj as Error | null)?.message ?? "Unknown error."}
+        </div>
+      ) : null}
+
       {/* ── Stats strip ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4" style={{ padding: "7px 13px" }}>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5" style={{ padding: "7px 13px" }}>
         <StatCard
           label="Total"
           value={stats.total}
@@ -341,6 +429,14 @@ export function TeamDirectory() {
           icon={<Briefcase size={13} color="#7A7260" />}
           noRightBorder
           padding="13px 16px"
+        />
+        <StatCard
+          label="Contracts Signed"
+          value={stats.contractsSigned}
+          sub={`${Math.max(0, stats.total - stats.contractsSigned)} unsigned · target ${stats.total}/${stats.total}`}
+          icon={<CheckCircle size={13} color={stats.contractsSigned === stats.total && stats.total > 0 ? "#3D6B4A" : "#7A5820"} />}
+          live={stats.contractsSigned === stats.total && stats.total > 0}
+          noRightBorder
         />
       </div>
 
@@ -386,7 +482,7 @@ export function TeamDirectory() {
               onChange={(e) => setTypeFilter(e.target.value)}
               style={{ padding: "6px 10px", border: "1px solid #E0D8C8", borderRadius: 6, fontSize: 12, fontFamily: "'DM Sans', sans-serif", background: "#FDFAF5", color: "#4A4538", outline: "none", cursor: "pointer" }}
             >
-              <option value="">All types</option>
+              <option value="all">All types</option>
               <option value="full">Full-time</option>
               <option value="part">Part-time</option>
             </select>
@@ -395,7 +491,7 @@ export function TeamDirectory() {
               onChange={(e) => setShiftFilter(e.target.value)}
               style={{ padding: "6px 10px", border: "1px solid #E0D8C8", borderRadius: 6, fontSize: 12, fontFamily: "'DM Sans', sans-serif", background: "#FDFAF5", color: "#4A4538", outline: "none", cursor: "pointer" }}
             >
-              <option value="">All staff</option>
+              <option value="all">All staff</option>
               <option value="on">On shift now</option>
               <option value="off">Off shift</option>
             </select>
@@ -538,6 +634,16 @@ export function TeamDirectory() {
         </div>
       )}
 
+      {view === "contracts" && (
+        <ContractsView
+          staff={allStaff}
+          isLoading={isLoading}
+          filter={contractsFilter}
+          setFilter={setContractsFilter}
+          stats={stats}
+        />
+      )}
+
       <AddEmployeeModal isOpen={addOpen} onClose={() => setAddOpen(false)} />
 
       {approveTarget && (
@@ -550,6 +656,201 @@ export function TeamDirectory() {
             queryClient.invalidateQueries({ queryKey: ['staff-list'] })
           }}
         />
+      )}
+    </div>
+  )
+}
+
+// ── Contracts view ─────────────────────────────────────────────────────────────
+
+function ContractsView({
+  staff,
+  isLoading,
+  filter,
+  setFilter,
+  stats,
+}: {
+  staff: DirectoryProfile[]
+  isLoading: boolean
+  filter: "all" | "signed" | "unsigned" | "expiring"
+  setFilter: (f: "all" | "signed" | "unsigned" | "expiring") => void
+  stats: { total: number; contractsSigned: number }
+}) {
+  const expiringCount = useMemo(
+    () => staff.filter((s) => getContractStatus(s).status === "expiring").length,
+    [staff],
+  )
+
+  const rows = useMemo(() => {
+    const filtered = staff.filter((p) => {
+      if (filter === "all") return true
+      const status = getContractStatus(p).status
+      return status === filter
+    })
+    return [...filtered].sort((a, b) => {
+      const sa = getContractStatus(a).status
+      const sb = getContractStatus(b).status
+      const rank: Record<ContractStatus, number> = { unsigned: 0, expiring: 1, signed: 2 }
+      const diff = rank[sa] - rank[sb]
+      if (diff !== 0) return diff
+      return (a.full_name ?? "").localeCompare(b.full_name ?? "")
+    })
+  }, [staff, filter])
+
+  const fmtDate = (s: string | null | undefined) => {
+    if (!s) return "—"
+    const d = new Date(s)
+    if (Number.isNaN(d.getTime())) return "—"
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+  }
+
+  const chip = (key: typeof filter, label: string, badge?: number) => {
+    const active = filter === key
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => setFilter(key)}
+        style={{
+          padding: "4px 12px",
+          borderRadius: 999,
+          fontSize: 11,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: ".05em",
+          border: active ? "1px solid #B8922A" : "1px solid #E0D8C8",
+          background: active ? "#FBF5E6" : "#FFFFFF",
+          color: active ? "#7A5820" : "#7A7260",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        {label}
+        {typeof badge === "number" && badge > 0 ? (
+          <span
+            style={{
+              background: active ? "#B8922A" : "#A89E8C",
+              color: "#fff",
+              borderRadius: 10,
+              fontSize: 9,
+              fontWeight: 700,
+              padding: "1px 6px",
+            }}
+          >
+            {badge}
+          </span>
+        ) : null}
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ padding: "16px 24px 32px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        {chip("all", "All", stats.total)}
+        {chip("signed", "Signed", stats.contractsSigned)}
+        {chip("unsigned", "Unsigned", Math.max(0, stats.total - stats.contractsSigned - expiringCount))}
+        {chip("expiring", "Expiring (≤30d)", expiringCount)}
+        <div style={{ marginLeft: "auto", fontSize: 11, color: "#7A7260" }}>
+          {stats.contractsSigned}/{stats.total} contracts signed
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
+          <Loader2 className="animate-spin" size={24} color="#A89E8C" />
+        </div>
+      ) : rows.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 60, color: "#A89E8C", fontSize: 13 }}>
+          No staff match this filter.
+        </div>
+      ) : (
+        <div
+          style={{
+            background: "#FFFFFF",
+            border: "1px solid #E0D8C8",
+            borderRadius: 10,
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#FBF8F2", borderBottom: "1px solid #E0D8C8" }}>
+                  {[
+                    "Name",
+                    "Role",
+                    "Department",
+                    "Status",
+                    "Type",
+                    "Start",
+                    "End",
+                    "",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: "left",
+                        padding: "10px 14px",
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: ".06em",
+                        color: "#7A7260",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((p) => (
+                  <tr key={p.id} style={{ borderBottom: "1px solid #F0EAE0" }}>
+                    <td style={{ padding: "10px 14px", fontWeight: 600, color: "#1A1814" }}>
+                      <Link
+                        to={`/team/${p.id}?tab=details`}
+                        style={{ color: "#1A1814", textDecoration: "none" }}
+                      >
+                        {p.full_name ?? "—"}
+                      </Link>
+                      <div style={{ fontSize: 11, color: "#7A7260", fontWeight: 400 }}>{p.email ?? ""}</div>
+                    </td>
+                    <td style={{ padding: "10px 14px", color: "#1A1814", textTransform: "capitalize" }}>
+                      {p.job_role ?? p.role}
+                    </td>
+                    <td style={{ padding: "10px 14px", color: "#7A7260" }}>
+                      {normalizeDepartment(p.department) || "—"}
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <ContractBadge person={p} />
+                    </td>
+                    <td style={{ padding: "10px 14px", color: "#7A7260", textTransform: "capitalize" }}>
+                      {(p.contract_type ?? "").replace(/_/g, " ") || "—"}
+                    </td>
+                    <td style={{ padding: "10px 14px", color: "#7A7260" }}>{fmtDate(p.contract_start_date)}</td>
+                    <td style={{ padding: "10px 14px", color: "#7A7260" }}>{fmtDate(p.contract_end_date)}</td>
+                    <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                      <Link
+                        to={`/team/${p.id}?tab=details`}
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          color: "#B8922A",
+                          textDecoration: "none",
+                        }}
+                      >
+                        Edit →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -870,6 +1171,7 @@ function TeamMemberCard({
                   {person.employment_type.replace(/[_-]/g, " ")}
                 </span>
               )}
+              <ContractBadge person={person} />
             </div>
           </div>
 

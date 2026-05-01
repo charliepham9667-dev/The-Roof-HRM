@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useOperationsSheetLink, type OperationsSheetKind } from "@/hooks/useOperationsSheetLinks"
+import { supabase } from "@/lib/supabase"
+import { parseGoogleSheetUrl, useOperationsSheetLink, type OperationsSheetKind } from "@/hooks/useOperationsSheetLinks"
 
 export type RequestReviewStatus = "pending" | "approved" | "cancelled" | "declined"
 export type RequestScope = "past" | "mtd" | "both"
@@ -41,6 +42,38 @@ export type OperationsDataQuality = {
   unknownStatuses: Record<string, number>
 }
 
+export type OperationsTabSummary = {
+  gid: string | null
+  tabName: string | null
+  /** Rows discovered after parsing this tab's CSV. */
+  rowsParsed: number
+  /** True when the form-template fallback was used (single document per tab). */
+  usedTemplateFallback: boolean
+}
+
+export type TabDiscoverySource =
+  | "client_api"
+  | "edge_api"
+  | "edge_pubhtml"
+  | "primary_only"
+
+export type TabDiscoveryReport = {
+  /** How the tab list was obtained (or "primary_only" when discovery failed). */
+  source: TabDiscoverySource
+  /** Number of tabs returned by the discovery call (before exclusion). */
+  discoveredCount: number
+  /** True when a client-callable Google API key is available. */
+  hasClientApiKey: boolean
+  /** Whether the client-side Sheets API call was attempted. */
+  triedClientApi: boolean
+  /** Whether the edge function call was attempted. */
+  triedEdgeFunction: boolean
+  /** Whether the edge function returned 404 (i.e. not deployed). */
+  edgeFunctionMissing: boolean
+  /** First user-visible error encountered while trying to discover tabs. */
+  errorMessage: string | null
+}
+
 export type OperationsRequestMetricsResult = {
   rows: OperationsRequestRow[]
   quality: OperationsDataQuality
@@ -52,6 +85,10 @@ export type OperationsRequestMetricsResult = {
   metricsPast: OperationsMetrics
   metricsMtd: OperationsMetrics
   metricsAll: OperationsMetrics
+  /** Per-tab summary so the UI can show which tabs contributed to the roll-up. */
+  tabs: OperationsTabSummary[]
+  /** Diagnostics around how the tab list was obtained. */
+  discovery: TabDiscoveryReport
 }
 
 const EMPTY_METRICS: OperationsMetrics = {
@@ -240,6 +277,159 @@ function parseCsvRows(csvText: string): { rows: Record<string, string>[]; invali
   return { rows, invalidRows }
 }
 
+function isExcludedTabName(name: string | null | undefined): boolean {
+  const n = String(name || "").trim().toLowerCase()
+  if (!n) return false
+  if (n.includes("template")) return true
+  if (n.includes("bank account") || n.includes("bank_account")) return true
+  return false
+}
+
+function withGid(csvUrl: string, gid: string): string {
+  const url = new URL(csvUrl)
+  url.searchParams.set("gid", gid)
+  return url.toString()
+}
+
+type DiscoveryOutcome = {
+  tabs: Array<{ gid: string; name: string }>
+  source: TabDiscoverySource
+  triedClientApi: boolean
+  triedEdgeFunction: boolean
+  edgeFunctionMissing: boolean
+  errorMessage: string | null
+}
+
+// Try the Google Sheets API v4 directly from the browser. This works without
+// any Edge Function deploy step — the Sheets API ships CORS headers for
+// public reads when called with `?key=`. The key must be a browser-safe API
+// key (HTTP referrer-restricted) exposed via VITE_GOOGLE_API_KEY at build
+// time, and the spreadsheet must be shared "anyone with the link".
+async function listTabsViaClientApi(
+  spreadsheetId: string,
+  apiKey: string,
+): Promise<{ tabs: Array<{ gid: string; name: string }>; error: string | null }> {
+  const url =
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}` +
+    `?key=${encodeURIComponent(apiKey)}` +
+    `&fields=${encodeURIComponent("sheets.properties(sheetId,title,hidden)")}`
+  try {
+    const res = await fetch(url, { cache: "no-store" })
+    if (!res.ok) {
+      const body = await res.text().catch(() => "")
+      const snippet = body.slice(0, 200)
+      return {
+        tabs: [],
+        error: `Sheets API ${res.status}${snippet ? `: ${snippet}` : ""}`,
+      }
+    }
+    const data = await res.json()
+    const sheets: any[] = Array.isArray(data?.sheets) ? data.sheets : []
+    const tabs: Array<{ gid: string; name: string }> = []
+    for (const sheet of sheets) {
+      const props = sheet?.properties || {}
+      if (props.hidden) continue
+      const sheetId = props.sheetId
+      const title = props.title
+      if (sheetId == null || !title) continue
+      tabs.push({ gid: String(sheetId), name: String(title) })
+    }
+    return { tabs, error: null }
+  } catch (err) {
+    return {
+      tabs: [],
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+}
+
+// Invoke the `list-sheet-tabs` Edge Function as a fallback path. The
+// function runs server-side (no CORS), uses the GOOGLE_API_KEY secret, and
+// falls back to /pubhtml scraping for "Publish to web" sheets.
+async function listTabsViaEdgeFunction(sheetUrl: string): Promise<{
+  tabs: Array<{ gid: string; name: string }>
+  source: "edge_api" | "edge_pubhtml" | null
+  missing: boolean
+  error: string | null
+}> {
+  try {
+    const { data, error } = await supabase.functions.invoke<{
+      tabs?: Array<{ gid: string; name: string }>
+      source?: "api" | "pubhtml" | "none"
+      error?: string | null
+    }>("list-sheet-tabs", {
+      body: { sheetUrl },
+    })
+    if (error) {
+      const message = error.message || String(error)
+      const lower = message.toLowerCase()
+      const missing =
+        lower.includes("not found") ||
+        lower.includes("404") ||
+        lower.includes("function not found")
+      return { tabs: [], source: null, missing, error: message }
+    }
+    const tabs = Array.isArray(data?.tabs) ? data!.tabs! : []
+    const remoteSource = data?.source
+    const source: "edge_api" | "edge_pubhtml" | null =
+      remoteSource === "api" ? "edge_api" : remoteSource === "pubhtml" ? "edge_pubhtml" : null
+    return {
+      tabs,
+      source,
+      missing: false,
+      error: data?.error ?? null,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    const lower = message.toLowerCase()
+    const missing =
+      lower.includes("not found") ||
+      lower.includes("404") ||
+      lower.includes("failed to fetch")
+    return { tabs: [], source: null, missing, error: message }
+  }
+}
+
+async function discoverTabs(sheetUrl: string): Promise<DiscoveryOutcome> {
+  const parsed = parseGoogleSheetUrl(sheetUrl)
+  const outcome: DiscoveryOutcome = {
+    tabs: [],
+    source: "primary_only",
+    triedClientApi: false,
+    triedEdgeFunction: false,
+    edgeFunctionMissing: false,
+    errorMessage: null,
+  }
+
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY
+  if (parsed.id && apiKey) {
+    outcome.triedClientApi = true
+    const { tabs, error } = await listTabsViaClientApi(parsed.id, apiKey)
+    if (tabs.length > 0) {
+      outcome.tabs = tabs
+      outcome.source = "client_api"
+      return outcome
+    }
+    if (error) outcome.errorMessage = `Client API: ${error}`
+  }
+
+  outcome.triedEdgeFunction = true
+  const edge = await listTabsViaEdgeFunction(sheetUrl)
+  if (edge.tabs.length > 0 && edge.source) {
+    outcome.tabs = edge.tabs
+    outcome.source = edge.source
+    return outcome
+  }
+  if (edge.missing) outcome.edgeFunctionMissing = true
+  if (edge.error && !outcome.errorMessage) {
+    outcome.errorMessage = edge.missing
+      ? "Edge Function `list-sheet-tabs` is not deployed."
+      : `Edge Function: ${edge.error}`
+  }
+
+  return outcome
+}
+
 function parseCsvMatrix(csvText: string): string[][] {
   return csvText
     .split(/\r?\n/g)
@@ -252,6 +442,13 @@ function rowMatchesAnyPattern(row: string[], patterns: string[]): boolean {
     const normalized = normalizeHeader(cell)
     return patterns.some((pattern) => normalized.includes(pattern))
   })
+}
+
+function isMeaningfulValue(value: string): boolean {
+  const trimmed = value.trim()
+  if (!trimmed) return false
+  if (trimmed === ":" || trimmed === "-" || trimmed === "—") return false
+  return /[\p{L}\p{N}]/u.test(trimmed)
 }
 
 function parseAmountsFromRow(row: string[]): number[] {
@@ -270,7 +467,7 @@ function findValueForLabel(rows: string[][], patterns: string[]): string | null 
       if (!patterns.some((pattern) => normalized.includes(pattern))) continue
       for (let j = i + 1; j < row.length; j++) {
         const candidate = row[j]?.trim()
-        if (!candidate) continue
+        if (!candidate || !isMeaningfulValue(candidate)) continue
         const candidateNorm = normalizeHeader(candidate)
         if (patterns.some((pattern) => candidateNorm.includes(pattern))) continue
         return candidate
@@ -281,12 +478,16 @@ function findValueForLabel(rows: string[][], patterns: string[]): string | null 
 }
 
 function findAmountForLabel(rows: string[][], patterns: string[]): number | null {
+  const candidates: number[] = []
   for (const row of rows) {
     if (!rowMatchesAnyPattern(row, patterns)) continue
     const amounts = parseAmountsFromRow(row)
-    if (amounts.length) return Math.max(...amounts)
+    if (amounts.length) candidates.push(...amounts)
   }
-  return null
+  if (!candidates.length) return null
+  const positive = candidates.filter((n) => n > 0)
+  if (positive.length) return Math.max(...positive)
+  return candidates[candidates.length - 1] ?? null
 }
 
 function parseTemplateForms(
@@ -393,21 +594,106 @@ export function useOperationsRequestMetrics(kind: Extract<OperationsSheetKind, "
   const { data: link, isLoading: isLoadingLink } = useOperationsSheetLink(kind)
 
   const csvQuery = useQuery({
-    queryKey: ["operations-request-csv", kind, link?.csv_export_url],
+    queryKey: ["operations-request-csv", kind, link?.csv_export_url, link?.sheet_url],
     enabled: !!link?.csv_export_url,
     queryFn: async () => {
-      const response = await fetch(link!.csv_export_url!, { cache: "no-store" })
-      if (!response.ok) throw new Error(`Unable to fetch CSV (${response.status})`)
-      const text = await response.text()
-      if (text.trim().startsWith("<!")) throw new Error("Sheet URL returned HTML instead of CSV. Publish sheet to web and use the published link.")
-      return text
+      const baseCsvUrl = link!.csv_export_url!
+      const primaryResponse = await fetch(baseCsvUrl, { cache: "no-store" })
+      if (!primaryResponse.ok) throw new Error(`Unable to fetch CSV (${primaryResponse.status})`)
+      const primaryText = await primaryResponse.text()
+      if (primaryText.trim().startsWith("<!")) {
+        throw new Error("Sheet URL returned HTML instead of CSV. Publish sheet to web and use the published link.")
+      }
+
+      const parsedCsvUrl = new URL(baseCsvUrl)
+      const primaryGid = parsedCsvUrl.searchParams.get("gid")
+
+      const sheetUrl = link!.sheet_url
+      const parsedSheet = parseGoogleSheetUrl(sheetUrl)
+      const looksLikeGoogleSheet = !!parsedSheet.id || !!parsedSheet.publishId
+
+      const hasClientApiKey = !!import.meta.env.VITE_GOOGLE_API_KEY
+
+      if (!looksLikeGoogleSheet) {
+        return {
+          sources: [{ gid: primaryGid, tabName: null, text: primaryText }],
+          discovery: {
+            source: "primary_only" as TabDiscoverySource,
+            discoveredCount: 0,
+            hasClientApiKey,
+            triedClientApi: false,
+            triedEdgeFunction: false,
+            edgeFunctionMissing: false,
+            errorMessage: null,
+          },
+        }
+      }
+
+      const outcome = await discoverTabs(sheetUrl)
+      const discovery: TabDiscoveryReport = {
+        source: outcome.source,
+        discoveredCount: outcome.tabs.length,
+        hasClientApiKey,
+        triedClientApi: outcome.triedClientApi,
+        triedEdgeFunction: outcome.triedEdgeFunction,
+        edgeFunctionMissing: outcome.edgeFunctionMissing,
+        errorMessage: outcome.errorMessage,
+      }
+
+      if (!outcome.tabs.length) {
+        return {
+          sources: [{ gid: primaryGid, tabName: null, text: primaryText }],
+          discovery,
+        }
+      }
+
+      const primaryTabName = outcome.tabs.find((t) => t.gid === primaryGid)?.name ?? null
+      const sources: Array<{ gid: string | null; tabName: string | null; text: string }> = []
+      if (!isExcludedTabName(primaryTabName)) {
+        sources.push({ gid: primaryGid, tabName: primaryTabName, text: primaryText })
+      }
+
+      const extraTabs = outcome.tabs.filter((tab) =>
+        tab.gid !== primaryGid && !isExcludedTabName(tab.name),
+      )
+
+      const fetched = await Promise.all(extraTabs.map(async (tab) => {
+        try {
+          const response = await fetch(withGid(baseCsvUrl, tab.gid), { cache: "no-store" })
+          if (!response.ok) return null
+          const text = await response.text()
+          if (!text || text.trim().startsWith("<!")) return null
+          return { gid: tab.gid, tabName: tab.name || null, text }
+        } catch {
+          return null
+        }
+      }))
+
+      for (const item of fetched) {
+        if (item) sources.push(item)
+      }
+
+      // Fallback to primary if every tab got excluded/missed.
+      if (!sources.length) {
+        sources.push({ gid: primaryGid, tabName: primaryTabName, text: primaryText })
+      }
+      return { sources, discovery }
     },
   })
 
   const parsed = useMemo<OperationsRequestMetricsResult>(() => {
     const todayIso = new Date().toISOString().slice(0, 10)
     const monthStartIso = `${todayIso.slice(0, 7)}-01`
-    if (!csvQuery.data) {
+    const emptyDiscovery: TabDiscoveryReport = {
+      source: "primary_only",
+      discoveredCount: 0,
+      hasClientApiKey: !!import.meta.env.VITE_GOOGLE_API_KEY,
+      triedClientApi: false,
+      triedEdgeFunction: false,
+      edgeFunctionMissing: false,
+      errorMessage: null,
+    }
+    if (!csvQuery.data || !csvQuery.data.sources.length) {
       return {
         rows: [],
         quality: { invalidRows: 0, unknownStatuses: {} },
@@ -419,44 +705,70 @@ export function useOperationsRequestMetrics(kind: Extract<OperationsSheetKind, "
         metricsPast: EMPTY_METRICS,
         metricsMtd: EMPTY_METRICS,
         metricsAll: EMPTY_METRICS,
+        tabs: [],
+        discovery: csvQuery.data?.discovery ?? emptyDiscovery,
       }
     }
 
-    const parsedCsv = parseCsvRows(csvQuery.data)
     const unknownStatuses: Record<string, number> = {}
-    let invalidRows = parsedCsv.invalidRows
-    const rowsFromTable: OperationsRequestRow[] = []
+    let invalidRows = 0
+    const combinedRows: OperationsRequestRow[] = []
+    const tabs: OperationsTabSummary[] = []
 
-    for (const row of parsedCsv.rows) {
-      const requestDate = parseIsoDate(pick(row, HEADER_KEYS.date))
-      const amount = parseAmount(pick(row, HEADER_KEYS.amount))
-      const rawStatus = pick(row, HEADER_KEYS.status)
-      const status = normalizeStatus(rawStatus)
+    for (const source of csvQuery.data.sources) {
+      const parsedCsv = parseCsvRows(source.text)
+      invalidRows += parsedCsv.invalidRows
+      const rowsFromTable: OperationsRequestRow[] = []
 
-      if (!requestDate || amount == null) {
-        invalidRows++
-        continue
+      for (const row of parsedCsv.rows) {
+        const requestDate = parseIsoDate(pick(row, HEADER_KEYS.date))
+        const amount = parseAmount(pick(row, HEADER_KEYS.amount))
+        const rawStatus = pick(row, HEADER_KEYS.status)
+        const status = normalizeStatus(rawStatus)
+
+        if (!requestDate || amount == null) {
+          invalidRows++
+          continue
+        }
+        if (rawStatus && !status) {
+          unknownStatuses[rawStatus] = (unknownStatuses[rawStatus] ?? 0) + 1
+        }
+        const resolvedStatus = status ?? "pending"
+
+        rowsFromTable.push({
+          documentId: pick(row, HEADER_KEYS.documentId),
+          requestDate,
+          amount,
+          status: resolvedStatus,
+          category: pick(row, HEADER_KEYS.category) ?? "Unspecified",
+          supplier: pick(row, HEADER_KEYS.supplier) ?? "Unspecified",
+          requester: pick(row, HEADER_KEYS.requester) ?? "Unspecified",
+          rawStatus: rawStatus ?? resolvedStatus,
+        })
       }
-      if (rawStatus && !status) {
-        unknownStatuses[rawStatus] = (unknownStatuses[rawStatus] ?? 0) + 1
-      }
-      const resolvedStatus = status ?? "pending"
 
-      rowsFromTable.push({
-        documentId: pick(row, HEADER_KEYS.documentId),
-        requestDate,
-        amount,
-        status: resolvedStatus,
-        category: pick(row, HEADER_KEYS.category) ?? "Unspecified",
-        supplier: pick(row, HEADER_KEYS.supplier) ?? "Unspecified",
-        requester: pick(row, HEADER_KEYS.requester) ?? "Unspecified",
-        rawStatus: rawStatus ?? resolvedStatus,
+      const fallback = rowsFromTable.length === 0 ? parseTemplateForms(source.text, kind) : null
+      if (fallback) {
+        // In form-template mode, do not treat every non-tabular sheet row as invalid.
+        invalidRows -= parsedCsv.invalidRows
+        invalidRows += fallback.invalidRows
+      }
+      const selected = fallback ? fallback.rows : rowsFromTable
+      combinedRows.push(...selected)
+      tabs.push({
+        gid: source.gid ?? null,
+        tabName: source.tabName ?? null,
+        rowsParsed: selected.length,
+        usedTemplateFallback: !!fallback,
       })
     }
 
-    const fallback = rowsFromTable.length === 0 ? parseTemplateForms(csvQuery.data, kind) : null
-    if (fallback) invalidRows += fallback.invalidRows
-    const rows = fallback ? fallback.rows : rowsFromTable
+    const deduped = new Map<string, OperationsRequestRow>()
+    for (const row of combinedRows) {
+      const key = `${row.documentId || "na"}|${row.requestDate}|${row.amount}|${row.requester}`
+      deduped.set(key, row)
+    }
+    const rows = Array.from(deduped.values())
 
     rows.sort((a, b) => a.requestDate.localeCompare(b.requestDate))
 
@@ -474,6 +786,8 @@ export function useOperationsRequestMetrics(kind: Extract<OperationsSheetKind, "
       metricsPast: computeOperationsMetrics(pastRows),
       metricsMtd: computeOperationsMetrics(mtdRows),
       metricsAll: computeOperationsMetrics(rows),
+      tabs,
+      discovery: csvQuery.data.discovery,
     }
   }, [csvQuery.data, kind])
 

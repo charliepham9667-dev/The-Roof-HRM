@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Loader2, Settings, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useKPISummary, useSyncStatus, MonthParam } from '../../hooks/useDashboardData';
 import { WeeklySalesTrend } from './WeeklySalesTrend';
@@ -7,6 +8,8 @@ import { TargetManager } from './TargetManager';
 import { RevenueVelocity } from './RevenueVelocity';
 import { ExecutiveSummary } from './ExecutiveSummary';
 import { CashPositionPanel } from '@/components/finance/CashPositionPanel';
+import { SupplierDebtPanel } from '@/components/finance/SupplierDebtPanel';
+import { MonthlyPLTable } from '@/components/finance/MonthlyPLTable';
 import { BAR_COLORS } from '@/lib/chart-colors';
 import {
   Button,
@@ -17,6 +20,7 @@ import {
   Separator,
   StatusBadge,
 } from '@/components/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatCard } from '@/components/ui/stat-card';
 
 // Format large numbers for display
@@ -71,6 +75,18 @@ export function OwnerOverview() {
     year: now.getFullYear(),
     month: now.getMonth(),
   });
+
+  // ?tab=cash|debt deep-link support so the dashboard "Log Debt" quick action
+  // and any old /finance/debt bookmarks can land on the right tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const cashTab = requestedTab === 'debt' ? 'debt' : 'cash';
+  const handleCashTabChange = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'debt') params.set('tab', 'debt');
+    else params.delete('tab');
+    setSearchParams(params, { replace: true });
+  };
   
   const { data: kpi, isLoading, error } = useKPISummary(selectedMonth);
   const { data: syncStatus } = useSyncStatus();
@@ -190,7 +206,7 @@ export function OwnerOverview() {
             <DashboardCardTitle className="text-sm font-medium">Executive Summary</DashboardCardTitle>
           </DashboardCardHeader>
           <DashboardCardContent>
-            <EXecutiveSUmmary noContainer selectedMonth={selectedMonth} />
+            <ExecutiveSummaryPanel noContainer selectedMonth={selectedMonth} />
           </DashboardCardContent>
         </DashboardCard>
 
@@ -205,8 +221,22 @@ export function OwnerOverview() {
         </DashboardCard>
       </div>
 
-      {/* Cash Position — daily-ish snapshot from accountant */}
-      <CashPositionPanel />
+      {/* Cash Position + Debt Tracker tabs — daily-ish snapshot from accountant */}
+      <Tabs value={cashTab} onValueChange={handleCashTabChange} className="w-full">
+        <TabsList>
+          <TabsTrigger value="cash">Cash Position</TabsTrigger>
+          <TabsTrigger value="debt">Debt Tracker</TabsTrigger>
+        </TabsList>
+        <TabsContent value="cash" className="mt-3">
+          <CashPositionPanel />
+        </TabsContent>
+        <TabsContent value="debt" className="mt-3">
+          <SupplierDebtPanel />
+        </TabsContent>
+      </Tabs>
+
+      {/* Full-year monthly P&L table — Jan…Dec + YTD across key lines */}
+      <MonthlyPLTable />
 
       {/* Target Manager Modal */}
       <TargetManager isOpen={showTargetManager} onClose={() => setShowTargetManager(false)} />
@@ -260,7 +290,7 @@ function TargetMetCard({ percentage, isOnTrack, onEdit }: { percentage: number; 
   );
 }
 
-function EXecutiveSUmmary({ noContainer, selectedMonth }: { noContainer?: boolean; selectedMonth?: MonthParam }) {
+function ExecutiveSummaryPanel({ noContainer, selectedMonth }: { noContainer?: boolean; selectedMonth?: MonthParam }) {
   return (
     <div className={noContainer ? 'space-y-4' : undefined}>
       <RevenueVelocity noContainer={noContainer} selectedMonth={selectedMonth} />

@@ -178,10 +178,15 @@ export function useRevenueVelocity(selectedMonth?: MonthParam) {
 
       // Get monthly target
       const periodStart = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-01`;
-      // For historical months, include the full month (use day after last day as exclusive upper bound).
+      // Build a valid exclusive upper bound: for the current month use today's
+      // date so we exclude EOD accounting; for historical months use the FIRST
+      // day of the next month (e.g. 2026-04-01) — never YYYY-MM-(N+1) which
+      // produces invalid dates like 2026-03-32 and silently fails.
+      const nextMonthStart = new Date(viewYear, viewMonth + 1, 1);
+      const nextMonthFirstISO = `${nextMonthStart.getFullYear()}-${String(nextMonthStart.getMonth() + 1).padStart(2, '0')}-01`;
       const todayISO = isCurrentMonth
         ? `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(calendarDay).padStart(2, '0')}`
-        : `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(daysInMonth + 1).padStart(2, '0')}`;
+        : nextMonthFirstISO;
 
       const { data: targetData } = await supabase
         .from('targets')
@@ -189,17 +194,19 @@ export function useRevenueVelocity(selectedMonth?: MonthParam) {
         .eq('metric', 'revenue')
         .eq('period', 'monthly')
         .eq('period_start', periodStart)
-        .single();
+        .maybeSingle();
 
       const monthlyTarget = targetData?.target_value || 1200000000; // Default 1.2B
 
       // Get MTD / full-month revenue
-      const { data: metricsData } = await supabase
+      const { data: metricsData, error: metricsError } = await supabase
         .from('daily_metrics')
         .select('date, revenue')
         .gte('date', periodStart)
         .lt('date', todayISO)
         .order('date', { ascending: false });
+
+      if (metricsError) throw metricsError;
 
       const mtdRevenue = (metricsData || []).reduce((sum, row) => sum + (row.revenue || 0), 0);
       const daysWithData = (metricsData || []).filter(r => r.revenue > 0).length;

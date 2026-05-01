@@ -330,25 +330,72 @@ export function useTodayShifts(todayIso: string) {
   });
 }
 
+// Columns SELECTed for the staff directory.  We try the full set first
+// (including the contract_* columns introduced by migration
+// 20260501000000_profiles_contract_fields.sql) and fall back to the legacy
+// set if the migration has not been applied yet on this environment, so
+// the UI doesn't go blank during a staggered deploy.
+const STAFF_LIST_COLUMNS_FULL =
+  'id, full_name, email, role, phone, hire_date, avatar_url, job_role, employment_type, manager_type, department, reports_to, contract_signed, contract_signed_date, contract_start_date, contract_end_date, contract_type';
+const STAFF_LIST_COLUMNS_LEGACY =
+  'id, full_name, email, role, phone, hire_date, avatar_url, job_role, employment_type, manager_type, department, reports_to';
+
+function isMissingColumnError(err: any): boolean {
+  if (!err) return false;
+  if (err.code === '42703') return true;
+  const msg = String(err.message || '').toLowerCase();
+  return /column .* does not exist/.test(msg) || msg.includes('contract_');
+}
+
+function withContractDefaults<T extends Record<string, any>>(row: T): T & {
+  contract_signed: boolean;
+  contract_signed_date: string | null;
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  contract_type: string | null;
+} {
+  return {
+    contract_signed: false,
+    contract_signed_date: null,
+    contract_start_date: null,
+    contract_end_date: null,
+    contract_type: null,
+    ...row,
+  };
+}
+
 // Get all staff for dropdown (only active)
 export function useStaffList() {
   return useQuery({
     queryKey: ['staff-list'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const first = await supabase
         .from('profiles')
-        .select(
-          'id, full_name, email, role, phone, hire_date, avatar_url, job_role, employment_type, manager_type, department, reports_to'
-        )
+        .select(STAFF_LIST_COLUMNS_FULL)
         .eq('is_active', true)
         .eq('status', 'active')
         .order('full_name');
 
-      if (error) {
-        console.warn('Staff list fetch failed:', error.message);
-        throw error;
+      if (!first.error) {
+        return (first.data || []).map((row: any) => withContractDefaults(row));
       }
-      return data || [];
+
+      if (isMissingColumnError(first.error)) {
+        console.warn(
+          '[useStaffList] contract_* columns missing — falling back to legacy SELECT. Apply migration 20260501000000_profiles_contract_fields.sql.'
+        );
+        const fallback = await supabase
+          .from('profiles')
+          .select(STAFF_LIST_COLUMNS_LEGACY)
+          .eq('is_active', true)
+          .eq('status', 'active')
+          .order('full_name');
+        if (fallback.error) throw fallback.error;
+        return (fallback.data || []).map((row: any) => withContractDefaults(row));
+      }
+
+      console.warn('Staff list fetch failed:', first.error.message);
+      throw first.error;
     },
     retry: 1,
     staleTime: 1000 * 60 * 5,

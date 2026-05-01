@@ -13,6 +13,16 @@ clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
+// Allow the page to ask the new service worker to activate immediately.
+// The page posts {type: 'SKIP_WAITING'} after the user clicks "Update" on
+// the new-version banner, then reloads — this is what makes deploys
+// propagate within one navigation rather than waiting for all tabs to close.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Navigation requests (HTML page loads): always serve index.html from
 // the precache but use NetworkFirst so a fresh copy is attempted first.
 // This prevents stale HTML referencing old JS hashes after a deployment.

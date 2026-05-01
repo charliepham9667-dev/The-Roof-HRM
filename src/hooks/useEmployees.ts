@@ -23,8 +23,49 @@ export type EmployeeProfile = {
   address: string | null
   emergency_contact_name: string | null
   emergency_contact_phone: string | null
+  contract_signed: boolean
+  contract_signed_date: string | null
+  contract_start_date: string | null
+  contract_end_date: string | null
+  contract_type: string | null
   created_at?: string
   updated_at?: string
+}
+
+// We attempt the full SELECT first (including contract_* columns added in
+// migration 20260501000000_profiles_contract_fields.sql) and fall back to the
+// legacy column set if the migration has not yet been applied, so the UI
+// stays functional during a staggered deploy.
+const PROFILE_SELECT_COLUMNS =
+  "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, date_of_birth, address, emergency_contact_name, emergency_contact_phone, contract_signed, contract_signed_date, contract_start_date, contract_end_date, contract_type, created_at, updated_at"
+
+const PROFILE_SELECT_COLUMNS_LEGACY =
+  "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, date_of_birth, address, emergency_contact_name, emergency_contact_phone, created_at, updated_at"
+
+const CONTRACT_FIELDS = [
+  "contract_signed",
+  "contract_signed_date",
+  "contract_start_date",
+  "contract_end_date",
+  "contract_type",
+] as const
+
+function isMissingColumnError(err: any): boolean {
+  if (!err) return false
+  if (err.code === "42703") return true
+  const msg = String(err.message || "").toLowerCase()
+  return /column .* does not exist/.test(msg) || msg.includes("contract_")
+}
+
+function withContractDefaults(row: any): EmployeeProfile {
+  return {
+    contract_signed: false,
+    contract_signed_date: null,
+    contract_start_date: null,
+    contract_end_date: null,
+    contract_type: null,
+    ...row,
+  } as EmployeeProfile
 }
 
 export type EmploymentHistoryRow = {
@@ -58,16 +99,30 @@ export function useEmployeeProfile(userId: string | undefined) {
     queryFn: async (): Promise<EmployeeProfile> => {
       if (!userId) throw new Error("Missing userId")
 
-      const { data, error } = await supabase
+      const first = await supabase
         .from("profiles")
-        .select(
-          "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, date_of_birth, address, emergency_contact_name, emergency_contact_phone, created_at, updated_at",
-        )
+        .select(PROFILE_SELECT_COLUMNS)
         .eq("id", userId)
         .single()
 
-      if (error) throw error
-      return data as EmployeeProfile
+      if (!first.error) {
+        return withContractDefaults(first.data)
+      }
+
+      if (isMissingColumnError(first.error)) {
+        console.warn(
+          "[useEmployeeProfile] contract_* columns missing — falling back to legacy SELECT.",
+        )
+        const fallback = await supabase
+          .from("profiles")
+          .select(PROFILE_SELECT_COLUMNS_LEGACY)
+          .eq("id", userId)
+          .single()
+        if (fallback.error) throw fallback.error
+        return withContractDefaults(fallback.data)
+      }
+
+      throw first.error
     },
     enabled: !!userId,
   })
@@ -94,20 +149,41 @@ export function useUpdateEmployeeProfile(userId: string) {
           | "emergency_contact_phone"
           | "role"
           | "manager_type"
+          | "contract_signed"
+          | "contract_signed_date"
+          | "contract_start_date"
+          | "contract_end_date"
+          | "contract_type"
         >
       >,
     ) => {
-      const { data, error } = await supabase
+      const fullPayload = { ...patch, updated_at: new Date().toISOString() }
+      const first = await supabase
         .from("profiles")
-        .update({ ...patch, updated_at: new Date().toISOString() })
+        .update(fullPayload)
         .eq("id", userId)
-        .select(
-          "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, date_of_birth, address, emergency_contact_name, emergency_contact_phone, created_at, updated_at",
-        )
+        .select(PROFILE_SELECT_COLUMNS)
         .single()
 
-      if (error) throw error
-      return data as EmployeeProfile
+      if (!first.error) return withContractDefaults(first.data)
+
+      if (isMissingColumnError(first.error)) {
+        console.warn(
+          "[useUpdateEmployeeProfile] contract_* columns missing — retrying without them.",
+        )
+        const legacyPatch: Record<string, any> = { ...fullPayload }
+        for (const f of CONTRACT_FIELDS) delete legacyPatch[f]
+        const fallback = await supabase
+          .from("profiles")
+          .update(legacyPatch)
+          .eq("id", userId)
+          .select(PROFILE_SELECT_COLUMNS_LEGACY)
+          .single()
+        if (fallback.error) throw fallback.error
+        return withContractDefaults(fallback.data)
+      }
+
+      throw first.error
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employee-profile", userId] })

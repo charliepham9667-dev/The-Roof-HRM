@@ -120,6 +120,49 @@ function calculateYTDSummary(months: PnlMonthly[]): PnlSummary {
 }
 
 /**
+ * Aggregate `daily_metrics.revenue` per month for a given year. Returns a
+ * Record keyed by month number (1..12) → revenue total in VND, or null when
+ * there's no daily data for that month yet.
+ *
+ * This is the same source as `useKPISummary`'s "Total Revenue" KPI, so
+ * surfacing it elsewhere keeps the dashboard internally consistent — the
+ * `pnl_monthly.gross_sales` column can lag because the monthly P&L Google
+ * Sheet is hand-maintained, while `daily_metrics` is updated nightly from
+ * the POS daily revenue tracker (the source of truth for Gross Revenue).
+ */
+export function useDailyRevenueByMonth(year: number) {
+  return useQuery({
+    queryKey: ['daily-revenue-by-month', year],
+    queryFn: async (): Promise<Record<number, number | null>> => {
+      const startIso = `${year}-01-01`
+      const endIso = `${year + 1}-01-01`
+      const { data, error } = await supabase
+        .from('daily_metrics')
+        .select('date, revenue')
+        .gte('date', startIso)
+        .lt('date', endIso)
+
+      if (error) throw error
+
+      const totals: Record<number, number | null> = {}
+      for (let m = 1; m <= 12; m += 1) totals[m] = null
+      for (const row of data || []) {
+        const ds = String((row as any).date || '')
+        const monthStr = ds.slice(5, 7)
+        const month = Number(monthStr)
+        const rev = Number((row as any).revenue || 0)
+        if (Number.isFinite(month) && month >= 1 && month <= 12) {
+          totals[month] = (totals[month] ?? 0) + rev
+        }
+      }
+      return totals
+    },
+    enabled: Number.isFinite(year),
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+/**
  * Fetch P&L data for a specific year
  * @param year - Year to fetch (default: current year)
  * @param dataType - 'actual' or 'budget' (default: 'actual')

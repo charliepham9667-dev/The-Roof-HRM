@@ -8,6 +8,8 @@ import {
   useOperationsRequestMetrics,
   type RequestReviewStatus,
   type RequestScope,
+  type TabDiscoveryReport,
+  type TabDiscoverySource,
 } from "@/hooks/useOperationsRequestMetrics"
 import type { OperationsSheetKind } from "@/hooks/useOperationsSheetLinks"
 import { cn } from "@/lib/utils"
@@ -104,6 +106,34 @@ export function RequestOverviewPanel({ kind }: Props) {
       <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
         Status contract for reporting: <strong>pending</strong>, <strong>approved</strong>, <strong>cancelled</strong>, <strong>declined</strong>.
       </div>
+
+      {parsed.tabs.length > 0 && (
+        <div className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-[11px] text-muted-foreground space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="font-medium text-foreground">
+              Tabs combined: {parsed.tabs.length}
+            </div>
+            <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              {discoverySourceLabel(parsed.discovery.source)}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {parsed.tabs.map((tab, i) => (
+              <span
+                key={`${tab.gid ?? "primary"}-${i}`}
+                className="inline-flex items-center gap-1 rounded border border-border bg-background px-1.5 py-0.5"
+                title={tab.usedTemplateFallback ? "Parsed as form template" : "Parsed as table"}
+              >
+                <span className="text-foreground">{tab.tabName || `gid ${tab.gid ?? "?"}`}</span>
+                <span className="tabular-nums">{tab.rowsParsed}</span>
+              </span>
+            ))}
+          </div>
+          {parsed.discovery.source === "primary_only" && (
+            <DiscoveryHelp discovery={parsed.discovery} />
+          )}
+        </div>
+      )}
 
       {!link ? (
         <div className="rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
@@ -284,6 +314,74 @@ function BreakdownCard({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function discoverySourceLabel(source: TabDiscoverySource): string {
+  switch (source) {
+    case "client_api":
+      return "Sheets API (browser)"
+    case "edge_api":
+      return "Sheets API (edge fn)"
+    case "edge_pubhtml":
+      return "/pubhtml scrape"
+    case "primary_only":
+    default:
+      return "Primary tab only"
+  }
+}
+
+function DiscoveryHelp({ discovery }: { discovery: TabDiscoveryReport }) {
+  const reasons: string[] = []
+  if (!discovery.hasClientApiKey) {
+    reasons.push("`VITE_GOOGLE_API_KEY` is not set in your build env")
+  }
+  if (discovery.triedClientApi && discovery.errorMessage?.startsWith("Client API")) {
+    reasons.push(discovery.errorMessage)
+  }
+  if (discovery.edgeFunctionMissing) {
+    reasons.push("`list-sheet-tabs` Edge Function returned 404 (not deployed)")
+  } else if (
+    discovery.triedEdgeFunction &&
+    discovery.errorMessage?.startsWith("Edge Function")
+  ) {
+    reasons.push(discovery.errorMessage)
+  }
+
+  return (
+    <div className="mt-1.5 rounded border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900 space-y-1.5">
+      <div className="flex items-center gap-1.5 font-medium">
+        <AlertTriangle className="h-3 w-3" />
+        Only the primary tab was summarised — multiple tabs in this sheet are
+        being ignored.
+      </div>
+      {reasons.length > 0 && (
+        <ul className="list-disc pl-4 space-y-0.5">
+          {reasons.map((reason, i) => (
+            <li key={i}>{reason}</li>
+          ))}
+        </ul>
+      )}
+      <div className="pt-1 border-t border-amber-200/60 space-y-1">
+        <div className="font-medium">Pick one to enable multi-tab roll-up:</div>
+        <div>
+          <span className="font-semibold">A. Browser-side (no deploy):</span>
+          {" "}set <code className="rounded bg-amber-100 px-1">VITE_GOOGLE_API_KEY</code>
+          {" "}in <code className="rounded bg-amber-100 px-1">.env</code> /
+          {" "}Vercel env, restrict it to your domain in GCP, then redeploy.
+        </div>
+        <div>
+          <span className="font-semibold">B. Server-side:</span> deploy the
+          edge function:
+        </div>
+        <pre className="rounded bg-amber-100/80 px-2 py-1 text-[10.5px] leading-snug overflow-x-auto">{`supabase functions deploy list-sheet-tabs
+supabase secrets set GOOGLE_API_KEY=<your_key>`}</pre>
+        <div>
+          The sheet must also be shared as <em>"Anyone with the link can
+          view"</em> for either path to work.
+        </div>
+      </div>
     </div>
   )
 }

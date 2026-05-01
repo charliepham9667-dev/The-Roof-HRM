@@ -17,7 +17,6 @@ import {
   Building2,
   Users,
   TrendingUp,
-  TrendingDown,
   Settings,
   LucideIcon,
 } from 'lucide-react'
@@ -117,7 +116,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       label: 'Finance',
       items: [
         { title: 'P&L Performance',      url: '/finance/pl',             icon: TrendingUp },
-        { title: 'Debt Tracker',         url: '/finance/debt',           icon: TrendingDown },
       ],
     },
     {
@@ -253,7 +251,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       label: 'HR',
       items: [
         { title: 'Leave Requests',       url: '/staff/leave',             icon: Clock },
-        { title: 'Payslips',             url: '/staff/payslips',          icon: DollarSign },
         { title: 'Profile',              url: '/staff/profile',           icon: Users },
       ],
     },

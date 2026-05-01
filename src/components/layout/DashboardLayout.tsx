@@ -9,6 +9,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { PushPromptBanner } from '@/components/common/PushPromptBanner';
 import { UnreadNotificationsBanner } from '@/components/common/UnreadNotificationsBanner';
+import { VersionBadge } from '@/components/VersionBadge';
 import { useAuthStore } from '@/stores/authStore';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -99,6 +100,7 @@ export function DashboardLayout() {
               <Outlet />
             </Suspense>
           </ErrorBoundary>
+          <VersionBadge />
         </main>
         <MobileBottomNav />
       </SidebarInset>

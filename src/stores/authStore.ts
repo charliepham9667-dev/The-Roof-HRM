@@ -153,18 +153,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Set up auth state listener (only once)
     if (!authListenerSet) {
       authListenerSet = true;
-      
+
       supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('Auth state changed:', event);
-        
+
         if (event === 'SIGNED_IN' && session?.user) {
           set({ user: session.user, error: null });
           await get().fetchProfile();
         } else if (event === 'SIGNED_OUT') {
           set({ user: null, profile: null, viewAs: null, error: null });
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // Refresh user, and re-fetch profile if it's missing (which can
+          // happen on iOS PWA after the app is backgrounded long enough that
+          // in-memory state was dropped but the session is still valid).
+          set({ user: session.user });
+          if (!get().profile) {
+            await get().fetchProfile();
+          }
+        } else if (event === 'USER_UPDATED' && session?.user) {
           set({ user: session.user });
         }
+        // Note: we intentionally do NOT clear user/profile on any other
+        // event. Transient network errors must not look like a logout.
       });
     }
   },

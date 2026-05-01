@@ -1,28 +1,10 @@
 import { useNavigate } from "react-router-dom"
-import { ChevronRight, FileText, Plug, RefreshCw, Shield, Users } from "lucide-react"
+import { ChevronRight, Plug, RefreshCw } from "lucide-react"
 
 import { PageHeader } from "@/components/ui"
 import { PushDiagnostics } from "@/components/settings/PushDiagnostics"
 
 const settingsItems = [
-  {
-    title: "Permissions",
-    description: "Manage user permissions and access levels",
-    icon: Shield,
-    href: "/settings/permissions",
-  },
-  {
-    title: "Roles",
-    description: "Configure roles and their capabilities",
-    icon: Users,
-    href: "/settings/roles",
-  },
-  {
-    title: "SOP Management",
-    description: "Manage standard operating procedures",
-    icon: FileText,
-    href: "/settings/sops",
-  },
   {
     title: "Data Sync",
     description: "Configure data synchronization settings",

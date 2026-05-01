@@ -10,12 +10,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const BREADCRUMB_MAP: Record<string, [string, string]> = {
   // Owner
   'owner/dashboard':      ['Owner',     'Executive Dashboard'],
-  'owner/my-dashboard':   ['Owner',     'My Dashboard'],
-  'owner/alerts':         ['Owner',     'Alerts'],
   'owner/tasks':          ['Owner',     'Task Delegation'],
   'owner/team-directory': ['Team',      'Team Overview'],
   'owner/org-chart':      ['Team',      'Org Chart'],
-  'owner/workforce':      ['Team',      'Workforce Overview'],
   'owner/calendar':       ['Owner',     'Calendar'],
   'owner/venue-calendar': ['Venue',     'Venue Calendar'],
   'owner/venue':          ['Venue',     'Venue Manager'],
@@ -25,30 +22,20 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'owner/resources':      ['Common',    'Resources'],
   'owner/schedule':       ['Team',      'Schedule'],
   'owner/company':        ['Company',   'Company Profile'],
-  'weekly-focus':         ['Owner',     'Weekly Focus'],
   // Finance
   'finance/summary':      ['Finance',   'Finance Snapshot'],
   'finance/pl':           ['Finance',   'P&L Performance'],
-  'finance/reports':      ['Finance',   'Report Builder'],
-  'finance/category':     ['Finance',   'Category Drilldown'],
-  'finance/cashflow':     ['Finance',   'Cash Flow'],
-  'finance/costs':        ['Finance',   'Cost Control'],
-  'finance/forecast':     ['Finance',   'Forecast'],
+  'finance/debt':         ['Finance',   'Supplier Debt'],
   // Manager
   'manager/dashboard':    ['Manager',   'Dashboard'],
   'manager/venue':        ['Venue',     'Venue Manager'],
   'manager/operations':   ['Operations','Operations'],
   'manager/reservations': ['Manager',   'Reservations'],
   'manager/leave':        ['Team',      'Leave Approval'],
-  'manager/shift-summary':['Team',      'Shift Summary'],
-  'manager/promotions':   ['Manager',   'Promotions'],
-  'manager/events':       ['Manager',   'Events'],
   'manager/schedule':     ['Team',      'Schedule'],
   'manager/floor-issues': ['Manager',   'Floor Issues'],
-  'manager/onboarding':   ['Team',      'Onboarding'],
   'manager/tasks':        ['Manager',   'My Tasks'],
   'manager/calendar':     ['Venue',     'Venue Briefing'],
-  'manager/incidents':    ['Manager',   'Incidents'],
   'manager/resources':    ['Common',    'Resources'],
   // Staff
   'staff/dashboard':      ['Staff',     'My Dashboard'],
@@ -56,7 +43,6 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   'staff/profile':        ['Staff',     'My Profile'],
   'staff/tasks':          ['Staff',     'My Tasks'],
   'staff/leave':          ['Staff',     'Leave'],
-  'staff/payslips':       ['Staff',     'Payslips'],
   'staff/check-in':       ['Staff',     'Check In / Out'],
   'staff/calendar':       ['Schedule',  'Venue Briefing'],
   // Marketing
@@ -68,9 +54,6 @@ const BREADCRUMB_MAP: Record<string, [string, string]> = {
   // Common / Settings
   'resources':            ['Common',    'Resources'],
   'settings':             ['Settings',  'Settings'],
-  'settings/permissions': ['Settings',  'Permissions'],
-  'settings/roles':       ['Settings',  'Roles'],
-  'settings/sops':        ['Settings',  'SOPs'],
   'admin/sync':           ['Admin',     'Sync Data'],
 }
 

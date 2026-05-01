@@ -4,7 +4,6 @@ import {
   Activity,
   AlertTriangle,
   BarChart2,
-  CalendarClock,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
@@ -15,7 +14,6 @@ import {
   Sparkles,
   Trash2,
   Wallet,
-  Zap,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -47,10 +45,8 @@ import {
 import { useTodayPaxConfirmed, useReservationsCsv } from "@/hooks/useReservationsCsv"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
-import { useCreateMaintenanceTask } from "@/hooks/useMaintenanceTasks"
 import { TaskDescriptionEditor, SubTodoListEditor } from "@/components/tasks"
 import { AutomationStatusStrip } from "@/components/owner-dashboard/AutomationStatusStrip"
-
 const ICT_TZ = "Asia/Ho_Chi_Minh"
 
 function getIctParts(now: Date) {
@@ -84,10 +80,6 @@ function getIctDateIso(now: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: ICT_TZ }).formatToParts(now)
   const map = new Map(parts.map((p) => [p.type, p.value]))
   return `${map.get("year")}-${map.get("month")}-${map.get("day")}`
-}
-
-function pad2(n: number) {
-  return String(n).padStart(2, "0")
 }
 
 function getIsoWeekMeta(dateIso: string) {
@@ -214,61 +206,6 @@ function formatDue(dueIso: string | undefined) {
 
 
 
-function AnalogClock({
-  hour,
-  minute,
-  second,
-}: {
-  hour: number
-  minute: number
-  second: number
-}) {
-  const secDeg = (second / 60) * 360
-  const minDeg = (minute / 60) * 360 + (second / 60) * 6
-  const hourDeg = ((hour % 12) / 12) * 360 + (minute / 60) * 30
-
-  return (
-    <svg viewBox="0 0 200 200" className="mx-auto h-20 w-20 text-foreground">
-      <circle cx="100" cy="100" r="86" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1.5" />
-      <circle cx="100" cy="100" r="4" fill="rgb(var(--primary))" />
-
-      {/* hour hand */}
-      <line
-        x1="100"
-        y1="100"
-        x2="100"
-        y2="56"
-        stroke="currentColor"
-        strokeWidth="4"
-        strokeLinecap="round"
-        style={{ transform: `rotate(${hourDeg}deg)`, transformOrigin: "100px 100px" }}
-      />
-      {/* minute hand */}
-      <line
-        x1="100"
-        y1="100"
-        x2="100"
-        y2="40"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        style={{ transform: `rotate(${minDeg}deg)`, transformOrigin: "100px 100px" }}
-      />
-      {/* second hand */}
-      <line
-        x1="100"
-        y1="104"
-        x2="100"
-        y2="30"
-        stroke="rgb(var(--primary))"
-        strokeWidth="1"
-        strokeLinecap="round"
-        style={{ transform: `rotate(${secDeg}deg)`, transformOrigin: "100px 100px" }}
-      />
-    </svg>
-  )
-}
-
 function MetricCard({
   title,
   children,
@@ -288,35 +225,6 @@ function MetricCard({
       <div className="mt-2">{children}</div>
       {footer ? <div className="mt-3">{footer}</div> : null}
     </div>
-  )
-}
-
-function CardShell({
-  title,
-  icon,
-  right,
-  children,
-  className,
-}: {
-  title: string
-  icon?: React.ReactNode
-  right?: React.ReactNode
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <section className={cn("rounded-card border border-border bg-card shadow-card min-w-0 overflow-hidden", className)}>
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-2">
-          {icon ? <div className="text-primary">{icon}</div> : null}
-          <div className="text-xs tracking-widest font-semibold text-foreground uppercase">
-            {title}
-          </div>
-        </div>
-        {right}
-      </div>
-      <div className="px-5 pb-5">{children}</div>
-    </section>
   )
 }
 
@@ -359,30 +267,6 @@ function DashboardHeaderClock({ firstName }: { firstName: string }) {
           <div className="rounded-sm border border-border px-3 py-1 text-xs tracking-widest font-semibold text-foreground uppercase shrink-0">
             {modeLabel.toUpperCase()}
           </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function HqClockPanel() {
-  const [tick, setTick] = useState(() => new Date())
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTick(new Date()), 1000)
-    return () => window.clearInterval(id)
-  }, [])
-
-  const ict = useMemo(() => getIctParts(tick), [tick])
-  const timeString = `${pad2(ict.hour)}:${pad2(ict.minute)}:${pad2(ict.second)}`
-
-  return (
-    <div className="grid gap-4 overflow-hidden">
-      <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
-      <div className="text-center overflow-hidden">
-        <div className="font-display text-[22px] sm:text-[26px] tracking-[2px] sm:tracking-[4px] text-foreground truncate">{timeString}</div>
-        <div className="mt-1 text-xs tracking-wider text-muted-foreground uppercase truncate">
-          ICT · UTC+7
         </div>
       </div>
     </div>
@@ -434,8 +318,6 @@ export default function OwnerDashboardPage() {
     if (paxTargetEditOpen) setPaxTargetDraft(paxTarget ? String(Math.round(Number(paxTarget))) : "")
   }, [paxTargetEditOpen, paxTarget])
 
-  const createMaintenanceTask = useCreateMaintenanceTask()
-  const [rainTaskState, setRainTaskState] = useState<'idle' | 'saving' | 'done'>('idle')
 
   const { data: roofCalendar, isLoading: weekCsvLoading, error: weekCsvError } = useRoofCalendarWeekData()
   const weekCsv = roofCalendar?.byDate ?? []
@@ -732,7 +614,7 @@ export default function OwnerDashboardPage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate("/finance/debt")}
+            onClick={() => navigate("/finance/summary?tab=debt")}
             className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
           >
             <span className="inline-flex items-center gap-2">
@@ -764,84 +646,6 @@ export default function OwnerDashboardPage() {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
-      </div>
-
-      {/* HQ row */}
-      <div className="grid gap-4 w-full min-w-0 md:grid-cols-2 lg:grid-cols-[320px_1fr]">
-        <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />}>
-          <HqClockPanel />
-        </CardShell>
-
-        <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />}>
-          <div className="flex flex-col sm:flex-row items-stretch gap-0">
-            {/* Current conditions */}
-            <div className="min-w-0 sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
-              <div className="flex items-center gap-3">
-                <div className="text-[32px]">🌤</div>
-                <div className="font-display text-[34px] sm:text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
-              </div>
-              <div className="mt-2 text-xs text-secondary-foreground tracking-wide">Broken Clouds · Humidity 78%</div>
-
-              <div className="mt-3 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Zap className="h-3.5 w-3.5 shrink-0" />
-                  <span className="min-w-0 break-words">Rain expected Saturday — prep covers & heaters by 13:00</span>
-                </div>
-                <button
-                  disabled={rainTaskState !== 'idle'}
-                  onClick={async () => {
-                    setRainTaskState('saving')
-                    try {
-                      await createMaintenanceTask.mutateAsync({
-                        title: 'Prep covers & heaters for rain — Saturday',
-                        category: 'equipment',
-                        priority: 'high',
-                        status: 'open',
-                      })
-                      setRainTaskState('done')
-                    } catch {
-                      setRainTaskState('idle')
-                    }
-                  }}
-                  className="mt-1.5 flex items-center gap-1 rounded bg-info/10 px-2 py-0.5 text-[11px] font-medium text-info hover:bg-info/20 disabled:opacity-60 transition-colors"
-                >
-                  {rainTaskState === 'saving' ? (
-                    <><Activity className="h-3 w-3 animate-spin" /> Creating…</>
-                  ) : rainTaskState === 'done' ? (
-                    <><CheckCircle2 className="h-3 w-3" /> Task Created</>
-                  ) : (
-                    <>+ Create Task</>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* 7-day forecast */}
-            <div className="-mx-5 sm:mx-0 px-5 sm:px-0 sm:pl-5 flex min-w-0 w-full items-center pt-4 sm:pt-0 overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {[
-                { d: "TUE", hi: 27, lo: 22, emoji: "🌤" },
-                { d: "WED", hi: 25, lo: 22, emoji: "🌥" },
-                { d: "THU", hi: 25, lo: 22, emoji: "🌧" },
-                { d: "FRI", hi: 25, lo: 22, emoji: "🌧" },
-                { d: "SAT", hi: 25, lo: 20, emoji: "⛈", badge: "PREP" },
-                { d: "SUN", hi: 25, lo: 22, emoji: "⛅" },
-                { d: "MON", hi: 25, lo: 22, emoji: "🌥" },
-              ].map((x, i, arr) => (
-                <div key={x.d} className={cn("flex shrink-0 flex-col items-center gap-1.5 py-1 px-3", i < arr.length - 1 && "border-r border-border")}>
-                  <div className="text-xs tracking-wider text-muted-foreground uppercase">{x.d}</div>
-                  <div className="text-base">{x.emoji}</div>
-                  <div className="text-sm text-foreground">{x.hi}°</div>
-                  <div className="text-xs text-muted-foreground">{x.lo}°</div>
-                  {"badge" in x && x.badge ? (
-                    <div className="rounded-sm border border-warning/20 bg-warning/10 px-1 py-0.5 text-sm tracking-wider text-warning uppercase">
-                      {x.badge}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardShell>
       </div>
 
       {/* Revenue pulse */}

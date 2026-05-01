@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   AlertTriangle,
-  Activity,
   ArrowUpRight,
-  CalendarClock,
   CalendarDays,
   MapPin,
   Plus,
@@ -11,7 +9,6 @@ import {
   Tag,
   Trash2,
   User,
-  Zap,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useAuthStore } from "@/stores/authStore"
@@ -28,9 +25,7 @@ import {
   useGoogleReviews,
 } from "@/hooks/useDashboardData"
 import {
-  useExecutiveDashboardDailyInput,
   useMonthlyTarget,
-  useUpsertExecutiveDashboardDailyInput,
   useUpsertMonthlyTarget,
 } from "@/hooks/useExecutiveDashboardInputs"
 import { useTodayPaxConfirmed, useReservationsCsv } from "@/hooks/useReservationsCsv"
@@ -150,43 +145,6 @@ const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function AnalogClock({ hour, minute, second }: { hour: number; minute: number; second: number }) {
-  const secDeg = (second / 60) * 360
-  const minDeg = (minute / 60) * 360 + (second / 60) * 6
-  const hourDeg = ((hour % 12) / 12) * 360 + (minute / 60) * 30
-  return (
-    <svg viewBox="0 0 200 200" className="mx-auto h-20 w-20 text-foreground">
-      <circle cx="100" cy="100" r="86" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1.5" />
-      <circle cx="100" cy="100" r="4" fill="rgb(var(--primary))" />
-      <line x1="100" y1="100" x2="100" y2="56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"
-        style={{ transform: `rotate(${hourDeg}deg)`, transformOrigin: "100px 100px" }} />
-      <line x1="100" y1="100" x2="100" y2="40" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
-        style={{ transform: `rotate(${minDeg}deg)`, transformOrigin: "100px 100px" }} />
-      <line x1="100" y1="104" x2="100" y2="30" stroke="rgb(var(--primary))" strokeWidth="1" strokeLinecap="round"
-        style={{ transform: `rotate(${secDeg}deg)`, transformOrigin: "100px 100px" }} />
-    </svg>
-  )
-}
-
-function CardShell({
-  title, icon, right, children, className,
-}: {
-  title: string; icon?: React.ReactNode; right?: React.ReactNode; children: React.ReactNode; className?: string
-}) {
-  return (
-    <section className={cn("rounded-card border border-border bg-card shadow-card", className)}>
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-2">
-          {icon ? <div className="text-primary">{icon}</div> : null}
-          <div className="text-xs tracking-widest font-semibold text-foreground uppercase">{title}</div>
-        </div>
-        {right}
-      </div>
-      <div className="px-5 pb-5">{children}</div>
-    </section>
-  )
-}
-
 function DashboardHeaderClock({ firstName }: { firstName: string }) {
   const [tick, setTick] = useState(() => new Date())
 
@@ -228,28 +186,6 @@ function DashboardHeaderClock({ firstName }: { firstName: string }) {
   )
 }
 
-function HqClockPanel() {
-  const [tick, setTick] = useState(() => new Date())
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTick(new Date()), 1000)
-    return () => window.clearInterval(id)
-  }, [])
-
-  const ict = useMemo(() => getIctParts(tick), [tick])
-  const timeString = `${pad2(ict.hour)}:${pad2(ict.minute)}:${pad2(ict.second)}`
-
-  return (
-    <div className="grid gap-4">
-      <AnalogClock hour={ict.hour} minute={ict.minute} second={ict.second} />
-      <div className="text-center">
-        <div className="font-display text-[26px] tracking-[4px] text-foreground">{timeString}</div>
-        <div className="mt-1 text-xs tracking-wider text-muted-foreground uppercase">ICT · UTC+7</div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Pipeline helpers ──────────────────────────────────────────────────────────
 
 function formatPipelineWhen(dateIso: string, startTime: string | null, endTime: string | null) {
@@ -277,11 +213,15 @@ export function ManagerDashboard() {
   const isOwnerPreviewing = profile?.role === "owner" && viewAs?.role === "manager"
 
   const [todayIso, setTodayIso] = useState(() => getIctDateIso(new Date()))
+  const [now, setNow] = useState(() => new Date())
   useEffect(() => {
-    const id = window.setInterval(() => setTodayIso(getIctDateIso(new Date())), 60_000)
+    const id = window.setInterval(() => {
+      const d = new Date()
+      setNow(d)
+      setTodayIso(getIctDateIso(d))
+    }, 30_000)
     return () => window.clearInterval(id)
   }, [])
-  const now = new Date()
   const todayWeekday = useMemo(
     () => new Intl.DateTimeFormat("en-US", { timeZone: ICT_TZ, weekday: "long" }).format(new Date(`${todayIso}T12:00:00Z`)),
     [todayIso],
@@ -403,8 +343,18 @@ export function ManagerDashboard() {
     return `${pad2(h)}:${pad2(m)}:${pad2(s)}`
   }
 
+  const fmtTimeIct = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: ICT_TZ,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+    [],
+  )
   function fmtTime(d: Date) {
-    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+    return fmtTimeIct.format(d)
   }
 
   const shiftTimerStr = fmtSecs(shiftElapsed)
@@ -415,9 +365,8 @@ export function ManagerDashboard() {
   const { data: velocity, isLoading: _velocityLoading } = useRevenueVelocity()
   const { data: googleReviews } = useGoogleReviews()
   const periodStartIso = `${todayIso.slice(0, 7)}-01`
-  const { data: dailyInput, isLoading: _dailyInputLoading } = useExecutiveDashboardDailyInput(todayIso)
   const { data: paxTarget } = useMonthlyTarget("pax", periodStartIso)
-  const { pax: _csvPaxConfirmed, isLoading: csvPaxLoading } = useTodayPaxConfirmed()
+  const { pax: csvPaxConfirmed, isLoading: csvPaxLoading } = useTodayPaxConfirmed()
   const { data: allCsvReservations = [] } = useReservationsCsv()
   const { data: todayShifts = [] } = useTodayShifts(todayIso)
 
@@ -493,19 +442,10 @@ export function ManagerDashboard() {
     return "Manager"
   })()
 
-  const upsertDailyInput = useUpsertExecutiveDashboardDailyInput()
   const upsertMonthlyTarget = useUpsertMonthlyTarget()
 
-  // Revenue
-  const tonightsRevenue = dailyInput?.tonightsRevenue ?? 0
   const mtdPax = kpi?.pax.value ?? 0
   const monthlyPaxPercent = paxTarget && paxTarget > 0 ? Math.round((mtdPax / paxTarget) * 100) : null
-
-  const [tonightEditOpen, setTonightEditOpen] = useState(false)
-  const [tonightDraft, setTonightDraft] = useState("")
-  useEffect(() => {
-    if (tonightEditOpen) setTonightDraft(String(Math.round(tonightsRevenue || 0)))
-  }, [tonightEditOpen, tonightsRevenue])
 
   const [paxTargetEditOpen, setPaxTargetEditOpen] = useState(false)
   const [paxTargetDraft, setPaxTargetDraft] = useState("")
@@ -521,53 +461,22 @@ export function ManagerDashboard() {
   const [issueFormOpen, setIssueFormOpen] = useState(false)
   const [issueDraft, setIssueDraft] = useState({ title: "", description: "", location: "" })
 
-  // ── Tonight's promos (hardcoded, matches owner dashboard style) ──────────────
-  const promosByDay: Record<string, Array<{ icon: string; label: string; sub: string; hours: string; type: "all_night" | "timed" | "conditional" }>> = {
-    Monday: [
-      { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
-      { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
-      { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
-      { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
-    ],
-    Tuesday: [
-      { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
-      { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
-      { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
-      { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
-    ],
-    Wednesday: [
-      { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
-      { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
-      { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
-      { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
-    ],
-    Thursday: [
-      { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
-      { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
-      { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
-      { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
-    ],
-    Friday: [
-      { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
-      { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
-      { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
-      { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
-    ],
+  // Promo cheatsheet — base list runs every day; weekday-specific extras added below.
+  // TODO: lift to a `promotions` table once the marketing team is editing it directly,
+  // so manager + owner dashboards share one source of truth.
+  type Promo = { icon: string; label: string; sub: string; hours: string; type: "all_night" | "timed" | "conditional" }
+  const BASE_PROMOS: Promo[] = [
+    { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
+    { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
+    { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
+    { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
+  ]
+  const WEEKDAY_EXTRAS: Record<string, Promo[]> = {
     Saturday: [
-      { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
-      { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
-      { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
-      { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
-      { icon: "🍷", label: "Girls Night — Free Flow Wine", sub: "All girls free flow wine 21:00–23:00 · Mừng 2 Tết", hours: "21:00–23:00", type: "timed" },
-    ],
-    Sunday: [
-      { icon: "💨", label: "Buy 1 Get 1", sub: "Happy hour menu items · all day promotion", hours: "14:00–18:00", type: "timed" },
-      { icon: "🍵", label: "Free Tea", sub: "With any special shisha order", hours: "All night", type: "all_night" },
-      { icon: "🍸", label: "Cocktail Set", sub: "6 best-sellers — 399K", hours: "All night", type: "all_night" },
-      { icon: "🌧", label: "20% Off Shisha", sub: "Rainy day special — apply when raining", hours: "Conditional", type: "conditional" },
+      { icon: "🍷", label: "Girls Night — Free Flow Wine", sub: "All girls free flow wine 21:00–23:00", hours: "21:00–23:00", type: "timed" },
     ],
   }
-  const todayPromos = promosByDay[todayWeekday] ?? promosByDay["Monday"]
+  const todayPromos: Promo[] = [...BASE_PROMOS, ...(WEEKDAY_EXTRAS[todayWeekday] ?? [])]
 
   // ── Task board ───────────────────────────────────────────────────────────────
   // useAllDelegationTasks fetches tasks assigned TO or delegated BY this user,
@@ -888,49 +797,6 @@ export function ManagerDashboard() {
         )}
       </div>
 
-      {/* HQ + Weather row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[320px_1fr] min-w-0">
-        <CardShell title="HQ — DA NANG" icon={<Activity className="h-4 w-4" />} className="min-w-0">
-          <HqClockPanel />
-        </CardShell>
-
-        <CardShell title="DA NANG — WEATHER" icon={<CalendarClock className="h-4 w-4" />} className="min-w-0 overflow-hidden">
-          <div className="flex flex-col sm:flex-row items-stretch gap-0">
-            <div className="min-w-0 sm:min-w-[200px] sm:border-r border-b sm:border-b-0 border-border sm:pr-6 pb-4 sm:pb-0">
-              <div className="flex items-center gap-3">
-                <div className="text-[28px] sm:text-[32px]">🌤</div>
-                <div className="font-display text-[34px] sm:text-[44px] leading-none tracking-[2px] text-foreground">27°</div>
-              </div>
-              <div className="mt-2 text-xs text-secondary-foreground tracking-wide">Broken Clouds · Humidity 78%</div>
-              <div className="mt-3 flex items-center gap-1.5 rounded-sm border border-info/15 bg-info/8 px-2.5 py-1.5 text-xs text-info">
-                <Zap className="h-3.5 w-3.5 shrink-0" /> Rain expected Saturday — prep covers & heaters by 13:00
-              </div>
-            </div>
-            <div className="flex flex-1 items-center sm:pl-5 pt-4 sm:pt-0 overflow-x-auto">
-              {[
-                { d: "TUE", hi: 27, lo: 22, emoji: "🌤" },
-                { d: "WED", hi: 25, lo: 22, emoji: "🌥" },
-                { d: "THU", hi: 25, lo: 22, emoji: "🌧" },
-                { d: "FRI", hi: 25, lo: 22, emoji: "🌧" },
-                { d: "SAT", hi: 25, lo: 20, emoji: "⛈", badge: "PREP" },
-                { d: "SUN", hi: 25, lo: 22, emoji: "⛅" },
-                { d: "MON", hi: 25, lo: 22, emoji: "🌥" },
-              ].map((x, i, arr) => (
-                <div key={x.d} className={cn("flex flex-1 flex-col items-center gap-1.5 py-1", i < arr.length - 1 && "border-r border-border")}>
-                  <div className="text-xs tracking-wider text-muted-foreground uppercase">{x.d}</div>
-                  <div className="text-base">{x.emoji}</div>
-                  <div className="text-sm text-foreground">{x.hi}°</div>
-                  <div className="text-xs text-muted-foreground">{x.lo}°</div>
-                  {"badge" in x && x.badge ? (
-                    <div className="rounded-sm border border-warning/20 bg-warning/10 px-1 py-0.5 text-sm tracking-wider text-warning uppercase">{x.badge}</div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardShell>
-      </div>
-
       {/* ── Section 2: Today's Pulse ─────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionTitle label="TODAY'S PULSE" />
@@ -1160,7 +1026,9 @@ export function ManagerDashboard() {
               <div className="font-mono text-[24px] sm:text-[30px] font-normal leading-none text-foreground">
                 {csvPaxLoading ? "—" : allCsvReservations.filter(r => r.status === "today").length}
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">Confirmed tonight</div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Reservations tonight · <span className="font-medium text-foreground">{csvPaxLoading ? "—" : csvPaxConfirmed.toLocaleString()}</span> pax confirmed
+              </div>
               {/* Next reservation alert */}
               {(() => {
                 const upcoming = allCsvReservations
@@ -1209,7 +1077,12 @@ export function ManagerDashboard() {
               {/* Rating half */}
               <div className="flex items-start gap-3">
                 <div className="flex-1">
-                  <div className="text-[11px] text-primary">★★★★★</div>
+                  <div className="text-[11px] text-primary" aria-label={`Rating ${googleReviews?.rating?.toFixed(1) ?? "—"} out of 5`}>
+                    {(() => {
+                      const rounded = Math.max(0, Math.min(5, Math.round(googleReviews?.rating ?? 0)))
+                      return "★".repeat(rounded) + "☆".repeat(5 - rounded)
+                    })()}
+                  </div>
                   <div className="font-mono text-2xl font-normal leading-none text-foreground mt-1">
                     {googleReviews?.rating ? googleReviews.rating.toFixed(1) : "—"}
                   </div>
@@ -1231,9 +1104,14 @@ export function ManagerDashboard() {
                   <div className="font-mono text-2xl font-normal leading-none text-foreground">
                     {kpiLoading ? "—" : mtdPax.toLocaleString()}
                   </div>
-                  <div className="mt-1 text-[10px] text-muted-foreground">
-                    Target: {paxTarget ? Number(paxTarget).toLocaleString() : "—"}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPaxTargetEditOpen(true)}
+                    className="mt-1 text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline transition-colors"
+                    title="Edit monthly pax target"
+                  >
+                    Target: {paxTarget ? Number(paxTarget).toLocaleString() : "—"} · Edit
+                  </button>
                   <div className="mt-2 h-1 w-full rounded-full bg-secondary overflow-hidden">
                     <div
                       className={cn("h-full rounded-full", monthlyPaxPercent && monthlyPaxPercent >= 100 ? "bg-success" : "bg-warning")}
@@ -1383,7 +1261,7 @@ export function ManagerDashboard() {
                 {followUpList.length === 0 ? (
                   <div className="px-4 py-5 text-xs text-muted-foreground italic">No delegated tasks.</div>
                 ) : (
-                  followUpList.map(({ task, isFresh }) => {
+                  followUpList.map(({ task, isFresh, label }) => {
                     const assignee = people.find((p) => p.id === task.assignedTo)
                     const assigneeName = assignee?.full_name || assignee?.email || "Unknown"
                     const assigneeFirst = assigneeName.split(" ")[0]
@@ -1415,6 +1293,8 @@ export function ManagerDashboard() {
                             <span>{assigneeFirst}</span>
                             <span className="text-muted-foreground/40">·</span>
                             <span className="capitalize">{cat}</span>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className={cn(isFresh ? "text-[#3b82f6]" : undefined)}>{label}</span>
                           </div>
                         </div>
                         <span className={cn("shrink-0 rounded-sm border px-1.5 py-0.5 text-[9px] tracking-wide uppercase whitespace-nowrap", badge.cls)}>{badge.label}</span>
@@ -1651,34 +1531,6 @@ export function ManagerDashboard() {
       </div>
 
       {/* ── Dialogs & Sheets ─────────────────────────────────────────────────── */}
-
-      {/* Edit Tonight's Revenue */}
-      <Dialog open={tonightEditOpen} onOpenChange={setTonightEditOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Tonight's revenue (manual)</DialogTitle></DialogHeader>
-          <div className="grid gap-2">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">VND amount</div>
-            <input
-              inputMode="numeric"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-              placeholder="e.g. 42500000"
-              value={tonightDraft}
-              onChange={(e) => setTonightDraft(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTonightEditOpen(false)}>Cancel</Button>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={upsertDailyInput.isPending}
-              onClick={async () => {
-                const value = Number(tonightDraft.replace(/[^\d.-]/g, "") || 0)
-                await upsertDailyInput.mutateAsync({ date: todayIso, tonightsRevenue: value })
-                setTonightEditOpen(false)
-              }}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit monthly PAX target */}
       <Dialog open={paxTargetEditOpen} onOpenChange={setPaxTargetEditOpen}>

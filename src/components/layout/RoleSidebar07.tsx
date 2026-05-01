@@ -37,7 +37,6 @@ import {
   // Finance icons
   DollarSign,
   TrendingUp,
-  TrendingDown,
   // Team icons
   Users,
   UserCog,
@@ -130,12 +129,6 @@ const navigationGroups: NavGroup[] = [
         title: 'Finance Snapshot',
         url: '/finance/summary',
         icon: DollarSign,
-        roles: ['owner'],
-      },
-      {
-        title: 'Debt Tracker',
-        url: '/finance/debt',
-        icon: TrendingDown,
         roles: ['owner'],
       },
       {
