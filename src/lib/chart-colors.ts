@@ -61,6 +61,17 @@ export const EXPENSE_COLORS = {
   fixed: "#FDBA74", // Light orange
 }
 
+// Cash flow / financial headroom charts
+export const FINANCE_FLOW_COLORS = {
+  inflow: "#16a34a",
+  cashOnHand: "#16a34a",
+  cashOut: "#DC2626",
+  outflow: "#6C2B29",
+  liquidity: "#C74C3C",
+  netPositive: "#14532D",
+  netNegative: "#6C2B29",
+}
+
 // For revenue categories
 export const REVENUE_COLORS = {
   wine: "#EA580C",

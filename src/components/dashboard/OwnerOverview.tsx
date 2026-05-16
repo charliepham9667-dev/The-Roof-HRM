@@ -1,37 +1,36 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Loader2, Settings, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useKPISummary, useSyncStatus, MonthParam } from '../../hooks/useDashboardData';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useKPISummary, useRevenueVelocity, MonthParam } from '../../hooks/useDashboardData';
 import { WeeklySalesTrend } from './WeeklySalesTrend';
 import { MonthlyPerformance } from './MonthlyPerformance';
 import { TargetManager } from './TargetManager';
-import { RevenueVelocity } from './RevenueVelocity';
 import { ExecutiveSummary } from './ExecutiveSummary';
-import { CashPositionPanel } from '@/components/finance/CashPositionPanel';
-import { SupplierDebtPanel } from '@/components/finance/SupplierDebtPanel';
+import { FinancialHeadroomView } from '@/components/finance/FinancialHeadroomView';
 import { MonthlyPLTable } from '@/components/finance/MonthlyPLTable';
-import { BAR_COLORS } from '@/lib/chart-colors';
+import { FinanceKpiTile } from '@/components/finance/FinanceKpiTile';
+import { MonthPaceCard } from '@/components/finance/MonthPaceCard';
+import { VelocityInsightPill } from '@/components/finance/VelocityInsightPill';
+import { computeMonthPace } from '@/lib/finance-pace';
 import {
-  Button,
   DashboardCard,
   DashboardCardContent,
-  DashboardCardHeader,
-  DashboardCardTitle,
-  Separator,
-  StatusBadge,
 } from '@/components/ui';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { StatCard } from '@/components/ui/stat-card';
 
-// Format large numbers for display
 function formatVND(value: number): string {
-  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B đ`;
-  if (value >= 1000000) return `${Math.round(value / 1000000)}M đ`;
+  if (value >= 1000000000) return `${(value / 1000000000).toFixed(2)}B đ`;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M đ`;
   if (value >= 1000) return `${Math.round(value / 1000)}K đ`;
   return `${value} đ`;
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function formatHeaderDate(d: Date): string {
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const day = d.getDate();
+  return `${weekday} · ${month} ${day}`;
+}
 
 function MonthPicker({ selected, onChange }: { selected: MonthParam; onChange: (m: MonthParam) => void }) {
   const now = new Date();
@@ -76,226 +75,125 @@ export function OwnerOverview() {
     month: now.getMonth(),
   });
 
-  // ?tab=cash|debt deep-link support so the dashboard "Log Debt" quick action
-  // and any old /finance/debt bookmarks can land on the right tab.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get('tab');
-  const cashTab = requestedTab === 'debt' ? 'debt' : 'cash';
-  const handleCashTabChange = (next: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'debt') params.set('tab', 'debt');
-    else params.delete('tab');
-    setSearchParams(params, { replace: true });
-  };
-  
-  const { data: kpi, isLoading, error } = useKPISummary(selectedMonth);
-  const { data: syncStatus } = useSyncStatus();
+  const { data: kpi, isLoading: kpiLoading, error: kpiError } = useKPISummary(selectedMonth);
+  const { data: velocity, isLoading: velocityLoading } = useRevenueVelocity(selectedMonth);
 
-  const getGreetingMessage = () => {
-    const isCurrentMonth = selectedMonth.year === now.getFullYear() && selectedMonth.month === now.getMonth();
-    if (isCurrentMonth) {
-      return now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    }
-    return `Viewing ${MONTH_NAMES[selectedMonth.month]} ${selectedMonth.year}`;
-  };
+  const isCurrentMonth =
+    selectedMonth.year === now.getFullYear() && selectedMonth.month === now.getMonth();
+  const remainingDays = velocity
+    ? Math.max(0, velocity.daysInMonth - velocity.currentDay)
+    : 0;
 
-  const getSyncBadge = (): { variant: 'warning' | 'error' | 'success'; label: string } | null => {
-    // Still loading — show nothing
-    if (!syncStatus) return null;
+  const pace = velocity
+    ? computeMonthPace({
+        mtdRevenue: velocity.mtdRevenue,
+        monthlyTarget: velocity.monthlyTarget,
+        dayOfMonth: velocity.currentDay,
+        daysInMonth: velocity.daysInMonth,
+        avgDailyRevenue: velocity.avgDailyRevenue,
+      })
+    : null;
 
-    // No sync log records at all — suppress the badge (sync_logs table not in use)
-    if (!syncStatus.lastSyncAt && syncStatus.status === null) return null;
+  const headerDateLabel = isCurrentMonth
+    ? formatHeaderDate(now)
+    : `VIEWING · ${MONTH_NAMES[selectedMonth.month].toUpperCase()} ${selectedMonth.year}`;
 
-    if (syncStatus.status === 'failed') {
-      return { variant: 'error' as const, label: 'Sync Error' };
-    }
-
-    if (syncStatus.status === 'running' || syncStatus.status === 'pending') {
-      return { variant: 'warning' as const, label: 'Syncing…' };
-    }
-
-    if (syncStatus.isStale) {
-      return { variant: 'warning' as const, label: `Stale (${syncStatus.hoursAgo}h)` };
-    }
-
-    return { variant: 'success' as const, label: 'Data Synced' };
-  };
-
-  const syncBadge = getSyncBadge();
-  const isCurrentMonth = selectedMonth.year === now.getFullYear() && selectedMonth.month === now.getMonth();
-  const kpiTimeframeSubtext = isCurrentMonth
-    ? "Month-to-date vs same period last year"
-    : `${MONTH_NAMES[selectedMonth.month]} ${selectedMonth.year} vs same period last year`;
-  const revenueSubtext = kpi?.targetMet.isOnTrack
-    ? "On track to hit target"
-    : "Needs to increase revenue to hit target";
+  const isLoading = kpiLoading || velocityLoading;
 
   return (
-    <div className="flex-1 space-y-4">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+    <div className="flex-1 space-y-4 bg-[#FDFBF7] -m-4 p-4 md:-m-6 md:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[28px] font-bold leading-tight text-foreground">Finance Summary</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{getGreetingMessage()}</p>
+          <p className="text-[11.5px] font-bold uppercase tracking-wide text-primary">
+            {headerDateLabel}
+          </p>
+          <h1 className="font-serif text-[28px] font-semibold leading-tight tracking-tight text-foreground sm:text-[32px]">
+            Finance Summary
+          </h1>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <MonthPicker selected={selectedMonth} onChange={setSelectedMonth} />
-          {syncBadge && (
-            <StatusBadge variant={syncBadge.variant} showIcon>
-              {syncBadge.label}
-            </StatusBadge>
+        <div className="flex flex-wrap items-center gap-2">
+          {velocity && isCurrentMonth && (
+            <VelocityInsightPill
+              isOnTrack={pace?.isAheadOfPace ?? false}
+              avgDailyRevenue={velocity.avgDailyRevenue}
+              remainingDays={remainingDays}
+            />
           )}
+          <MonthPicker selected={selectedMonth} onChange={setSelectedMonth} />
         </div>
       </div>
 
-      {/* KPI row (dashboard-01) */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {isLoading ? (
           <div className="col-span-full flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : error ? (
+        ) : kpiError || !kpi || !velocity ? (
           <div className="col-span-full rounded-lg border border-border bg-card p-6 text-center text-sm text-error">
             Failed to load KPIs. Check Supabase connection.
           </div>
         ) : (
           <>
-            <StatCard
-              mode="kpi"
-              label="Total Revenue"
-              value={formatVND(kpi?.revenue.value || 0)}
-              trend={kpi?.revenue.trend ?? undefined}
-              subtext={revenueSubtext}
+            <FinanceKpiTile
+              label="Total Revenue · MTD"
+              value={formatVND(kpi.revenue.value)}
+              trendPercent={kpi.revenue.trend}
+              comparisonLine={`vs ${formatVND(kpi.lastYear.revenue)} same period last year`}
             />
-            <StatCard
-              mode="kpi"
-              label="Pax"
-              value={(kpi?.pax.value || 0).toLocaleString()}
-              trend={kpi?.pax.trend ?? undefined}
-              subtext={kpiTimeframeSubtext}
+            <FinanceKpiTile
+              label="Pax · MTD"
+              value={kpi.pax.value.toLocaleString()}
+              trendPercent={kpi.pax.trend}
+              comparisonLine={`vs ${kpi.lastYear.pax.toLocaleString()} same period last year`}
             />
-            <StatCard
-              mode="kpi"
+            <FinanceKpiTile
               label="Avg Spend"
-              value={formatVND(kpi?.avgSpend.value || 0)}
-              trend={kpi?.avgSpend.trend ?? undefined}
-              subtext={kpiTimeframeSubtext}
+              value={formatVND(kpi.avgSpend.value)}
+              trendPercent={kpi.avgSpend.trend}
+              tone={kpi.avgSpend.trend < 0 ? 'warning' : 'default'}
+              comparisonLine={
+                kpi.avgSpend.trend < 0
+                  ? 'Volume up, ticket down · check menu mix'
+                  : `vs ${formatVND(kpi.lastYear.avgSpend)} same period last year`
+              }
             />
-            <TargetMetCard
-              percentage={kpi?.targetMet.percentage || 0}
-              isOnTrack={kpi?.targetMet.isOnTrack || false}
-              onEdit={() => setShowTargetManager(true)}
+            <MonthPaceCard
+              mtdRevenue={velocity.mtdRevenue}
+              monthlyTarget={velocity.monthlyTarget}
+              dayOfMonth={velocity.currentDay}
+              daysInMonth={velocity.daysInMonth}
+              avgDailyRevenue={velocity.avgDailyRevenue}
+              onEditTarget={() => setShowTargetManager(true)}
             />
           </>
         )}
       </div>
 
-      {/* Charts row (shadcn dashboard layout) */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
-        <DashboardCard className="lg:col-span-4 h-auto md:h-[430px] !overflow-visible">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <DashboardCard className="lg:col-span-4 h-auto md:h-[430px] !overflow-visible border-border/80 bg-card">
           <DashboardCardContent className="pt-6">
-            <WeeklySalesTrend noContainer />
+            <WeeklySalesTrend noContainer variant="financeSummary" />
           </DashboardCardContent>
         </DashboardCard>
       </div>
 
-      {/* Executive Summary + Monthly Performance row */}
       <div className="flex flex-col gap-4 lg:flex-row">
-        <DashboardCard className="w-full lg:flex-[7]">
-          <DashboardCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <DashboardCardTitle className="text-sm font-medium">Executive Summary</DashboardCardTitle>
-          </DashboardCardHeader>
-          <DashboardCardContent>
-            <ExecutiveSummaryPanel noContainer selectedMonth={selectedMonth} />
+        <DashboardCard className="w-full min-w-0 border-border/80 bg-card lg:flex-[1] lg:min-w-0">
+          <DashboardCardContent className="pt-5">
+            <ExecutiveSummary noContainer selectedMonth={selectedMonth} showHeader />
           </DashboardCardContent>
         </DashboardCard>
 
-        <DashboardCard className="w-full lg:flex-[3] flex flex-col shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)] min-h-[300px]">
-          <DashboardCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <DashboardCardTitle className="text-sm font-medium">Monthly Performance</DashboardCardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </DashboardCardHeader>
-          <DashboardCardContent className="flex-1">
-            <MonthlyPerformance noContainer />
+        <DashboardCard className="flex min-h-[300px] w-full min-w-0 flex-col border-border/80 bg-card lg:flex-[2] lg:min-w-0">
+          <DashboardCardContent className="flex-1 pt-5">
+            <MonthlyPerformance noContainer variant="financeSummary" />
           </DashboardCardContent>
         </DashboardCard>
       </div>
 
-      {/* Cash Position + Debt Tracker tabs — daily-ish snapshot from accountant */}
-      <Tabs value={cashTab} onValueChange={handleCashTabChange} className="w-full">
-        <TabsList>
-          <TabsTrigger value="cash">Cash Position</TabsTrigger>
-          <TabsTrigger value="debt">Debt Tracker</TabsTrigger>
-        </TabsList>
-        <TabsContent value="cash" className="mt-3">
-          <CashPositionPanel />
-        </TabsContent>
-        <TabsContent value="debt" className="mt-3">
-          <SupplierDebtPanel />
-        </TabsContent>
-      </Tabs>
-
-      {/* Full-year monthly P&L table — Jan…Dec + YTD across key lines */}
+      <FinancialHeadroomView />
       <MonthlyPLTable />
-
-      {/* Target Manager Modal */}
       <TargetManager isOpen={showTargetManager} onClose={() => setShowTargetManager(false)} />
-    </div>
-  );
-}
-
-// Target Met card with circular progress indicator
-function TargetMetCard({ percentage, isOnTrack, onEdit }: { percentage: number; isOnTrack: boolean; onEdit: () => void }) {
-  const clamped = Math.max(0, Math.min(percentage, 100));
-  const remaining = 100 - clamped;
-  const fillColor = isOnTrack ? BAR_COLORS.current : BAR_COLORS.previous;
-
-  return (
-    <div className="rounded-card border border-border bg-card p-4 shadow-card" style={{ margin: 0 }}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs text-muted-foreground mb-1">Target Met</p>
-        <Button variant="ghost" size="icon" onClick={onEdit} className="h-8 w-8 -mt-1 -mr-1" title="Manage targets">
-          <Settings className="h-4 w-4 text-muted-foreground" />
-        </Button>
-      </div>
-
-      <div className="mt-2 space-y-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="text-2xl font-bold text-foreground">{isOnTrack ? "On Track" : "Behind"}</p>
-          <p className="text-sm font-mono font-medium tabular-nums text-muted-foreground">{clamped}%</p>
-        </div>
-
-        {/* Horizontal stacked bar (completed vs remaining) */}
-        <div
-          className="h-3 w-full overflow-hidden rounded-full border border-border/60 bg-background"
-          role="img"
-          aria-label={`${clamped}% target met`}
-          title={`${clamped}% target met`}
-        >
-          <div className="flex h-full w-full">
-            <div
-              style={{ width: `${clamped}%`, backgroundColor: fillColor }}
-              className="h-full"
-            />
-            <div
-              style={{ width: `${remaining}%`, backgroundColor: BAR_COLORS.target }}
-              className="h-full opacity-30"
-            />
-          </div>
-        </div>
-
-        <p className="text-sm text-muted-foreground">Target progress</p>
-      </div>
-    </div>
-  );
-}
-
-function ExecutiveSummaryPanel({ noContainer, selectedMonth }: { noContainer?: boolean; selectedMonth?: MonthParam }) {
-  return (
-    <div className={noContainer ? 'space-y-4' : undefined}>
-      <RevenueVelocity noContainer={noContainer} selectedMonth={selectedMonth} />
-      <Separator />
-      <ExecutiveSummary noContainer={noContainer} selectedMonth={selectedMonth} />
     </div>
   );
 }

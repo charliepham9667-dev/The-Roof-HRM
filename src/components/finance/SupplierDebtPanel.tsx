@@ -1,18 +1,15 @@
 import { useEffect, useMemo, useState } from "react"
-import { format, parseISO, startOfDay, subDays } from "date-fns"
+import { format, parseISO } from "date-fns"
 import {
-  AlertTriangle,
   ChevronDown,
   ChevronUp,
   Download,
-  FileText,
   History as HistoryIcon,
+  ImageUp,
   Loader2,
+  Plus,
   Save,
-  TrendingDown,
-  TrendingUp,
-  Upload,
-  Wallet,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,108 +17,182 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  DebtStatusBadge,
+  FinanceKpiCard,
+  FinancePill,
+  formatCompactVnd,
+  formatVnd,
+} from "@/components/finance/finance-ui"
+import {
+  categoryLabel,
+  dueUrgency,
+  formatDueRelative,
+  formatIsoDateLabel,
+  mostRecentFridayIso,
+  parseNumberInput,
+  type DebtCategory,
+  type DebtItemStatus,
+} from "@/lib/finance-headroom"
+import { DebtImportDialog } from "@/components/finance/DebtImportDialog"
+import {
+  nextStatusForAction,
+  useDebtCategoryBreakdown,
+  useDebtRibbonMetrics,
+  useDeleteDebtItem,
+  useUpdateDebtItemStatus,
+  useUpsertDebtItem,
+  type FinanceSupplierDebtItem,
+  type PaymentChannel,
+} from "@/hooks/useFinanceSupplierDebtItems"
+import {
   getSupplierDebtSignedUrl,
-  useLatestSupplierDebt,
+  useDeleteSupplierDebtHistory,
   useSupplierDebtHistory,
   useUploadSupplierDebtSource,
   useUpsertSupplierDebt,
   type FinanceSupplierDebtReport,
 } from "@/hooks/useFinanceSupplierDebt"
 
-function formatCompactVnd(amount: number | null | undefined): string {
-  if (amount == null || Number.isNaN(amount)) return "—"
-  const abs = Math.abs(amount)
-  if (abs >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(2)}B đ`
-  if (abs >= 1_000_000) return `${Math.round(amount / 1_000_000)}M đ`
-  return `${amount.toLocaleString()} đ`
+const CATEGORY_OPTIONS: DebtCategory[] = ["inventory", "rent", "capex", "utilities", "other"]
+
+const catBarColor: Record<DebtCategory, string> = {
+  inventory: "#C74C3C",
+  rent: "#6C2B29",
+  capex: "#4A1F1C",
+  utilities: "#2563EB",
+  other: "#78716C",
 }
 
-function formatVnd(amount: number | null | undefined): string {
-  if (amount == null || Number.isNaN(amount)) return "—"
-  return new Intl.NumberFormat("vi-VN", { style: "decimal", maximumFractionDigits: 0 }).format(amount) + " đ"
-}
-
-function parseNumberInput(raw: string): number | null {
-  const cleaned = raw.replace(/[^0-9.-]/g, "")
-  if (!cleaned) return null
-  const n = Number(cleaned)
-  return Number.isFinite(n) ? n : null
-}
-
-/** Most recent Friday on or before `date`, as ISO yyyy-MM-dd. */
-function mostRecentFridayIso(date = new Date()): string {
-  const d = startOfDay(date)
-  const dow = d.getDay() // 0=Sun, 5=Fri
-  const offset = (dow + 2) % 7 // days back to Friday
-  const friday = subDays(d, offset)
-  return format(friday, "yyyy-MM-dd")
-}
-
-/**
- * Supplier Debt panel. Mirrors CashPositionPanel layout: compact KPI tiles +
- * trend sparkline + collapsible inline form + history dialog. Shared between
- * the standalone `/finance/debt` page and the Debt Tracker tab on the
- * Finance Snapshot Cash Position area.
- */
 export function SupplierDebtPanel() {
-  const { data: latest } = useLatestSupplierDebt()
-  const { data: history = [] } = useSupplierDebtHistory(12)
-  const upsert = useUpsertSupplierDebt()
+  const { buckets, items, isLoading } = useDebtRibbonMetrics()
+  const breakdown = useDebtCategoryBreakdown()
+  const upsertItem = useUpsertDebtItem()
+  const updateStatus = useUpdateDebtItemStatus()
+  const deleteItem = useDeleteDebtItem()
+
+  const { data: history = [] } = useSupplierDebtHistory(24)
+  const upsertWeekly = useUpsertSupplierDebt()
   const uploadSource = useUploadSupplierDebtSource()
 
-  const [formOpen, setFormOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [channelFilter, setChannelFilter] = useState<PaymentChannel | "all">("all")
+  const [weeklyOpen, setWeeklyOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [reportDate, setReportDate] = useState<string>(mostRecentFridayIso())
-  const [totalDebt, setTotalDebt] = useState<string>("")
-  const [totalOverdue, setTotalOverdue] = useState<string>("")
-  const [notes, setNotes] = useState<string>("")
-  const [file, setFile] = useState<File | null>(null)
-  const [fileName, setFileName] = useState<string>("")
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [editItem, setEditItem] = useState<FinanceSupplierDebtItem | null>(null)
 
-  const existingForDate = useMemo<FinanceSupplierDebtReport | undefined>(
+  const filteredItems = useMemo(() => {
+    if (channelFilter === "all") return items
+    return items.filter((i) => i.payment_channel === channelFilter)
+  }, [items, channelFilter])
+
+  const filteredTotal = useMemo(
+    () => filteredItems.reduce((s, i) => s + Number(i.amount_vnd), 0),
+    [filteredItems],
+  )
+
+  const [vendor, setVendor] = useState("")
+  const [category, setCategory] = useState<DebtCategory>("inventory")
+  const [amount, setAmount] = useState("")
+  const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd"))
+  const [itemNotes, setItemNotes] = useState("")
+  const [itemStatus, setItemStatus] = useState<DebtItemStatus>("pending")
+
+  const [reportDate, setReportDate] = useState(mostRecentFridayIso())
+  const [totalDebt, setTotalDebt] = useState("")
+  const [totalOverdue, setTotalOverdue] = useState("")
+  const [weeklyNotes, setWeeklyNotes] = useState("")
+  const [file, setFile] = useState<File | null>(null)
+  const [weeklyMessage, setWeeklyMessage] = useState<string | null>(null)
+  const [weeklyError, setWeeklyError] = useState<string | null>(null)
+
+  const existingWeekly = useMemo(
     () => history.find((h) => h.report_date === reportDate),
     [history, reportDate],
   )
 
   useEffect(() => {
-    if (!formOpen) return
-    if (existingForDate) {
-      setTotalDebt(String(existingForDate.total_debt_vnd ?? ""))
+    if (!weeklyOpen) return
+    if (existingWeekly) {
+      setTotalDebt(String(existingWeekly.total_debt_vnd ?? ""))
       setTotalOverdue(
-        existingForDate.total_overdue_vnd != null ? String(existingForDate.total_overdue_vnd) : "",
+        existingWeekly.total_overdue_vnd != null ? String(existingWeekly.total_overdue_vnd) : "",
       )
-      setNotes(existingForDate.notes ?? "")
-      setFileName(existingForDate.source_file_name ?? "")
+      setWeeklyNotes(existingWeekly.notes ?? "")
     } else {
       setTotalDebt("")
       setTotalOverdue("")
-      setNotes("")
-      setFileName("")
+      setWeeklyNotes("")
     }
     setFile(null)
-    setMessage(null)
-    setError(null)
-  }, [existingForDate, reportDate, formOpen])
+    setWeeklyMessage(null)
+    setWeeklyError(null)
+  }, [existingWeekly, reportDate, weeklyOpen])
 
-  const delta = useMemo(() => {
-    if (history.length < 2) return null
-    const [current, previous] = history
-    const diff = Number(current.total_debt_vnd) - Number(previous.total_debt_vnd)
-    return { diff, previous }
-  }, [history])
+  const openAdd = (item?: FinanceSupplierDebtItem) => {
+    if (item) {
+      setEditItem(item)
+      setVendor(item.vendor)
+      setCategory(item.category)
+      setAmount(String(item.amount_vnd))
+      setDueDate(item.due_date)
+      setItemNotes(item.notes ?? "")
+      setItemStatus(item.status)
+    } else {
+      setEditItem(null)
+      setVendor("")
+      setCategory("inventory")
+      setAmount("")
+      setDueDate(format(new Date(), "yyyy-MM-dd"))
+      setItemNotes("")
+      setItemStatus("pending")
+    }
+    setAddOpen(true)
+  }
 
-  const handleSave = async () => {
-    setError(null)
-    setMessage(null)
+  const handleSaveItem = async () => {
+    const amt = parseNumberInput(amount)
+    if (!vendor.trim() || amt == null) return
+    await upsertItem.mutateAsync({
+      id: editItem?.id,
+      vendor,
+      category,
+      amountVnd: amt,
+      dueDate,
+      status: itemStatus,
+      notes: itemNotes,
+    })
+    setAddOpen(false)
+  }
+
+  const handleRowAction = async (item: FinanceSupplierDebtItem) => {
+    const next = nextStatusForAction(item.status)
+    if (next === item.status) return
+    await updateStatus.mutateAsync({ id: item.id, status: next, dueDate: item.due_date })
+  }
+
+  const handleMarkStopped = async (item: FinanceSupplierDebtItem) => {
+    await updateStatus.mutateAsync({ id: item.id, status: "stopped" })
+  }
+
+  const handleWeeklySave = async () => {
+    setWeeklyError(null)
+    setWeeklyMessage(null)
     const debtValue = parseNumberInput(totalDebt)
     if (debtValue == null) {
-      setError("Enter the total supplier debt (VND).")
+      setWeeklyError("Enter the total supplier debt (VND).")
       return
     }
     try {
@@ -129,235 +200,426 @@ export function SupplierDebtPanel() {
       if (file) {
         uploaded = await uploadSource.mutateAsync({ reportDate, file })
       }
-      await upsert.mutateAsync({
+      await upsertWeekly.mutateAsync({
         reportDate,
         totalDebtVnd: debtValue,
         totalOverdueVnd: parseNumberInput(totalOverdue),
-        notes: notes || null,
-        sourceFilePath: uploaded?.path ?? existingForDate?.source_file_path ?? null,
-        sourceFileName: uploaded?.fileName ?? existingForDate?.source_file_name ?? null,
-        sourceFileMimeType: uploaded?.mimeType ?? existingForDate?.source_file_mime_type ?? null,
-        sourceFileSizeBytes: uploaded?.sizeBytes ?? existingForDate?.source_file_size_bytes ?? null,
+        notes: weeklyNotes || null,
+        sourceFilePath: uploaded?.path ?? existingWeekly?.source_file_path ?? null,
+        sourceFileName: uploaded?.fileName ?? existingWeekly?.source_file_name ?? null,
+        sourceFileMimeType: uploaded?.mimeType ?? existingWeekly?.source_file_mime_type ?? null,
+        sourceFileSizeBytes: uploaded?.sizeBytes ?? existingWeekly?.source_file_size_bytes ?? null,
       })
-      setMessage(`Saved ${format(parseISO(reportDate), "EEE, MMM d, yyyy")}.`)
+      setWeeklyMessage(`Saved ${format(parseISO(reportDate), "EEE, MMM d, yyyy")}.`)
       setFile(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save supplier debt report")
+      setWeeklyError(err instanceof Error ? err.message : "Failed to save")
     }
   }
 
   return (
-    <section className="rounded-card border border-border bg-card shadow-card">
-      <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4">
-        <div>
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            Supplier Debt Tracker
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Friday snapshot of supplier liabilities. Upload your accountant screenshot and key totals
-            to track debt exposure week over week.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setHistoryOpen(true)}
-            disabled={history.length === 0}
-          >
-            <HistoryIcon className="h-3.5 w-3.5 mr-1.5" />
-            History
-          </Button>
-          <Button type="button" size="sm" onClick={() => setFormOpen((v) => !v)}>
-            {formOpen ? (
-              <>
-                <ChevronUp className="h-3.5 w-3.5 mr-1.5" /> Close
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-3.5 w-3.5 mr-1.5" /> Log debt snapshot
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 pt-3">
-        <KpiTile
-          label="Total owed (latest)"
-          icon={<Wallet className="h-4 w-4" />}
-          value={latest ? formatCompactVnd(Number(latest.total_debt_vnd)) : "—"}
-          sub={latest?.report_date ? `As of ${format(parseISO(latest.report_date), "MMM d")}` : "No data yet"}
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <FinanceKpiCard
+          label="Total Owed"
+          value={formatCompactVnd(buckets.total)}
+          sublabel={`${buckets.vendorCount} vendors`}
+          variant="active"
         />
-        <KpiTile
-          label="Overdue exposure"
-          icon={<AlertTriangle className="h-4 w-4" />}
-          value={
-            latest?.total_overdue_vnd != null
-              ? formatCompactVnd(Number(latest.total_overdue_vnd))
-              : "—"
-          }
-          sub={
-            latest?.total_overdue_vnd != null && Number(latest.total_overdue_vnd) > 0 ? (
-              <span className="inline-flex items-center gap-1 text-warning">
-                <AlertTriangle className="h-3 w-3" /> needs follow-up
-              </span>
-            ) : (
-              "No overdue logged"
-            )
-          }
+        <FinanceKpiCard
+          label="Due today / overdue"
+          value={formatCompactVnd(buckets.dueTodayOrOverdue)}
+          pill={<FinancePill tone="error">!</FinancePill>}
         />
-        <KpiTile
-          label="Weekly change"
-          icon={<TrendingDown className="h-4 w-4" />}
-          value={delta ? `${delta.diff > 0 ? "+" : ""}${formatCompactVnd(delta.diff)}` : "—"}
-          sub={
-            delta ? (
-              <span
-                className={
-                  "inline-flex items-center gap-1 " +
-                  (delta.diff > 0
-                    ? "text-error"
-                    : delta.diff < 0
-                      ? "text-success"
-                      : "text-muted-foreground")
-                }
-              >
-                {delta.diff > 0 ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : delta.diff < 0 ? (
-                  <TrendingDown className="h-3 w-3" />
-                ) : null}
-                vs {format(parseISO(delta.previous.report_date), "MMM d")}
-              </span>
-            ) : (
-              "Need 2+ snapshots"
-            )
-          }
+        <FinanceKpiCard
+          label="Pending"
+          value={formatCompactVnd(buckets.pendingTotal)}
+          pill={<FinancePill tone="info">?</FinancePill>}
+        />
+        <FinanceKpiCard
+          label="Stopped"
+          value={formatCompactVnd(buckets.stoppedTotal)}
+          pill={<FinancePill tone="neutral">⏸</FinancePill>}
         />
       </div>
 
-      <div className="px-4">
-        {history.length > 1 ? (
-          <Sparkline data={history} />
-        ) : (
-          <div className="rounded-sm border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            Log at least two Friday snapshots to see the weekly trend.
+      <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">Supplier ledger · who, what, when</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-md border border-border overflow-hidden text-xs">
+              {(["all", "bank", "cash"] as const).map((ch) => (
+                <button
+                  key={ch}
+                  type="button"
+                  className={`px-2.5 py-1 capitalize ${
+                    channelFilter === ch
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                  onClick={() => setChannelFilter(ch)}
+                >
+                  {ch === "all" ? "All" : ch}
+                </button>
+              ))}
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              <ImageUp className="h-3.5 w-3.5 mr-1" />
+              Import from screenshot
+            </Button>
+            <Button type="button" size="sm" onClick={() => openAdd()}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add debt
+            </Button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[#FAF4EF]">
+              <tr className="text-left text-[10.5px] uppercase tracking-wide text-[#6C2B29] font-bold">
+                <th className="px-3 py-2">Vendor</th>
+                <th className="px-3 py-2">Category</th>
+                <th className="px-3 py-2 text-right">Amount</th>
+                <th className="px-3 py-2">Due</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Notes</th>
+                <th className="px-3 py-2">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && (
+                <tr>
+                  <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                    Loading ledger…
+                  </td>
+                </tr>
+              )}
+              {!isLoading && filteredItems.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                    {items.length === 0
+                      ? "No line items yet. Add vendors from your Friday accountant notes."
+                      : "No items match this channel filter."}
+                  </td>
+                </tr>
+              )}
+              {filteredItems.map((d) => {
+                const urgency = dueUrgency(d.due_date)
+                const dueClass =
+                  urgency === "today" || urgency === "overdue"
+                    ? "text-[#6C2B29] font-bold"
+                    : urgency === "soon"
+                      ? "text-warning font-semibold"
+                      : "text-muted-foreground"
+                return (
+                  <tr key={d.id} className="border-t border-border">
+                    <td className="px-3 py-3 font-medium">
+                      {d.vendor_code && (
+                        <span className="text-[10px] font-mono text-muted-foreground mr-1.5">
+                          {d.vendor_code}
+                        </span>
+                      )}
+                      {d.vendor}
+                      {d.payment_channel && (
+                        <FinancePill tone="neutral" className="ml-1.5 align-middle">
+                          {d.payment_channel}
+                        </FinancePill>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
+                      <span
+                        className="inline-flex items-center gap-1.5 text-xs"
+                        style={{ color: catBarColor[d.category] }}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: catBarColor[d.category] }}
+                        />
+                        {categoryLabel(d.category)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono font-semibold tabular-nums">
+                      {formatCompactVnd(Number(d.amount_vnd))}
+                    </td>
+                    <td className={`px-3 py-3 text-xs ${dueClass}`}>
+                      {formatDueRelative(d.due_date)}
+                    </td>
+                    <td className="px-3 py-3">
+                      <DebtStatusBadge status={d.status} />
+                    </td>
+                    <td className="px-3 py-3 text-xs text-muted-foreground max-w-[200px] line-clamp-2">
+                      {d.notes || "—"}
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {d.status === "pending" && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleRowAction(d)}
+                              disabled={updateStatus.isPending}
+                            >
+                              Paid
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => handleMarkStopped(d)}
+                              disabled={updateStatus.isPending}
+                            >
+                              Stop
+                            </Button>
+                          </>
+                        )}
+                        {d.status === "stopped" && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => handleRowAction(d)}
+                              disabled={updateStatus.isPending}
+                            >
+                              Resume
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() =>
+                                updateStatus.mutateAsync({
+                                  id: d.id,
+                                  status: "paid",
+                                  dueDate: d.due_date,
+                                })
+                              }
+                              disabled={updateStatus.isPending}
+                            >
+                              Paid
+                            </Button>
+                          </>
+                        )}
+                        {d.status === "paid" && (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {filteredItems.length > 0 && (
+                <tr className="bg-primary/5 border-t-2 border-[#C74C3C]">
+                  <td className="px-3 py-3 font-bold">
+                    Total{channelFilter !== "all" ? ` (${channelFilter})` : ""}
+                  </td>
+                  <td />
+                  <td className="px-3 py-3 text-right font-mono font-bold">
+                    {formatCompactVnd(filteredTotal)}
+                  </td>
+                  <td colSpan={4} />
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {breakdown.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {breakdown.slice(0, 3).map((o) => (
+            <div key={o.key} className="rounded-card border border-border bg-card p-3 shadow-card">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: catBarColor[o.key] }}
+                />
+                {o.label}
+                <span className="ml-auto text-muted-foreground">{o.count} vendors</span>
+              </div>
+              <div className="text-xl font-semibold mt-1">{formatCompactVnd(o.amount)}</div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${o.pct}%`, background: catBarColor[o.key] }}
+                />
+              </div>
+              <p className="text-[10.5px] text-muted-foreground mt-1">{o.pct.toFixed(0)}% of debt</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-card border border-border bg-muted/30 p-4">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <span className="text-sm font-semibold">Weekly reconciliation snapshot</span>
+          <FinancePill tone="info">Friday · screenshot + totals</FinancePill>
+          <div className="ml-auto flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setHistoryOpen(true)}
+              disabled={history.length === 0}
+            >
+              <HistoryIcon className="h-3.5 w-3.5 mr-1" />
+              History
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setWeeklyOpen((v) => !v)}>
+              {weeklyOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              <span className="ml-1">Log Friday snapshot</span>
+            </Button>
+          </div>
+        </div>
+        {weeklyOpen && (
+          <div className="space-y-3 border-t border-border pt-3 mt-2">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="space-y-1">
+                <Label>Snapshot date</Label>
+                <Input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Total owed (VND)</Label>
+                <Input value={totalDebt} onChange={(e) => setTotalDebt(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Overdue (optional)</Label>
+                <Input value={totalOverdue} onChange={(e) => setTotalOverdue(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Screenshot / PDF</Label>
+                <Input
+                  type="file"
+                  accept=".png,.jpg,.jpeg,.webp,.pdf"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            </div>
+            <Input
+              placeholder="Notes — optional reconciliation context"
+              value={weeklyNotes}
+              onChange={(e) => setWeeklyNotes(e.target.value)}
+            />
+            <Button onClick={handleWeeklySave} disabled={upsertWeekly.isPending}>
+              {upsertWeekly.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+              Save weekly snapshot
+            </Button>
+            {weeklyMessage && <p className="text-xs text-success">{weeklyMessage}</p>}
+            {weeklyError && <p className="text-xs text-destructive">{weeklyError}</p>}
           </div>
         )}
       </div>
 
-      {formOpen && (
-        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-border mt-3">
-          <div className="text-sm font-semibold text-foreground">Log Friday snapshot</div>
-          <div className="grid gap-3 md:grid-cols-4">
+      <DebtImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editItem ? "Edit debt" : "Add debt"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
             <div className="space-y-1">
-              <Label htmlFor="debt-date">Snapshot date (Friday)</Label>
-              <Input
-                id="debt-date"
-                type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-              />
+              <Label>Vendor</Label>
+              <Input value={vendor} onChange={(e) => setVendor(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="debt-total">Total owed (VND)</Label>
-              <Input
-                id="debt-total"
-                inputMode="decimal"
-                placeholder="0"
-                value={totalDebt}
-                onChange={(e) => setTotalDebt(e.target.value)}
-              />
+              <Label>Category</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as DebtCategory)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {categoryLabel(c)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Amount (VND)</Label>
+                <Input value={amount} onChange={(e) => setAmount(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Due date</Label>
+                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="debt-overdue">Overdue (optional)</Label>
-              <Input
-                id="debt-overdue"
-                inputMode="decimal"
-                placeholder="0"
-                value={totalOverdue}
-                onChange={(e) => setTotalOverdue(e.target.value)}
-              />
+              <Label>Status</Label>
+              <Select value={itemStatus} onValueChange={(v) => setItemStatus(v as DebtItemStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="stopped">Stopped</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="debt-file">Screenshot / PDF</Label>
-              <Input
-                id="debt-file"
-                type="file"
-                accept=".png,.jpg,.jpeg,.webp,.pdf"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null
-                  setFile(f)
-                  if (f) setFileName(f.name)
+              <Label>Notes</Label>
+              <Input value={itemNotes} onChange={(e) => setItemNotes(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            {editItem && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  deleteItem.mutate(editItem.id)
+                  setAddOpen(false)
                 }}
-              />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="debt-notes">Notes (optional)</Label>
-            <Input
-              id="debt-notes"
-              placeholder="e.g. Heineken +12M this week, Pernod on hold"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" onClick={handleSave} disabled={upsert.isPending || uploadSource.isPending}>
-              {upsert.isPending || uploadSource.isPending ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-3.5 w-3.5 mr-1.5" /> Save snapshot
-                </>
-              )}
+              >
+                Delete
+              </Button>
+            )}
+            <Button onClick={handleSaveItem} disabled={upsertItem.isPending}>
+              Save
             </Button>
-            {fileName && (
-              <span className="text-xs text-muted-foreground">
-                <Upload className="h-3 w-3 inline-block mr-1" />
-                {fileName}
-              </span>
-            )}
-            {existingForDate && (
-              <span className="text-xs text-muted-foreground">
-                Already logged for this date — saving will update it.
-              </span>
-            )}
-          </div>
-          {message && <p className="text-xs text-success">{message}</p>}
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[min(96vw,80rem)] sm:max-w-[min(96vw,80rem)] max-h-[min(92dvh,720px)] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Supplier debt history</DialogTitle>
+            <DialogTitle>Debt import & snapshot history</DialogTitle>
           </DialogHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <p className="text-xs text-muted-foreground -mt-2 mb-2">
+            Payment-list screenshots and Friday reconciliation totals. Re-importing the same date
+            and channel updates that row. Delete duplicates you no longer need.
+          </p>
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-secondary/40">
-                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2 text-right">Total owed</th>
+                <tr className="text-xs uppercase text-muted-foreground">
+                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2 text-left">Type</th>
+                  <th className="px-3 py-2 text-right">Total</th>
                   <th className="px-3 py-2 text-right">Overdue</th>
-                  <th className="px-3 py-2">Notes</th>
-                  <th className="px-3 py-2">Attachment</th>
+                  <th className="px-3 py-2 text-left min-w-[200px]">Notes</th>
+                  <th className="px-3 py-2 text-center w-20">File</th>
+                  <th className="px-3 py-2 text-center w-16" />
                 </tr>
               </thead>
               <tbody>
                 {history.map((row) => (
-                  <HistoryRow key={row.id} row={row} />
+                  <WeeklyHistoryRow key={row.id} row={row} />
                 ))}
                 {history.length === 0 && (
                   <tr>
-                    <td className="px-3 py-6 text-sm text-muted-foreground text-center" colSpan={5}>
-                      No entries yet.
+                    <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                      No history yet.
                     </td>
                   </tr>
                 )}
@@ -366,80 +628,18 @@ export function SupplierDebtPanel() {
           </div>
         </DialogContent>
       </Dialog>
-    </section>
-  )
-}
-
-function KpiTile({
-  label,
-  icon,
-  value,
-  sub,
-}: {
-  label: string
-  icon: React.ReactNode
-  value: string
-  sub: React.ReactNode
-}) {
-  return (
-    <div className="rounded-card border border-border bg-background p-3">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span className="text-xs">{label}</span>
-      </div>
-      <div className="mt-1 text-2xl font-bold text-foreground">{value}</div>
-      <div className="mt-0.5 text-[11px] text-muted-foreground">{sub}</div>
     </div>
   )
 }
 
-function Sparkline({ data }: { data: FinanceSupplierDebtReport[] }) {
-  // data is newest -> oldest; flip for chronological plot
-  const series = [...data].reverse()
-  const totals = series.map((d) => Number(d.total_debt_vnd) || 0)
-  const min = Math.min(...totals)
-  const max = Math.max(...totals)
-  const range = Math.max(1, max - min)
-
-  const width = 600
-  const height = 60
-  const step = totals.length > 1 ? width / (totals.length - 1) : width
-
-  const points = totals.map((v, i) => {
-    const x = i * step
-    const y = height - ((v - min) / range) * height
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  })
-
-  return (
-    <div className="rounded-card border border-border bg-background p-3">
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>Last {series.length} weeks · supplier debt</span>
-        <span>
-          {series[0]?.report_date && format(parseISO(series[0].report_date), "MMM d")} –{" "}
-          {series[series.length - 1]?.report_date &&
-            format(parseISO(series[series.length - 1].report_date), "MMM d")}
-        </span>
-      </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-16 mt-1" preserveAspectRatio="none">
-        <polyline
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          className="text-primary"
-          points={points.join(" ")}
-        />
-      </svg>
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1">
-        <span>min {formatCompactVnd(min)}</span>
-        <span>max {formatCompactVnd(max)}</span>
-      </div>
-    </div>
-  )
+function weeklyChannelLabel(channel: FinanceSupplierDebtReport["payment_channel"]): string {
+  if (channel === "bank") return "Payment list · Bank"
+  if (channel === "cash") return "Payment list · Cash"
+  return "Friday snapshot"
 }
 
-function HistoryRow({ row }: { row: FinanceSupplierDebtReport }) {
+function WeeklyHistoryRow({ row }: { row: FinanceSupplierDebtReport }) {
+  const deleteHistory = useDeleteSupplierDebtHistory()
   const [busy, setBusy] = useState(false)
 
   const handleOpen = async () => {
@@ -453,33 +653,56 @@ function HistoryRow({ row }: { row: FinanceSupplierDebtReport }) {
     }
   }
 
+  const handleDelete = async () => {
+    const label = `${formatIsoDateLabel(row.report_date, "MMM d, yyyy")} · ${weeklyChannelLabel(row.payment_channel)}`
+    if (!window.confirm(`Delete this history entry?\n\n${label}`)) return
+    try {
+      await deleteHistory.mutateAsync(row.id)
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Could not delete entry")
+    }
+  }
+
   return (
     <tr className="border-t border-border">
       <td className="px-3 py-2 whitespace-nowrap">
-        {format(parseISO(row.report_date), "EEE, MMM d, yyyy")}
+        {formatIsoDateLabel(row.report_date, "EEE, MMM d")}
       </td>
-      <td className="px-3 py-2 text-right font-medium text-foreground">
+      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
+        {weeklyChannelLabel(row.payment_channel)}
+      </td>
+      <td className="px-3 py-2 text-right font-mono tabular-nums whitespace-nowrap">
         {formatVnd(Number(row.total_debt_vnd))}
       </td>
-      <td className="px-3 py-2 text-right">
+      <td className="px-3 py-2 text-right whitespace-nowrap">
         {row.total_overdue_vnd != null ? formatVnd(Number(row.total_overdue_vnd)) : "—"}
       </td>
-      <td className="px-3 py-2 text-muted-foreground max-w-[240px] truncate">{row.notes || "—"}</td>
-      <td className="px-3 py-2">
+      <td className="px-3 py-2 text-xs text-muted-foreground max-w-md">{row.notes || "—"}</td>
+      <td className="px-3 py-2 text-center">
         {row.source_file_path ? (
           <Button type="button" size="sm" variant="ghost" onClick={handleOpen} disabled={busy}>
-            {busy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <>
-                <Download className="h-3.5 w-3.5 mr-1.5" />
-                {row.source_file_name ?? "View"}
-              </>
-            )}
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
           </Button>
         ) : (
-          <span className="text-xs text-muted-foreground">—</span>
+          <span className="text-muted-foreground">—</span>
         )}
+      </td>
+      <td className="px-3 py-2 text-center">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleDelete}
+          disabled={deleteHistory.isPending}
+          title="Delete this entry"
+        >
+          {deleteHistory.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Trash2 className="h-3.5 w-3.5" />
+          )}
+        </Button>
       </td>
     </tr>
   )

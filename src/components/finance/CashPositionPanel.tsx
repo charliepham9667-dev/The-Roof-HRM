@@ -1,27 +1,32 @@
 import { useEffect, useMemo, useState } from "react"
 import { format, parseISO } from "date-fns"
 import {
-  Banknote,
   ChevronDown,
   ChevronUp,
   Download,
   History as HistoryIcon,
+  ImageUp,
   Loader2,
   Save,
-  TrendingDown,
-  TrendingUp,
   Upload,
-  Wallet,
 } from "lucide-react"
+import { CashImportDialog } from "@/components/finance/CashImportDialog"
+import type { ParsedCashPosition } from "@/lib/parse-cash-position"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { CashFlowChart } from "@/components/finance/CashFlowChart"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  FinanceKpiCard,
+  FinancePill,
+  MiniSparkline,
+  formatCompactVnd,
+  formatVnd,
+} from "@/components/finance/finance-ui"
+import { FINANCE_FLOW_COLORS } from "@/lib/chart-colors"
+import { mostRecentFridayIso, parseNumberInput } from "@/lib/finance-headroom"
+import { useFinancialHeadroom } from "@/hooks/useFinancialHeadroom"
 import {
   getCashPositionSignedUrl,
   useCashPositionHistory,
@@ -31,41 +36,20 @@ import {
   type FinanceCashPosition,
 } from "@/hooks/useFinanceCashPosition"
 
-function formatCompactVnd(amount: number | null | undefined): string {
-  if (amount == null || Number.isNaN(amount)) return "—"
-  const abs = Math.abs(amount)
-  if (abs >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(2)}B đ`
-  if (abs >= 1_000_000) return `${Math.round(amount / 1_000_000)}M đ`
-  return `${amount.toLocaleString()} đ`
-}
-
-function formatVnd(amount: number | null | undefined): string {
-  if (amount == null || Number.isNaN(amount)) return "—"
-  return new Intl.NumberFormat("vi-VN", { style: "decimal", maximumFractionDigits: 0 }).format(amount) + " đ"
-}
-
-function parseNumberInput(raw: string): number | null {
-  const cleaned = raw.replace(/[^0-9.-]/g, "")
-  if (!cleaned) return null
-  const n = Number(cleaned)
-  return Number.isFinite(n) ? n : null
-}
-
-function todayIso(): string {
-  return format(new Date(), "yyyy-MM-dd")
-}
-
 export function CashPositionPanel() {
   const { data: latest } = useLatestCashPosition()
   const { data: history = [] } = useCashPositionHistory(30)
+  const { cashFlow } = useFinancialHeadroom()
   const upsert = useUpsertCashPosition()
   const uploadSource = useUploadCashPositionSource()
 
   const [formOpen, setFormOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [reportDate, setReportDate] = useState<string>(todayIso())
+  const [reportDate, setReportDate] = useState<string>(mostRecentFridayIso())
   const [bank, setBank] = useState<string>("")
   const [cash, setCash] = useState<string>("")
+  const [cardPending, setCardPending] = useState<string>("")
   const [notes, setNotes] = useState<string>("")
   const [file, setFile] = useState<File | null>(null)
   const [fileName, setFileName] = useState<string>("")
@@ -77,16 +61,23 @@ export function CashPositionPanel() {
     [history, reportDate],
   )
 
+  const cashOnHandTracked = useMemo(() => {
+    if (!latest) return false
+    return history.some((h) => Number(h.cash_balance_vnd) > 0)
+  }, [history, latest])
+
   useEffect(() => {
     if (!formOpen) return
     if (existingForDate) {
       setBank(String(existingForDate.bank_balance_vnd ?? ""))
       setCash(String(existingForDate.cash_balance_vnd ?? ""))
+      setCardPending(String(existingForDate.card_pending_vnd ?? ""))
       setNotes(existingForDate.notes ?? "")
       setFileName(existingForDate.source_file_name ?? "")
     } else {
       setBank("")
       setCash("")
+      setCardPending("")
       setNotes("")
       setFileName("")
     }
@@ -95,20 +86,28 @@ export function CashPositionPanel() {
     setError(null)
   }, [existingForDate, reportDate, formOpen])
 
-  const delta = useMemo(() => {
-    if (history.length < 2) return null
-    const [current, previous] = history
-    const diff = Number(current.total_vnd) - Number(previous.total_vnd)
-    return { diff, previous }
-  }, [history])
+  const handleImportApply = (parsed: ParsedCashPosition, importFile: File | null) => {
+    setReportDate(parsed.reportDate)
+    setBank(parsed.bankBalanceVnd != null ? String(parsed.bankBalanceVnd) : "")
+    setCash(parsed.cashBalanceVnd != null ? String(parsed.cashBalanceVnd) : "")
+    setCardPending(parsed.cardPendingVnd != null ? String(parsed.cardPendingVnd) : "")
+    if (importFile) {
+      setFile(importFile)
+      setFileName(importFile.name)
+    }
+    setFormOpen(true)
+    setMessage("Imported from screenshot — review and save.")
+    setError(null)
+  }
 
   const handleSave = async () => {
     setError(null)
     setMessage(null)
     const bankValue = parseNumberInput(bank)
     const cashValue = parseNumberInput(cash)
-    if (bankValue == null && cashValue == null) {
-      setError("Enter at least one of bank or cash balance.")
+    const cardValue = parseNumberInput(cardPending)
+    if (bankValue == null && cashValue == null && cardValue == null) {
+      setError("Enter at least one balance field.")
       return
     }
     try {
@@ -120,6 +119,7 @@ export function CashPositionPanel() {
         reportDate,
         bankBalanceVnd: bankValue ?? 0,
         cashBalanceVnd: cashValue ?? 0,
+        cardPendingVnd: cardValue ?? 0,
         notes: notes || null,
         sourceFilePath: uploaded?.path ?? existingForDate?.source_file_path ?? null,
         sourceFileName: uploaded?.fileName ?? existingForDate?.source_file_name ?? null,
@@ -133,188 +133,228 @@ export function CashPositionPanel() {
     }
   }
 
-  return (
-    <section className="rounded-card border border-border bg-card shadow-card">
-      <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4">
-        <div>
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Banknote className="h-4 w-4 text-muted-foreground" />
-            Cashflow Snapshot
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Daily liquidity view from the accountant screenshot. Keep this fresh with Debt Tracker
-            to understand current financial headroom.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setHistoryOpen(true)}
-            disabled={history.length === 0}
-          >
-            <HistoryIcon className="h-3.5 w-3.5 mr-1.5" />
-            History
-          </Button>
-          <Button type="button" size="sm" onClick={() => setFormOpen((v) => !v)}>
-            {formOpen ? (
-              <>
-                <ChevronUp className="h-3.5 w-3.5 mr-1.5" /> Close
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-3.5 w-3.5 mr-1.5" /> Log cash snapshot
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+  const { weekSummary, liquidityDeltaWeek } = cashFlow
+  const inSpark = weekSummary.last7.map((d) => d.inflow)
+  const liquiditySpark = weekSummary.last7.map((d) => d.liquidity)
+  const outSpark = weekSummary.last7.map((d) => d.outflow)
 
-      {/* KPI tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 pt-3">
-        <KpiTile
-          label="Bank balance"
-          icon={<Banknote className="h-4 w-4" />}
-          value={latest ? formatCompactVnd(Number(latest.bank_balance_vnd)) : "—"}
-          sub={latest?.report_date ? `As of ${format(parseISO(latest.report_date), "MMM d")}` : "No data yet"}
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <FinanceKpiCard
+          label="Cash In · week"
+          value={`+${formatCompactVnd(weekSummary.inTotal)}`}
+          variant="success"
+          pill={<FinancePill tone="success">↑ Sales26</FinancePill>}
+          footer={
+            <div className="space-y-1">
+              <span>Last 7 days · daily revenue (sync)</span>
+              <MiniSparkline data={inSpark} color={FINANCE_FLOW_COLORS.inflow} />
+            </div>
+          }
         />
-        <KpiTile
-          label="Cash on hand"
-          icon={<Wallet className="h-4 w-4" />}
-          value={latest ? formatCompactVnd(Number(latest.cash_balance_vnd)) : "—"}
-          sub={latest?.report_date ? `As of ${format(parseISO(latest.report_date), "MMM d")}` : "No data yet"}
+        <FinanceKpiCard
+          label="Cash Out · week"
+          value={`−${formatCompactVnd(weekSummary.outTotal)}`}
+          footer={
+            <div className="space-y-1">
+              <span className="text-[#6C2B29]">Paid supplier debt (Debt Tracker)</span>
+              <MiniSparkline data={outSpark} color={FINANCE_FLOW_COLORS.outflow} />
+            </div>
+          }
         />
-        <KpiTile
-          label="Total liquidity"
-          icon={<TrendingUp className="h-4 w-4" />}
-          value={latest ? formatCompactVnd(Number(latest.total_vnd)) : "—"}
-          sub={
-            delta ? (
-              <span
-                className={
-                  "inline-flex items-center gap-1 " +
-                  (delta.diff > 0
-                    ? "text-success"
-                    : delta.diff < 0
-                      ? "text-error"
-                      : "text-muted-foreground")
-                }
-              >
-                {delta.diff > 0 ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : delta.diff < 0 ? (
-                  <TrendingDown className="h-3 w-3" />
-                ) : null}
-                {delta.diff > 0 ? "+" : ""}
-                {formatCompactVnd(delta.diff)} vs {format(parseISO(delta.previous.report_date), "MMM d")}
-              </span>
-            ) : (
-              "Need 2+ entries"
-            )
+        <FinanceKpiCard
+          label="Change · week"
+          value={
+            liquidityDeltaWeek != null
+              ? `${liquidityDeltaWeek >= 0 ? "+" : "−"}${formatCompactVnd(Math.abs(liquidityDeltaWeek))}`
+              : "—"
+          }
+          variant="success"
+          pill={
+            <FinancePill tone={(liquidityDeltaWeek ?? 0) >= 0 ? "success" : "burg"}>
+              {(liquidityDeltaWeek ?? 0) >= 0 ? "Up" : "Down"}
+            </FinancePill>
+          }
+          footer={
+            <div className="space-y-1">
+              <span>Total liquidity vs start of week</span>
+              <MiniSparkline data={liquiditySpark} color={FINANCE_FLOW_COLORS.cashOnHand} />
+            </div>
           }
         />
       </div>
 
-      {/* Sparkline */}
-      <div className="px-4">
-        {history.length > 1 ? (
-          <Sparkline data={history} />
-        ) : (
-          <div className="rounded-sm border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            Log at least two snapshots to see the 30-day trend.
+      <CashFlowChart
+        series={cashFlow.series}
+        events={cashFlow.events}
+        rangeLabel={cashFlow.rangeLabel}
+        isLoading={cashFlow.isLoading}
+        hasLiquidityData={cashFlow.hasLiquidityData}
+        hasPaidDebtData={cashFlow.hasPaidDebtData}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <SplitTile
+          label="Bank balance"
+          value={latest ? formatCompactVnd(Number(latest.bank_balance_vnd)) : "—"}
+          sub="BIDV main · MB business"
+          pill={<FinancePill tone="info">main</FinancePill>}
+        />
+        <SplitTile
+          label="Cash on hand"
+          value={
+            latest && (Number(latest.cash_balance_vnd) > 0 || cashOnHandTracked)
+              ? formatCompactVnd(Number(latest.cash_balance_vnd))
+              : "Not tracked"
+          }
+          sub="Till + safe · settled Tue/Fri"
+          pill={<FinancePill tone="neutral">till</FinancePill>}
+          muted={!cashOnHandTracked && Number(latest?.cash_balance_vnd ?? 0) === 0}
+        />
+        <SplitTile
+          label="Card pending"
+          value={
+            latest && Number(latest.card_pending_vnd) > 0
+              ? formatCompactVnd(Number(latest.card_pending_vnd))
+              : latest
+                ? formatCompactVnd(Number(latest.card_pending_vnd))
+                : "—"
+          }
+          sub="POS settling +2 days"
+          pill={<FinancePill tone="warn">+2d</FinancePill>}
+        />
+      </div>
+
+      <div className="rounded-card border border-[#6C2B29]/15 bg-[#FAF4EF] p-4">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-sm font-semibold text-foreground">Log this Friday&apos;s snapshot</span>
+          {existingForDate && <FinancePill tone="info">Already saved — update will replace</FinancePill>}
+          <div className="ml-auto flex gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              <ImageUp className="h-3.5 w-3.5 mr-1.5" />
+              Import from screenshot
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setHistoryOpen(true)}
+              disabled={history.length === 0}
+            >
+              <HistoryIcon className="h-3.5 w-3.5 mr-1.5" />
+              History
+            </Button>
+            <Button type="button" size="sm" onClick={() => setFormOpen((v) => !v)}>
+              {formOpen ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5 mr-1.5" /> Close
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5 mr-1.5" /> Log snapshot
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {formOpen && (
+          <div className="space-y-3 border-t border-border pt-3">
+            <div className="grid gap-3 md:grid-cols-5">
+              <div className="space-y-1">
+                <Label htmlFor="cash-date">Date (Friday)</Label>
+                <Input
+                  id="cash-date"
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cash-bank">Bank balance (VND)</Label>
+                <Input
+                  id="cash-bank"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={bank}
+                  onChange={(e) => setBank(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cash-cash">Cash on hand (VND)</Label>
+                <Input
+                  id="cash-cash"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={cash}
+                  onChange={(e) => setCash(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cash-card">Card pending (VND)</Label>
+                <Input
+                  id="cash-card"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={cardPending}
+                  onChange={(e) => setCardPending(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="cash-file">Screenshot / PDF</Label>
+                <Input
+                  id="cash-file"
+                  type="file"
+                  accept=".png,.jpg,.jpeg,.webp,.pdf"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null
+                    setFile(f)
+                    if (f) setFileName(f.name)
+                  }}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="cash-notes">Notes (optional)</Label>
+              <Input
+                id="cash-notes"
+                placeholder="e.g. included MB_8333 payable, tech deposit unchanged"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={upsert.isPending || uploadSource.isPending}
+              >
+                {upsert.isPending || uploadSource.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3.5 w-3.5 mr-1.5" /> Save snapshot
+                  </>
+                )}
+              </Button>
+              {fileName && (
+                <span className="text-xs text-muted-foreground">
+                  <Upload className="h-3 w-3 inline-block mr-1" />
+                  {fileName}
+                </span>
+              )}
+            </div>
+            {message && <p className="text-xs text-success">{message}</p>}
+            {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
         )}
       </div>
 
-      {/* Inline form */}
-      {formOpen && (
-        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-border mt-3">
-          <div className="text-sm font-semibold text-foreground">Log today&apos;s cashflow snapshot</div>
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="space-y-1">
-              <Label htmlFor="cash-date">Date</Label>
-              <Input
-                id="cash-date"
-                type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="cash-bank">Bank balance (VND)</Label>
-              <Input
-                id="cash-bank"
-                inputMode="decimal"
-                placeholder="0"
-                value={bank}
-                onChange={(e) => setBank(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="cash-cash">Cash on hand (VND)</Label>
-              <Input
-                id="cash-cash"
-                inputMode="decimal"
-                placeholder="0"
-                value={cash}
-                onChange={(e) => setCash(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="cash-file">Screenshot / PDF</Label>
-              <Input
-                id="cash-file"
-                type="file"
-                accept=".png,.jpg,.jpeg,.webp,.pdf"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null
-                  setFile(f)
-                  if (f) setFileName(f.name)
-                }}
-              />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="cash-notes">Notes (optional)</Label>
-            <Input
-              id="cash-notes"
-              placeholder="e.g. included MB_8333 payable, tech deposit unchanged"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" onClick={handleSave} disabled={upsert.isPending || uploadSource.isPending}>
-              {upsert.isPending || uploadSource.isPending ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-3.5 w-3.5 mr-1.5" /> Save snapshot
-                </>
-              )}
-            </Button>
-            {fileName && (
-              <span className="text-xs text-muted-foreground">
-                <Upload className="h-3 w-3 inline-block mr-1" />
-                {fileName}
-              </span>
-            )}
-            {existingForDate && (
-              <span className="text-xs text-muted-foreground">
-                Already logged for this date — saving will update it.
-              </span>
-            )}
-          </div>
-          {message && <p className="text-xs text-success">{message}</p>}
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
-      )}
-
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[min(96vw,72rem)] sm:max-w-[min(96vw,72rem)]">
           <DialogHeader>
             <DialogTitle>Cash position history</DialogTitle>
           </DialogHeader>
@@ -325,6 +365,7 @@ export function CashPositionPanel() {
                   <th className="px-3 py-2">Date</th>
                   <th className="px-3 py-2 text-right">Bank</th>
                   <th className="px-3 py-2 text-right">Cash</th>
+                  <th className="px-3 py-2 text-right">Card pending</th>
                   <th className="px-3 py-2 text-right">Total</th>
                   <th className="px-3 py-2">Notes</th>
                   <th className="px-3 py-2">File</th>
@@ -336,7 +377,7 @@ export function CashPositionPanel() {
                 ))}
                 {history.length === 0 && (
                   <tr>
-                    <td className="px-3 py-6 text-sm text-muted-foreground text-center" colSpan={6}>
+                    <td className="px-3 py-6 text-sm text-muted-foreground text-center" colSpan={7}>
                       No entries yet.
                     </td>
                   </tr>
@@ -346,75 +387,46 @@ export function CashPositionPanel() {
           </div>
         </DialogContent>
       </Dialog>
-    </section>
-  )
-}
 
-function KpiTile({
-  label,
-  icon,
-  value,
-  sub,
-}: {
-  label: string
-  icon: React.ReactNode
-  value: string
-  sub: React.ReactNode
-}) {
-  return (
-    <div className="rounded-card border border-border bg-background p-3">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span className="text-xs">{label}</span>
-      </div>
-      <div className="mt-1 text-2xl font-bold text-foreground">{value}</div>
-      <div className="mt-0.5 text-[11px] text-muted-foreground">{sub}</div>
+      <CashImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onApply={handleImportApply}
+        onSaved={(count) =>
+          setMessage(`Saved ${count} day${count === 1 ? "" : "s"} of cash on hand — chart updated.`)
+        }
+      />
     </div>
   )
 }
 
-function Sparkline({ data }: { data: FinanceCashPosition[] }) {
-  // data is newest -> oldest; flip for chronological plot
-  const series = [...data].reverse()
-  const totals = series.map((d) => Number(d.total_vnd) || 0)
-  const min = Math.min(...totals)
-  const max = Math.max(...totals)
-  const range = Math.max(1, max - min)
-
-  const width = 600
-  const height = 60
-  const step = totals.length > 1 ? width / (totals.length - 1) : width
-
-  const points = totals.map((v, i) => {
-    const x = i * step
-    const y = height - ((v - min) / range) * height
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  })
-
+function SplitTile({
+  label,
+  value,
+  sub,
+  pill,
+  muted,
+}: {
+  label: string
+  value: string
+  sub: string
+  pill: React.ReactNode
+  muted?: boolean
+}) {
   return (
-    <div className="rounded-card border border-border bg-background p-3">
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>30-day total liquidity</span>
-        <span>
-          {series[0]?.report_date && format(parseISO(series[0].report_date), "MMM d")} –{" "}
-          {series[series.length - 1]?.report_date &&
-            format(parseISO(series[series.length - 1].report_date), "MMM d")}
+    <div className="rounded-card border border-border bg-card p-3 shadow-card">
+      <div className="flex justify-between items-start">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
         </span>
+        {pill}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-16 mt-1" preserveAspectRatio="none">
-        <polyline
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          className="text-primary"
-          points={points.join(" ")}
-        />
-      </svg>
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1">
-        <span>min {formatCompactVnd(min)}</span>
-        <span>max {formatCompactVnd(max)}</span>
+      <div
+        className={`mt-1 text-xl font-semibold ${muted ? "text-muted-foreground" : "text-foreground"}`}
+      >
+        {value}
       </div>
+      <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>
     </div>
   )
 }
@@ -440,19 +452,13 @@ function HistoryRow({ row }: { row: FinanceCashPosition }) {
       </td>
       <td className="px-3 py-2 text-right">{formatVnd(Number(row.bank_balance_vnd))}</td>
       <td className="px-3 py-2 text-right">{formatVnd(Number(row.cash_balance_vnd))}</td>
+      <td className="px-3 py-2 text-right">{formatVnd(Number(row.card_pending_vnd ?? 0))}</td>
       <td className="px-3 py-2 text-right font-medium">{formatVnd(Number(row.total_vnd))}</td>
-      <td className="px-3 py-2 text-muted-foreground max-w-[240px] truncate">{row.notes || "—"}</td>
+      <td className="px-3 py-2 text-muted-foreground max-w-[200px] truncate">{row.notes || "—"}</td>
       <td className="px-3 py-2">
         {row.source_file_path ? (
           <Button type="button" size="sm" variant="ghost" onClick={handleOpen} disabled={busy}>
-            {busy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <>
-                <Download className="h-3.5 w-3.5 mr-1.5" />
-                View
-              </>
-            )}
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
           </Button>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>

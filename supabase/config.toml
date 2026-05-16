@@ -380,6 +380,12 @@ verify_jwt = false
 [functions.create-employee]
 verify_jwt = false
 
+[functions.parse-payment-list]
+verify_jwt = false
+
+[functions.parse-cash-position]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

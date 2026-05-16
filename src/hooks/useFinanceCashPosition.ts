@@ -7,6 +7,7 @@ export type FinanceCashPosition = {
   report_date: string
   bank_balance_vnd: number
   cash_balance_vnd: number
+  card_pending_vnd: number
   total_vnd: number
   notes: string | null
   source_file_path: string | null
@@ -18,10 +19,32 @@ export type FinanceCashPosition = {
 }
 
 const SELECT_COLS =
-  "id,report_date,bank_balance_vnd,cash_balance_vnd,total_vnd,notes,source_file_path,source_file_name,source_file_mime_type,source_file_size_bytes,created_at,updated_at"
+  "id,report_date,bank_balance_vnd,cash_balance_vnd,card_pending_vnd,total_vnd,notes,source_file_path,source_file_name,source_file_mime_type,source_file_size_bytes,created_at,updated_at"
 
 const SOURCE_BUCKET = "finance-attachments"
 const SOURCE_PREFIX = "cash-position"
+const CASH_IMPORT_PREFIX = "cash-import"
+
+export function useUploadCashImportSource() {
+  return useMutation({
+    mutationFn: async (input: { reportDate: string; file: File }) => {
+      const safeName = input.file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
+      const folder = input.reportDate.replace(/[^0-9A-Za-z_-]/g, "_")
+      const path = `${CASH_IMPORT_PREFIX}/${folder}/${Date.now()}-${safeName}`
+      const { error } = await supabase.storage.from(SOURCE_BUCKET).upload(path, input.file, {
+        upsert: false,
+        contentType: input.file.type || undefined,
+      })
+      if (error) throw error
+      return {
+        path,
+        fileName: input.file.name,
+        mimeType: input.file.type || null,
+        sizeBytes: input.file.size,
+      }
+    },
+  })
+}
 
 export function useLatestCashPosition() {
   return useQuery({
@@ -54,6 +77,56 @@ export function useCashPositionHistory(days = 30) {
   })
 }
 
+export type BulkCashPositionRow = {
+  reportDate: string
+  bankBalanceVnd: number
+  cashBalanceVnd: number
+  cardPendingVnd?: number
+  notes?: string | null
+  sourceFilePath?: string | null
+  sourceFileName?: string | null
+  sourceFileMimeType?: string | null
+  sourceFileSizeBytes?: number | null
+}
+
+export function useBulkUpsertCashPositions() {
+  const qc = useQueryClient()
+  const profile = useAuthStore((s) => s.profile)
+  return useMutation({
+    mutationFn: async (rows: BulkCashPositionRow[]) => {
+      if (!profile?.id) throw new Error("Not authenticated")
+      if (rows.length === 0) throw new Error("No days to save")
+      const now = new Date().toISOString()
+      const payload = rows.map((r) => ({
+        report_date: r.reportDate,
+        bank_balance_vnd: r.bankBalanceVnd,
+        cash_balance_vnd: r.cashBalanceVnd,
+        card_pending_vnd: r.cardPendingVnd ?? 0,
+        notes: r.notes?.trim() || null,
+        source_file_path: r.sourceFilePath ?? null,
+        source_file_name: r.sourceFileName ?? null,
+        source_file_mime_type: r.sourceFileMimeType ?? null,
+        source_file_size_bytes: r.sourceFileSizeBytes ?? null,
+        created_by: profile.id,
+        updated_by: profile.id,
+        updated_at: now,
+      }))
+      const { data, error } = await supabase
+        .from("finance_cash_position_daily")
+        .upsert(payload, { onConflict: "report_date" })
+        .select(SELECT_COLS)
+      if (error) throw error
+      return (data as FinanceCashPosition[]) || []
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["finance-cash-position-latest"] })
+      qc.invalidateQueries({ queryKey: ["finance-cash-position-history"] })
+      qc.invalidateQueries({ queryKey: ["financial-headroom"] })
+      qc.invalidateQueries({ queryKey: ["cash-flow-revenue"] })
+    },
+  })
+}
+
 export function useUpsertCashPosition() {
   const qc = useQueryClient()
   const profile = useAuthStore((s) => s.profile)
@@ -62,6 +135,7 @@ export function useUpsertCashPosition() {
       reportDate: string
       bankBalanceVnd: number
       cashBalanceVnd: number
+      cardPendingVnd?: number
       notes?: string | null
       sourceFilePath?: string | null
       sourceFileName?: string | null
@@ -76,6 +150,7 @@ export function useUpsertCashPosition() {
             report_date: input.reportDate,
             bank_balance_vnd: input.bankBalanceVnd,
             cash_balance_vnd: input.cashBalanceVnd,
+            card_pending_vnd: input.cardPendingVnd ?? 0,
             notes: input.notes?.trim() || null,
             source_file_path: input.sourceFilePath ?? null,
             source_file_name: input.sourceFileName ?? null,
@@ -95,6 +170,8 @@ export function useUpsertCashPosition() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["finance-cash-position-latest"] })
       qc.invalidateQueries({ queryKey: ["finance-cash-position-history"] })
+      qc.invalidateQueries({ queryKey: ["financial-headroom"] })
+      qc.invalidateQueries({ queryKey: ["cash-flow-revenue"] })
     },
   })
 }

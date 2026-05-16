@@ -455,6 +455,7 @@ export interface KPISummary {
   pax: { value: number; trend: number; trendLabel: string };
   avgSpend: { value: number; trend: number; trendLabel: string };
   yoyGrowth: { value: number; trendLabel: string };
+  lastYear: { revenue: number; pax: number; avgSpend: number };
   targetMet: { percentage: number; isOnTrack: boolean };
 }
 
@@ -563,6 +564,8 @@ export function useKPISummary(selectedMonth?: MonthParam) {
         : 0;
 
       const targetPercentage = Math.round((currentPeriod.revenue / target) * 100);
+      const expectedByNow = (target / daysInMonth) * endDay;
+      const isOnPace = currentPeriod.revenue >= expectedByNow;
 
       return {
         revenue: {
@@ -584,9 +587,14 @@ export function useKPISummary(selectedMonth?: MonthParam) {
           value: revenueTrend,
           trendLabel: `${paxTrend >= 0 ? '+' : ''}${paxTrend.toFixed(1)}% Pax YoY`,
         },
+        lastYear: {
+          revenue: lastYearPeriod.revenue,
+          pax: lastYearPeriod.pax,
+          avgSpend: Math.round(lastYearPeriod.avgSpend),
+        },
         targetMet: {
           percentage: Math.min(targetPercentage, 100),
-          isOnTrack: targetPercentage >= 100,
+          isOnTrack: isOnPace,
         },
       };
     },
@@ -974,8 +982,10 @@ export interface MonthlyPerformanceData {
   monthIndex: number;
   year: number;
   actualRevenue: number;
+  lastYearRevenue: number;
   targetRevenue: number;
   achievementPercent: number;
+  isPartialMonth: boolean;
 }
 
 type MonthlyPerformanceRange = "tm" | "3m" | "6m" | "12m"
@@ -990,8 +1000,10 @@ export function useMonthlyPerformance(range: MonthlyPerformanceRange = "6m") {
       // Build a month window that can cross year boundaries.
       const endMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
       const startMonthStart = addMonths(endMonthStart, -(monthsCount - 1))
-      const startISO = formatLocalISODate(startMonthStart)
+      const queryStart = addMonths(startMonthStart, -12)
+      const startISO = formatLocalISODate(queryStart)
       const endISO = formatLocalISODate(now)
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
 
       // Actuals: sum daily revenue from Sales26-synced `daily_metrics` (falls back gracefully).
       const { data: metricsData, error } = await supabase
@@ -1007,6 +1019,30 @@ export function useMonthlyPerformance(range: MonthlyPerformanceRange = "6m") {
       ;(metricsData || []).forEach((row: any) => {
         const monthKey = String(row.date).slice(0, 7) // YYYY-MM
         actualByMonthKey.set(monthKey, (actualByMonthKey.get(monthKey) || 0) + (row.revenue || 0))
+      })
+
+      // Override actuals with pnl_monthly data_type='actual' rows (authoritative monthly totals
+      // that avoid double-counting when daily_metrics has both synced daily rows and manual totals).
+      const allYears = Array.from(
+        new Set(
+          Array.from({ length: monthsCount + 12 }, (_, i) => {
+            const d = addMonths(queryStart, i)
+            return d.getFullYear()
+          })
+        )
+      )
+      const { data: pnlActualRows } = await supabase
+        .from('pnl_monthly')
+        .select('year, month, gross_sales')
+        .eq('data_type', 'actual')
+        .in('year', allYears)
+
+      ;(pnlActualRows || []).forEach((row: any) => {
+        const y = Number(row.year)
+        const m = Number(row.month)
+        if (!y || !m) return
+        const key = `${y}-${String(m).padStart(2, '0')}`
+        actualByMonthKey.set(key, Number(row.gross_sales) || 0)
       })
 
       // Targets: monthly revenue targets from Sales26 row 6, written into `targets` table.
@@ -1049,7 +1085,10 @@ export function useMonthlyPerformance(range: MonthlyPerformanceRange = "6m") {
         const m = d.getMonth() + 1
         const monthKey = `${y}-${String(m).padStart(2, "0")}`
         const actual = actualByMonthKey.get(monthKey) || 0
+        const lastYearKey = `${y - 1}-${String(m).padStart(2, "0")}`
+        const lastYearRevenue = actualByMonthKey.get(lastYearKey) || 0
         const target = targetByMonthKey.get(monthKey) ?? pnlBudgetByMonthKey.get(monthKey) ?? 0
+        const isPartialMonth = monthKey === currentMonthKey
 
         result.push({
           monthKey,
@@ -1057,8 +1096,10 @@ export function useMonthlyPerformance(range: MonthlyPerformanceRange = "6m") {
           monthIndex: m - 1,
           year: y,
           actualRevenue: actual,
+          lastYearRevenue,
           targetRevenue: target,
           achievementPercent: target > 0 ? Math.round((actual / target) * 100) : 0,
+          isPartialMonth,
         })
       }
 

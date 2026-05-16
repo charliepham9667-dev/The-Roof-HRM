@@ -1,6 +1,6 @@
 # Data Contracts
 
-*Last updated: 2026-04-22 | Supabase project: gewlgslgltrhnwrsttsm*
+*Last updated: 2026-05-16 | Supabase project: gewlgslgltrhnwrsttsm*
 *All column names, types, and examples verified against live database.*
 
 ---
@@ -25,6 +25,7 @@ A data contract defines the expected shape, rules, and meaning of a table. It's 
 | `report_date` | date | NO | — | The date this snapshot covers. Must be unique. |
 | `bank_balance_vnd` | numeric | NO | 0 | BIDV bank balance in VND. This is what's being entered. |
 | `cash_balance_vnd` | numeric | NO | 0 | Physical cash on hand at venue. Often 0 — needs fixing. |
+| `card_pending_vnd` | numeric | NO | 0 | POS card settlements not yet in bank (added 2026-05-16) |
 | `total_vnd` | numeric | YES | — | Computed: `bank_balance_vnd + cash_balance_vnd`. May be null if not set. |
 | `notes` | text | YES | — | Free-text context (e.g., "Sent on 21st of April") |
 | `source_file_path` | text | YES | — | Storage path of uploaded screenshot/PDF |
@@ -61,13 +62,32 @@ source_file_name: "unnamed.png"
 - `cash_balance_vnd` is 0 on all existing rows. Thu is only entering bank balance. Physical cash-on-hand is not being tracked. **Action needed:** Update daily entry process with Thu to include cash drawer count.
 - `total_vnd` may be null on older rows — compute it as `bank_balance_vnd + cash_balance_vnd` in AIOS queries.
 
+### Import flow (cashflow screenshot)
+
+1. Owner uploads a MISA / cashflow screenshot (bank, till/safe, card pending).
+2. Edge function `parse-cash-position` (Claude vision) returns `reportDate`, balances, and warnings; client post-processes in `src/lib/parse-cash-position.ts`.
+3. Review dialog pre-fills the Friday snapshot form; save upserts `finance_cash_position_daily` for `report_date`.
+4. Optional source file stored at `finance-attachments` → `cash-import/{report_date}/{timestamp}-{filename}` (manual form upload uses `cash-position/...`).
+
+**Deploy:** reuse `ANTHROPIC_API_KEY`, then `supabase functions deploy parse-cash-position`.
+
 ### How AIOS Uses This Table
+- Finance → Cash Position: tiles (bank / cash / card) and liquidity line on cash-flow chart
 - `/expense-dashboard`: reads most recent row for cash runway calculation
 - `/business-intelligence`: checks against 🟢≥500M / 🟡200–499M / 🔴<200M thresholds
 - Daily health check: shows cash position in morning briefing
 - Weekly loop: checks 7-day cash trend
 
+### Cash flow chart (Finance → Cash Position)
+
+| Series | Source | Notes |
+|---|---|---|
+| Cash in (green) | `daily_metrics.revenue` | Filled by Sales26 sync (`bright-service` / Admin → Sync). Not payment-request sheets. |
+| Cash out (red) | `finance_supplier_debt_items` where `status = 'paid'` | Sum `amount_vnd` by `paid_at` (fallback `due_date`). Mark paid in Debt Tracker. |
+| Liquidity line | Latest `finance_cash_position_daily.total_vnd` (or bank+cash) carried across chart range | |
+
 ---
+
 
 ## Contract 2: `finance_supplier_debt_weekly`
 
@@ -120,6 +140,51 @@ notes:             "Diageo: 45M (due May 1), Shisha supplier: 28M (due Apr 30), 
 - `/expense-dashboard`: payment priority list — overdue amounts surface as top priority
 - Weekly close: cash runway calculation includes upcoming supplier payments
 - Monthly report: supplier debt trend section
+- **Reconciliation:** aggregate totals should align with sum of `finance_supplier_debt_items` where status ≠ `paid`
+
+---
+
+## Contract 2b: `finance_supplier_debt_items`
+
+**Purpose:** Line-item supplier debt ledger for the Debt Tracker UI. One row per vendor obligation.
+
+**Current status:** New table (2026-05-16). Populate via Finance → Debt Tracker → Add debt, or **Import from screenshot** (payment-list images).
+
+### Schema
+
+| Column | Type | Nullable | Description |
+|---|---|---|---|
+| `id` | uuid | NO | Primary key |
+| `vendor` | text | NO | Supplier / payee name |
+| `vendor_code` | text | YES | Accountant code (e.g. `NCC00028`) |
+| `category` | text | NO | `inventory`, `rent`, `capex`, `utilities`, `other` |
+| `amount_vnd` | numeric | NO | Amount owed (≥ 0) |
+| `due_date` | date | NO | Payment due date |
+| `status` | text | NO | `pending`, `stopped`, `paid` |
+| `notes` | text | YES | Context (remarks, bank name, account) |
+| `paid_at` | date | YES | Set when status → `paid` |
+| `payment_channel` | text | YES | `bank` or `cash` — from list title |
+| `source_import_path` | text | YES | Storage path of screenshot in `finance-attachments` bucket |
+| `source_weekly_report_id` | uuid | YES | Optional FK → weekly snapshot |
+
+### Import flow (payment-list screenshots)
+
+1. Owner uploads PNG/JPG of **THE ROOF - LIST OF PAYMENT REQUIRED - BANK|CASH - date**.
+2. Edge function `parse-payment-list` (Claude vision) returns structured rows; client post-processes in `src/lib/parse-payment-list.ts`.
+3. Review dialog: edit rows, reconcile footer total, optional replace open items for same `due_date` + `payment_channel`.
+4. Bulk insert with `status = pending`, `stopped`, or `paid` (chosen in import UI; default `pending`) and `source_import_path` = `debt-import/{list_date}/{timestamp}-{filename}`.
+
+**Deploy:** `supabase secrets set ANTHROPIC_API_KEY=...` then `supabase functions deploy parse-payment-list`.
+
+### Validation Rules
+- `amount_vnd >= 0`
+- `status = 'paid'` implies `paid_at` is set on mark-paid action
+- Free Cash Flow in UI: `liquidity (latest cash snapshot) − sum(open line items)` (fallback: weekly `total_debt_vnd`)
+
+### How AIOS Uses This Table
+- Finance Summary → Debt Tracker / Unified view
+- Next-5-due action queue ordered by `due_date`
+- Cash Position chart **cash out**: paid rows aggregated by `paid_at` (see Contract 1 cash flow table)
 
 ---
 

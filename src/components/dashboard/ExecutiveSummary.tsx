@@ -1,55 +1,56 @@
-import { Building2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useRevenueVelocity, useKPISummary, MonthParam } from '../../hooks/useDashboardData';
+import { computeMonthPace } from '@/lib/finance-pace';
+import { FinanceSummaryStatCell } from '@/components/finance/finance-ui';
 
-// Format VND with commas
 function formatVND(value: number): string {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B đ`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M đ`;
   return new Intl.NumberFormat('vi-VN').format(Math.round(value)) + ' đ';
 }
 
-// Format VND in millions
 function formatM(value: number): string {
-  return `${(value / 1000000).toFixed(1)}M đ`;
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  return `${(value / 1_000_000).toFixed(1)}M`;
 }
 
 export interface ExecutiveSummaryProps {
   noContainer?: boolean;
   selectedMonth?: MonthParam;
+  /** Render title + status pill row (Finance Summary page) */
+  showHeader?: boolean;
 }
 
-export function ExecutiveSummary({ noContainer = false, selectedMonth }: ExecutiveSummaryProps) {
+export function ExecutiveSummary({
+  noContainer = false,
+  selectedMonth,
+  showHeader = false,
+}: ExecutiveSummaryProps) {
   const { data: velocity, isLoading: velocityLoading } = useRevenueVelocity(selectedMonth);
   const { data: kpi, isLoading: kpiLoading } = useKPISummary(selectedMonth);
 
   const isLoading = velocityLoading || kpiLoading;
 
   if (isLoading) {
-    if (noContainer) {
-      return (
-        <div className="w-full flex items-center justify-center min-h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      );
-    }
-
-    return (
-      <div className="rounded-card border border-border bg-card p-6 w-full shadow-card flex items-center justify-center min-h-[300px]">
+    const loader = (
+      <div className="flex min-h-[200px] w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+    if (noContainer) return loader;
+    return (
+      <div className="flex min-h-[300px] w-full items-center justify-center rounded-card border border-border bg-card p-6 shadow-card">
+        {loader}
       </div>
     );
   }
 
   if (!velocity || !kpi) {
-    if (noContainer) {
-      return (
-        <div className="w-full flex items-center justify-center min-h-[300px]">
-          <p className="text-muted-foreground">Unable to load summary</p>
-        </div>
-      );
-    }
-
+    const empty = <p className="text-muted-foreground">Unable to load summary</p>;
+    if (noContainer) return empty;
     return (
-      <div className="rounded-card border border-border bg-card p-6 w-full shadow-card flex items-center justify-center min-h-[300px]">
-        <p className="text-muted-foreground">Unable to load summary</p>
+      <div className="flex min-h-[300px] w-full items-center justify-center rounded-card border border-border bg-card p-6 shadow-card">
+        {empty}
       </div>
     );
   }
@@ -57,142 +58,147 @@ export function ExecutiveSummary({ noContainer = false, selectedMonth }: Executi
   const {
     monthlyTarget,
     mtdRevenue,
-    surplus,
     projectedMonthEnd,
     avgDailyRevenue,
     currentDay,
     daysInMonth,
-    showStretchGoal,
-    stretchGoal,
-    requiredPaceForStretch,
     yesterdayRevenue,
   } = velocity;
 
   const now = new Date();
   const isPast = selectedMonth
-    ? selectedMonth.year < now.getFullYear() || (selectedMonth.year === now.getFullYear() && selectedMonth.month < now.getMonth())
+    ? selectedMonth.year < now.getFullYear() ||
+      (selectedMonth.year === now.getFullYear() && selectedMonth.month < now.getMonth())
     : false;
-  const remainingDays = daysInMonth - currentDay;
-  const paxValue = kpi.pax.value;
-  const paxTrend = kpi.pax.trend;
-  const avgSpend = kpi.avgSpend.value;
+  const remainingDays = Math.max(0, daysInMonth - currentDay);
 
-  // Determine momentum status
-  const yesterdayBelowAvg = yesterdayRevenue < avgDailyRevenue;
-  const targetCleared = mtdRevenue >= monthlyTarget;
+  const pace = computeMonthPace({
+    mtdRevenue,
+    monthlyTarget,
+    dayOfMonth: currentDay,
+    daysInMonth,
+    avgDailyRevenue,
+  });
 
-  // Calculate last year pax (approximate from trend)
-  const lastYearPax = paxTrend > 0 ? Math.round(paxValue / (1 + paxTrend / 100)) : 0;
+  const targetAbovePct =
+    monthlyTarget > 0
+      ? Math.round(((projectedMonthEnd - monthlyTarget) / monthlyTarget) * 100)
+      : 0;
 
-  // Generate strategic headline
-  const generateHeadline = () => {
-    if (isPast) {
-      if (targetCleared) {
-        return `Strong month — ${formatM(mtdRevenue)} revenue achieved against a ${formatM(monthlyTarget)} target${showStretchGoal ? `, reaching the ${formatM(stretchGoal)} stretch goal` : ''}.`;
-      } else {
-        const gap = monthlyTarget - mtdRevenue;
-        return `Finished ${formatM(gap)} short of the ${formatM(monthlyTarget)} monthly target with ${formatM(mtdRevenue)} in final revenue.`;
-      }
-    }
-    if (targetCleared) {
-      if (yesterdayBelowAvg) {
-        return `We have cleared the ${formatM(monthlyTarget)} monthly target with ${formatM(mtdRevenue)} secured. However, momentum slowed yesterday, widening the gap to the ${formatM(stretchGoal)} stretch goal.`;
-      } else {
-        return `Strong performance! We've exceeded the ${formatM(monthlyTarget)} target with ${formatM(mtdRevenue)} secured and maintaining momentum toward the ${formatM(stretchGoal)} stretch goal.`;
-      }
-    } else {
-      const gap = monthlyTarget - mtdRevenue;
-      return `We're ${formatM(gap)} away from the ${formatM(monthlyTarget)} monthly target. ${remainingDays} days remaining to close the gap.`;
-    }
-  };
+  const requiredDailyToMiss =
+    remainingDays > 0 ? (monthlyTarget - mtdRevenue) / remainingDays : 0;
 
-  // Generate forecast text
-  const generateForecast = () => {
-    if (isPast) {
-      const achievedPct = monthlyTarget > 0 ? ((mtdRevenue / monthlyTarget) * 100).toFixed(1) : '0.0';
-      return `Final result: ${formatM(mtdRevenue)} revenue (${achievedPct}% of target). Daily average was ${formatM(avgDailyRevenue)} across the month.`;
-    }
-    if (showStretchGoal) {
-      return `At our current daily average (${formatM(avgDailyRevenue)}), we are projected to land at ${formatM(projectedMonthEnd)}. To hit ${formatM(stretchGoal)}, we must average ${formatM(requiredPaceForStretch)}/day for the final ${remainingDays} days.`;
-    } else {
-      const requiredDaily = (monthlyTarget - mtdRevenue) / remainingDays;
-      return `At our current daily average (${formatM(avgDailyRevenue)}), we are projected to land at ${formatM(projectedMonthEnd)}. To hit target, we need ${formatM(requiredDaily)}/day for the final ${remainingDays} days.`;
-    }
-  };
+  const headerRow = showHeader ? (
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+      <h3 className="font-serif text-lg font-semibold text-foreground">Executive Summary</h3>
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10.5px] font-bold ${
+          pace.isAheadOfPace ? 'bg-success/15 text-success' : 'bg-error/15 text-error'
+        }`}
+      >
+        {pace.isAheadOfPace ? 'On Track' : 'Behind Pace'} · Day {currentDay}/{daysInMonth}
+      </span>
+    </div>
+  ) : (
+    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+      <p className="text-xs text-muted-foreground">
+        Goal: <span className="font-medium text-foreground">{formatVND(monthlyTarget)}</span>
+      </p>
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10.5px] font-bold ${
+          pace.isAheadOfPace ? 'bg-success/15 text-success' : 'bg-error/15 text-error'
+        }`}
+      >
+        {pace.isAheadOfPace ? 'On Track' : 'Behind Pace'} · Day {currentDay}/{daysInMonth}
+      </span>
+    </div>
+  );
 
   const content = (
     <>
-      {/* Strategic Headline */}
-      <div>
-        <p className="text-sm text-foreground/80 leading-relaxed">
-          <span className="text-primary font-semibold">Strategic Headline: </span>
-          {generateHeadline()}
+      {headerRow}
+
+      <p className="font-serif text-base leading-relaxed text-foreground">
+        <span className="font-semibold text-primary">Strategic Headline · </span>
+        {isPast ? (
+          <>
+            Finished with <strong className="text-success">{formatM(mtdRevenue)} đ</strong> against a{' '}
+            <strong>{formatM(monthlyTarget)}</strong> target
+            {mtdRevenue >= monthlyTarget ? ' — target cleared.' : '.'}
+          </>
+        ) : (
+          <>
+            You&apos;ve cleared <strong className="text-success">{formatM(mtdRevenue)} đ</strong> in {currentDay}{' '}
+            days — already{' '}
+            <strong className="text-success">
+              {pace.paceAheadPercent > 0 ? '+' : ''}
+              {pace.paceAheadPercent}% ahead of pace
+            </strong>{' '}
+            for the {formatM(monthlyTarget)} target. At your current {formatM(avgDailyRevenue)}/day run-rate,
+            you&apos;re projected to close at{' '}
+            <strong className="text-success">{formatM(projectedMonthEnd)} đ</strong>
+            {targetAbovePct > 0 ? ` — ${targetAbovePct}% above target.` : '.'}
+          </>
+        )}
+      </p>
+
+      {kpi.avgSpend.trend < 0 && (
+        <p className="mt-3 font-serif text-base leading-relaxed text-foreground">
+          <span className="font-semibold text-primary">One watch-out · </span>
+          Avg spend per guest is <strong className="text-warning">{formatVND(kpi.avgSpend.value)}</strong>, down{' '}
+          {Math.abs(Math.round(kpi.avgSpend.trend * 10) / 10)}% YoY. Pax volume more than made up for it (
+          {kpi.pax.value.toLocaleString()} guests, +{Math.round(kpi.pax.trend)}%), but the ticket-mix shift is
+          worth a menu review.
         </p>
+      )}
+
+      <div className="mt-4 rounded-lg border border-[#E7D5BC]/80 bg-[#F5EDE0] p-3 text-sm leading-relaxed text-foreground/90">
+        <span className="font-semibold text-primary">Forecast · </span>
+        {isPast ? (
+          <>Final daily average was {formatM(avgDailyRevenue)} across the month.</>
+        ) : (
+          <>
+            To miss target you&apos;d need to drop below{' '}
+            <strong>{formatM(Math.max(0, requiredDailyToMiss))}/day</strong>
+            {yesterdayRevenue > 0 && (
+              <>
+                {' '}
+                — yesterday <strong className="text-success">{formatM(yesterdayRevenue)}</strong>.
+              </>
+            )}
+          </>
+        )}
       </div>
 
-      {/* Performance Snapshot */}
-      <div className="border-b border-border pb-4">
-        <p className="text-sm font-semibold text-foreground mb-2">Performance Snapshot:</p>
-        <ul className="space-y-2 text-sm">
-          <li className="flex items-start gap-2">
-            <span className="text-muted-foreground">•</span>
-            <span>
-              <span className="text-primary font-medium">Goal Status: </span>
-              <span className="text-foreground/80">
-                We are <span className={`font-semibold ${surplus >= 0 ? 'text-success' : 'text-error'}`}>
-                  {surplus >= 0 ? '+' : ''}{formatM(surplus)}
-                </span> {surplus >= 0 ? 'over' : 'under'} the monthly target.
-              </span>
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-muted-foreground">•</span>
-            <span>
-              <span className="text-primary font-medium">Volume: </span>
-              <span className="text-foreground/80">
-                Guest count has reached <span className="font-semibold text-foreground">{paxValue.toLocaleString()} pax</span>.
-                {paxTrend > 0 && lastYearPax > 0 && (
-                  <> This is a <span className="font-semibold text-success">{paxTrend.toFixed(0)}% increase</span> over the same period last year ({lastYearPax.toLocaleString()} pax).</>
-                )}
-              </span>
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-muted-foreground">•</span>
-            <span>
-              <span className="text-primary font-medium">Avg Spend: </span>
-              <span className="text-foreground/80">
-                Average spend per guest is <span className="font-semibold text-foreground">{formatVND(avgSpend)}</span>.
-                {kpi.avgSpend.trend < 0 && (
-                  <span className="text-warning"> ({kpi.avgSpend.trend.toFixed(1)}% vs last year)</span>
-                )}
-              </span>
-            </span>
-          </li>
-        </ul>
-      </div>
-
-      {/* Forecast */}
-      <div className="bg-background rounded-lg border border-border p-4 shadow-[0px_2px_3px_0px_rgba(0,0,0,0.15)]">
-        <p className="text-sm">
-          <span className="text-primary font-semibold">Forecast: </span>
-          <span className="text-foreground/80">{generateForecast()}</span>
-        </p>
+      <div
+        className={`mt-4 grid gap-3 border-t border-border/60 pt-4 ${
+          showHeader ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'
+        }`}
+      >
+        <FinanceSummaryStatCell
+          boxed={showHeader}
+          label="MTD"
+          value={formatVND(mtdRevenue)}
+          valueClassName="text-success"
+        />
+        <FinanceSummaryStatCell
+          boxed={showHeader}
+          label="Forecast"
+          value={formatVND(isPast ? mtdRevenue : projectedMonthEnd)}
+          valueClassName="text-success"
+        />
+        <FinanceSummaryStatCell boxed={showHeader} label="Target" value={formatVND(monthlyTarget)} />
+        <FinanceSummaryStatCell boxed={showHeader} label="Days Left" value={String(remainingDays)} />
       </div>
     </>
   );
 
-  if (noContainer) {
-    return <div className="space-y-4">{content}</div>;
-  }
+  if (noContainer) return <div className="space-y-1">{content}</div>;
 
   return (
-    <div className="rounded-card border border-border bg-card p-4 md:p-6 w-full shadow-card flex flex-col min-h-[300px]">
-      <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-        <Building2 className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-        <h3 className="text-base md:text-lg font-semibold text-foreground">Executive Summary</h3>
-      </div>
-      <div className="space-y-4">{content}</div>
+    <div className="flex min-h-[300px] w-full flex-col rounded-card border border-border bg-card p-4 shadow-card md:p-6">
+      <h3 className="mb-4 font-serif text-lg font-semibold text-foreground">Executive Summary</h3>
+      {content}
     </div>
   );
 }

@@ -6,3 +6,7 @@ export { ProfitabilityTrendChart } from './ProfitabilityTrendChart';
 export { LineItemPerformanceTable } from './LineItemPerformanceTable';
 export { FinancialKPICards } from './FinancialKPICards';
 export { CFOExecutiveSummary } from './CFOExecutiveSummary';
+export { FinancialHeadroomView } from './FinancialHeadroomView';
+export { FinancialHealthHeader } from './FinancialHealthHeader';
+export { CashFlowChart } from './CashFlowChart';
+export { UnifiedHeadroomPanel } from './UnifiedHeadroomPanel';

@@ -1,9 +1,9 @@
-import { SupplierDebtPanel } from "@/components/finance/SupplierDebtPanel"
+import { FinancialHeadroomView } from "@/components/finance/FinancialHeadroomView"
 
 export function SupplierDebt() {
   return (
     <div className="space-y-6">
-      <SupplierDebtPanel />
+      <FinancialHeadroomView defaultTab="debt" />
     </div>
   )
 }
