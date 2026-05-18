@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { 
-  Loader2, 
   Calendar, 
   AlertCircle, 
   ChevronDown,

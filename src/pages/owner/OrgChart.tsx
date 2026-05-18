@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { Maximize2, Plus, Users, ZoomIn, ZoomOut } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage, Button, Input, PageHeader, ScrollArea } from "@/components/ui"
+import { Avatar, AvatarFallback, AvatarImage, Button, Input, PageHeader } from "@/components/ui"
 import { OrgChartNode, ProfileDetailPanel } from "@/components/org-chart"
 import { type OrgMember, useOrgChart, useUpdateReportsTo } from "@/hooks/useOrgChart"
 import { cn } from "@/lib/utils"

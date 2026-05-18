@@ -42,14 +42,6 @@ const PROFILE_SELECT_COLUMNS =
 const PROFILE_SELECT_COLUMNS_LEGACY =
   "id, email, full_name, role, avatar_url, phone, hire_date, job_role, department, employment_type, manager_type, reports_to, is_active, date_of_birth, address, emergency_contact_name, emergency_contact_phone, created_at, updated_at"
 
-const CONTRACT_FIELDS = [
-  "contract_signed",
-  "contract_signed_date",
-  "contract_start_date",
-  "contract_end_date",
-  "contract_type",
-] as const
-
 function isMissingColumnError(err: any): boolean {
   if (!err) return false
   if (err.code === "42703") return true

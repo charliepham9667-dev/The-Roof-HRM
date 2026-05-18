@@ -42,7 +42,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
@@ -720,7 +719,7 @@ function ContractsView({
     return [...filtered].sort((a, b) => {
       const sa = getContractStatus(a).status
       const sb = getContractStatus(b).status
-      const rank: Record<ContractStatus, number> = { unsigned: 0, expiring: 1, signed: 2 }
+      const rank: Record<ContractStatus, number> = { unsigned: 0, expiring: 1, signed: 2, grace: 3 }
       const diff = rank[sa] - rank[sb]
       if (diff !== 0) return diff
       return (a.full_name ?? "").localeCompare(b.full_name ?? "")
