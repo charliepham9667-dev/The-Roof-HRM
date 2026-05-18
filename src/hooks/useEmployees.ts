@@ -158,33 +158,21 @@ export function useUpdateEmployeeProfile(userId: string) {
         >
       >,
     ) => {
-      const fullPayload = { ...patch, updated_at: new Date().toISOString() }
-      const first = await supabase
+      // Route through edge function to bypass RLS
+      const res = await supabase.functions.invoke("approve-employee", {
+        body: { profileId: userId, action: "update-profile", fields: patch },
+      })
+      if (res.error) throw new Error(res.error.message)
+      if (res.data?.error) throw new Error(res.data.error)
+
+      // Re-fetch the full profile so callers get up-to-date data
+      const { data, error } = await supabase
         .from("profiles")
-        .update(fullPayload)
-        .eq("id", userId)
         .select(PROFILE_SELECT_COLUMNS)
+        .eq("id", userId)
         .single()
-
-      if (!first.error) return withContractDefaults(first.data)
-
-      if (isMissingColumnError(first.error)) {
-        console.warn(
-          "[useUpdateEmployeeProfile] contract_* columns missing — retrying without them.",
-        )
-        const legacyPatch: Record<string, any> = { ...fullPayload }
-        for (const f of CONTRACT_FIELDS) delete legacyPatch[f]
-        const fallback = await supabase
-          .from("profiles")
-          .update(legacyPatch)
-          .eq("id", userId)
-          .select(PROFILE_SELECT_COLUMNS_LEGACY)
-          .single()
-        if (fallback.error) throw fallback.error
-        return withContractDefaults(fallback.data)
-      }
-
-      throw first.error
+      if (error) throw error
+      return withContractDefaults(data)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employee-profile", userId] })

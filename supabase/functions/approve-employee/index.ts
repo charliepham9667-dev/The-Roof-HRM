@@ -86,7 +86,27 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    if (action === "set-reports-to") {
+    if (action === "update-profile") {
+      // General-purpose profile field update (bypasses RLS for owner/manager)
+      const ALLOWED_FIELDS = [
+        "full_name", "email", "phone", "hire_date", "job_role", "department",
+        "employment_type", "manager_type", "reports_to", "is_active",
+        "date_of_birth", "address", "emergency_contact_name",
+        "emergency_contact_phone", "role",
+        "contract_signed", "contract_signed_date", "contract_start_date",
+        "contract_end_date", "contract_type",
+      ];
+      const fields = body.fields as Record<string, unknown> | undefined;
+      if (!fields || typeof fields !== "object") {
+        return json({ error: "Missing fields object for update-profile action." }, 400);
+      }
+      for (const key of Object.keys(fields)) {
+        if (!ALLOWED_FIELDS.includes(key)) {
+          return json({ error: `Field '${key}' is not allowed.` }, 400);
+        }
+        patch[key] = fields[key];
+      }
+    } else if (action === "set-reports-to") {
       // reportsTo may be null (top-level) or a valid profile UUID
       patch.reports_to = body.reportsTo ?? null;
     } else if (action === "reject") {
