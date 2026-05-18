@@ -3,6 +3,7 @@ import { ChevronRight, Plug, RefreshCw } from "lucide-react"
 
 import { PageHeader } from "@/components/ui"
 import { PushDiagnostics } from "@/components/settings/PushDiagnostics"
+import { AutomationStatusStrip } from "@/components/owner-dashboard/AutomationStatusStrip"
 
 const settingsItems = [
   {
@@ -44,6 +45,11 @@ export default function Settings() {
           </button>
         ))}
       </div>
+
+      <section className="pt-4">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Automation Status</h2>
+        <AutomationStatusStrip />
+      </section>
 
       <section className="pt-4">
         <h2 className="mb-3 text-sm font-semibold text-foreground">Push notifications</h2>

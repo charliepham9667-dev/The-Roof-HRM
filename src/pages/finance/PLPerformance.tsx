@@ -7,6 +7,7 @@ import {
   Download,
   Filter
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { usePLData, usePLComparison, usePLYears } from '../../hooks/usePLData';
 import {
@@ -102,8 +103,51 @@ export function PLPerformance() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        {/* Header row skeleton */}
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-32 rounded-full" />
+          <Skeleton className="h-9 w-28 rounded-full" />
+          <div className="ml-auto flex gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+        {/* KPI tiles */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-card border border-border bg-card p-4 shadow-card space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+        {/* Chart + table area */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-card border border-border bg-card p-4 shadow-card space-y-3">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-[200px] w-full rounded-md" />
+          </div>
+          <div className="rounded-card border border-border bg-card p-4 shadow-card space-y-3">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-[200px] w-full rounded-md" />
+          </div>
+        </div>
+        {/* Table skeleton */}
+        <div className="rounded-card border border-border bg-card shadow-card">
+          <div className="p-4 space-y-3">
+            <Skeleton className="h-4 w-40" />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex gap-4">
+                <Skeleton className="h-4 w-32" />
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <Skeleton key={j} className="h-4 flex-1" />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

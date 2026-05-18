@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -76,28 +77,56 @@ type DirectoryProfile = {
   contract_type?: string | null
 }
 
-type ContractStatus = "signed" | "expiring" | "unsigned"
+type ContractStatus = "signed" | "expiring" | "unsigned" | "grace"
 
 function getContractStatus(person: DirectoryProfile): {
   status: ContractStatus
   daysToExpiry?: number
+  daysOnboard?: number
 } {
-  if (!person.contract_signed) return { status: "unsigned" }
+  if (!person.contract_signed) {
+    // Grace period: joined within the last 30 days — unsigned is expected
+    if (person.hire_date) {
+      const hireMs = new Date(person.hire_date).getTime()
+      const daysOnboard = Math.round((Date.now() - hireMs) / (1000 * 60 * 60 * 24))
+      if (daysOnboard <= 30) return { status: "grace", daysOnboard }
+    }
+    return { status: "unsigned" }
+  }
   if (person.contract_end_date) {
     const end = new Date(person.contract_end_date)
-    const now = new Date()
-    const days = Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    const days = Math.round((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     if (days < 30) return { status: "expiring", daysToExpiry: days }
   }
   return { status: "signed" }
 }
 
+const BADGE_BASE: React.CSSProperties = {
+  fontSize: 9.5,
+  fontWeight: 600,
+  padding: "2px 7px",
+  borderRadius: 4,
+  textTransform: "uppercase",
+  letterSpacing: ".04em",
+  border: "1px solid",
+}
+
 function ContractBadge({ person }: { person: DirectoryProfile }) {
-  const { status, daysToExpiry } = getContractStatus(person)
+  const { status, daysToExpiry, daysOnboard } = getContractStatus(person)
+
   if (status === "signed") {
     return (
-      <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#E6F4EC", color: "#2E7D52", border: "1px solid #90CBA8" }}>
+      <span style={{ ...BADGE_BASE, background: "#E6F4EC", color: "#2E7D52", borderColor: "#90CBA8" }}>
         Contract: Signed
+      </span>
+    )
+  }
+  if (status === "grace") {
+    return (
+      <span style={{ ...BADGE_BASE, background: "#F5F5F5", color: "#6B7280", borderColor: "#D1D5DB" }}
+        title={`Joined ${daysOnboard}d ago — contract pending`}
+      >
+        Contract: Pending
       </span>
     )
   }
@@ -107,15 +136,16 @@ function ContractBadge({ person }: { person: DirectoryProfile }) {
         ? "Expiring"
         : daysToExpiry < 0
           ? `Expired ${Math.abs(daysToExpiry)}d ago`
-          : `Expires ${daysToExpiry}d`
+          : `Expires in ${daysToExpiry}d`
     return (
-      <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#FBF5E6", color: "#7A5820", border: "1px solid #D8CAAC" }}>
+      <span style={{ ...BADGE_BASE, background: "#FBF5E6", color: "#7A5820", borderColor: "#D8CAAC" }}>
         Contract: {label}
       </span>
     )
   }
+  // Only genuinely overdue unsigned contracts get the red treatment
   return (
-    <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#FAE8E8", color: "#8B3030", border: "1px solid #D8A0A0" }}>
+    <span style={{ ...BADGE_BASE, background: "#FAE8E8", color: "#8B3030", borderColor: "#D8A0A0" }}>
       Contract: Unsigned
     </span>
   )
@@ -861,18 +891,33 @@ function ContractsView({
 function RejectButton({ profileId, onDone }: { profileId: string; onDone: () => void }) {
   const [loading, setLoading] = useState(false)
   const handleReject = async () => {
-    if (!confirm("Reject this sign-up request? The user will be informed they were not approved.")) return
+    if (!confirm("Reject this sign-up request? The profile will be marked as rejected.")) return
     setLoading(true)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ status: 'rejected' })
-      .eq('id', profileId)
-    setLoading(false)
-    if (error) {
-      toast.error("Failed to reject: " + error.message)
-    } else {
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !session?.access_token) throw new Error("Not authenticated")
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/approve-employee`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ profileId, action: "reject" }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`)
+
       toast.success("Request rejected.")
       onDone()
+    } catch (err) {
+      toast.error("Failed to reject: " + ((err as Error)?.message || "Unknown error"))
+    } finally {
+      setLoading(false)
     }
   }
   return (
@@ -929,136 +974,124 @@ function ApproveModal({
 
   const handleApprove = async () => {
     setLoading(true)
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        status: 'active',
-        is_active: true,
-        role,
-        job_role: jobRole || null,
-        employment_type: employmentType,
-        department: department || null,
-        hire_date: hireDate || null,
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !session?.access_token) throw new Error("Not authenticated")
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/approve-employee`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          profileId: profile.id,
+          role,
+          jobRole: jobRole || null,
+          employmentType,
+          department: department || null,
+          hireDate: hireDate || null,
+        }),
       })
-      .eq('id', profile.id)
-    setLoading(false)
-    if (error) {
-      toast.error("Failed to approve: " + error.message)
-    } else {
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`)
+
       toast.success(`${profile.name} has been approved and can now access their dashboard.`)
       onApproved()
+    } catch (err) {
+      toast.error("Failed to approve: " + ((err as Error)?.message || "Unknown error"))
+    } finally {
+      setLoading(false)
     }
   }
 
-  const fieldStyle: React.CSSProperties = {
-    padding: "7px 10px", border: "1px solid #E0D8C8", borderRadius: 6,
-    fontSize: 12.5, fontFamily: "'DM Sans', sans-serif",
-    background: "#FDFAF5", color: "#1A1814", outline: "none", width: "100%",
-  }
-  const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 600, color: "#7A7260",
-    textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4, display: "block",
-  }
-
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 9999,
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{
-        background: "#FDFAF5", borderRadius: 12, width: "100%", maxWidth: 480,
-        border: "1px solid #E0D8C8", boxShadow: "0 20px 60px rgba(0,0,0,.18)", overflow: "hidden",
-      }}>
-        {/* Header */}
-        <div style={{ padding: "18px 24px", borderBottom: "1px solid #E0D8C8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 600, margin: 0, color: "#1A1814" }}>
-              Approve Staff Member
-            </h2>
-            <p style={{ fontSize: 12, color: "#7A7260", margin: "2px 0 0" }}>Assign role and details before granting access</p>
-          </div>
-          <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#A89E8C", fontSize: 18, lineHeight: 1 }}>✕</button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Approve Staff Member</DialogTitle>
+          <p className="text-sm text-muted-foreground">Assign role and details before granting access</p>
+        </DialogHeader>
 
         {/* Employee info */}
-        <div style={{ padding: "16px 24px 0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#EDE8DD", borderRadius: 8 }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#B8922A22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#B8922A" }}>
-              {initials(profile.name)}
-            </div>
-            <div>
-              <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1814" }}>{profile.name}</div>
-              <div style={{ fontSize: 12, color: "#7A7260" }}>{profile.email}</div>
-            </div>
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-sm font-bold text-amber-700 shrink-0">
+            {initials(profile.name)}
+          </div>
+          <div>
+            <div className="text-sm font-semibold">{profile.name}</div>
+            <div className="text-xs text-muted-foreground">{profile.email}</div>
           </div>
         </div>
 
         {/* Form */}
-        <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={labelStyle}>System Role</label>
-              <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} style={fieldStyle}>
-                {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Employment Type</label>
-              <select value={employmentType} onChange={(e) => setEmploymentType(e.target.value as EmploymentType)} style={fieldStyle}>
-                {EMPLOYMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label style={labelStyle}>Job Role</label>
-            <select value={jobRole} onChange={(e) => setJobRole(e.target.value as JobRole | '')} style={fieldStyle}>
-              <option value="">— Select job role —</option>
-              {JOB_ROLES.map((jr) => (
-                <option key={jr} value={jr}>{jr.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>
-              ))}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-1.5">
+            <Label className="text-xs uppercase tracking-wide">System Role</Label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as UserRole)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Department</label>
-              <input
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                placeholder="e.g. Bar, Service…"
-                style={fieldStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Hire Date</label>
-              <input
-                type="date"
-                value={hireDate}
-                onChange={(e) => setHireDate(e.target.value)}
-                style={fieldStyle}
-              />
-            </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs uppercase tracking-wide">Employment Type</Label>
+            <select
+              value={employmentType}
+              onChange={(e) => setEmploymentType(e.target.value as EmploymentType)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {EMPLOYMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: "14px 24px 20px", display: "flex", gap: 10, justifyContent: "flex-end", borderTop: "1px solid #E0D8C8" }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 18px", border: "1px solid #E0D8C8", borderRadius: 6, background: "none", fontSize: 12.5, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", color: "#4A4538" }}>
-            Cancel
-          </button>
+        <div className="grid gap-1.5">
+          <Label className="text-xs uppercase tracking-wide">Job Role</Label>
+          <select
+            value={jobRole}
+            onChange={(e) => setJobRole(e.target.value as JobRole | '')}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">— Select job role —</option>
+            {JOB_ROLES.map((jr) => (
+              <option key={jr} value={jr}>{jr.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-1.5">
+            <Label className="text-xs uppercase tracking-wide">Department</Label>
+            <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Bar, Service…" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs uppercase tracking-wide">Hire Date</Label>
+            <Input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end pt-1">
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <button
             type="button"
             onClick={handleApprove}
             disabled={loading}
-            style={{ padding: "8px 18px", background: "#3D6B4A", color: "#fff", border: "none", borderRadius: 6, fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 6 }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3D6B4A] hover:bg-[#2e5239] text-white rounded-md text-sm font-medium disabled:opacity-60"
           >
             {loading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
             Approve & Grant Access
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1098,9 +1131,11 @@ function TeamMemberCard({
   const displayName = person.full_name ?? "Unnamed"
   const displayEmail = person.email ?? ""
   const [removeOpen, setRemoveOpen] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [accessEditOpen, setAccessEditOpen] = useState(false)
   const updateProfile = useUpdateEmployeeProfile(person.id)
   const isOwner = useAuthStore((s) => s.isOwner())
+  const qc = useQueryClient()
   const canChangeAccess = isOwner && person.role !== "owner"
   const maxHrs = person.role === "owner" ? 50 : 40
   const hrsPct = Math.min(100, Math.round((weekHrs / maxHrs) * 100))
@@ -1258,15 +1293,28 @@ function TeamMemberCard({
               <Button variant="outline" onClick={() => setRemoveOpen(false)} disabled={updateProfile.isPending}>Cancel</Button>
               <Button
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={updateProfile.isPending}
-                onClick={() => {
-                  updateProfile.mutate({ is_active: false }, {
-                    onSuccess: () => { toast.success("Staff removed"); setRemoveOpen(false) },
-                    onError: (err) => toast.error((err as Error)?.message ?? "Failed to remove staff"),
-                  })
+                disabled={removing}
+                onClick={async () => {
+                  setRemoving(true)
+                  try {
+                    const res = await supabase.functions.invoke("approve-employee", {
+                      body: { profileId: person.id, action: "remove" },
+                    })
+                    if (res.error) throw new Error(res.error.message)
+                    if (res.data?.error) throw new Error(res.data.error)
+                    toast.success(`${displayName} has been removed.`)
+                    setRemoveOpen(false)
+                    qc.invalidateQueries({ queryKey: ["staff-list"] })
+                    qc.invalidateQueries({ queryKey: ["pending-profiles"] })
+                    qc.invalidateQueries({ queryKey: ["org_chart"] })
+                  } catch (err) {
+                    toast.error((err as Error)?.message ?? "Failed to remove staff")
+                  } finally {
+                    setRemoving(false)
+                  }
                 }}
               >
-                {updateProfile.isPending ? "Removing…" : "Remove"}
+                {removing ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Removing…</> : "Remove"}
               </Button>
             </div>
           </div>
@@ -1417,22 +1465,29 @@ function OrgChartInline() {
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden rounded-xl border border-border bg-muted/20">
+      <div
+        className="rounded-xl border border-border bg-muted/20"
+        style={{ height: "520px", overflowX: "auto", overflowY: "auto" }}
+      >
         {isLoading ? (
-          <div className="flex h-[520px] items-center justify-center"><Loader2 className="animate-spin h-6 w-6 text-muted-foreground" /></div>
+          <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin h-6 w-6 text-muted-foreground" /></div>
         ) : error ? (
-          <div className="flex h-[520px] items-center justify-center"><p className="text-destructive">Failed to load organization chart</p></div>
+          <div className="flex h-full items-center justify-center"><p className="text-destructive">Failed to load organization chart</p></div>
         ) : !orgTree ? (
-          <div className="flex h-[520px] flex-col items-center justify-center">
+          <div className="flex h-full flex-col items-center justify-center">
             <Users className="mb-4 h-16 w-16 text-muted-foreground/50" />
             <p className="text-muted-foreground">No team members found</p>
           </div>
         ) : (
-          <ScrollArea className="h-[520px]">
-            <div className="flex min-h-full justify-center p-8" style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}>
+          <div style={{ padding: "2rem", width: "max-content", minWidth: "100%" }}>
+            <div style={{
+              transformOrigin: "top left",
+              transform: `scale(${zoom / 100})`,
+              width: `${100 / (zoom / 100)}%`,
+            }}>
               <OrgChartNode member={orgTree} onSelect={setSelected} isRoot editable={editMode} onMove={handleMove} />
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
 

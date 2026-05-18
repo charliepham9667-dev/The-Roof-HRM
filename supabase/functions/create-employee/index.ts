@@ -261,6 +261,8 @@ serve(async (req) => {
       manager_type: body.manager_type || null,
       department: body.department?.trim() || null,
       reports_to: normalizeUuidOrNull(body.reports_to),
+      // Owner/manager-created employees are immediately active – no approval queue.
+      status: "active",
       is_active: true,
       updated_at: new Date().toISOString(),
     };

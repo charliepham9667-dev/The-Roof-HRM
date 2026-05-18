@@ -58,9 +58,11 @@ export function AddEmployeeModal({
   const canSetManagerType = form.role === "manager"
 
   const payload = useMemo(() => {
+    const rawEmail = form.email.trim().toLowerCase()
+    const email = rawEmail || `noemail-${Date.now()}@theroof.draft`
     return {
       full_name: form.full_name.trim(),
-      email: form.email.trim().toLowerCase(),
+      email,
       role: form.role,
       phone: form.phone.trim() || null,
       hire_date: form.hire_date || null,
@@ -136,8 +138,10 @@ export function AddEmployeeModal({
         throw new Error(data?.error || "Failed to add employee")
       }
 
-      // Refresh directory list
+      // Refresh all relevant lists
       qc.invalidateQueries({ queryKey: ["staff-list"] })
+      qc.invalidateQueries({ queryKey: ["pending-profiles"] })
+      qc.invalidateQueries({ queryKey: ["org_chart"] })
 
       // Reset form for next time
       setForm((prev) => ({
@@ -205,9 +209,7 @@ export function AddEmployeeModal({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="email">
-              Email <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
@@ -215,10 +217,11 @@ export function AddEmployeeModal({
               onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))}
               placeholder="john@theroof.com"
               disabled={loading}
-              required
             />
             <p className="text-xs text-muted-foreground">
-              An account will be created. They can sign in via password reset.
+              {form.email.trim()
+                ? "An account will be created. They can sign in via password reset."
+                : "Leave blank to add now and set a real email later in the staff profile."}
             </p>
           </div>
 

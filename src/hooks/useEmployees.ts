@@ -136,6 +136,7 @@ export function useUpdateEmployeeProfile(userId: string) {
         Pick<
           EmployeeProfile,
           | "full_name"
+          | "email"
           | "phone"
           | "hire_date"
           | "job_role"

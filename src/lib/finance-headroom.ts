@@ -3,7 +3,7 @@ import { differenceInCalendarDays, format, parseISO, startOfDay, subDays } from 
 export const RUNWAY_FLOOR_DAYS = 30
 export const LARGE_OUTFLOW_VND = 80_000_000
 
-export type DebtCategory = "inventory" | "rent" | "capex" | "utilities" | "other"
+export type DebtCategory = "inventory" | "rent" | "capex" | "utilities" | "dividend" | "other"
 export type DebtItemStatus = "pending" | "stopped" | "paid"
 
 /** True when iso is YYYY-MM-DD and a real calendar date (avoids date-fns "Invalid time value"). */
@@ -143,6 +143,7 @@ export function categoryLabel(category: DebtCategory): string {
     rent: "Rent",
     capex: "Capex / Furniture",
     utilities: "Utilities",
+    dividend: "Dividend / Owner draw",
     other: "Other",
   }
   return labels[category] ?? category

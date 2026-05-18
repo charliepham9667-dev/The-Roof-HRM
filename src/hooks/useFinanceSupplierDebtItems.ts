@@ -37,6 +37,7 @@ const DEBT_IMPORT_PREFIX = "debt-import"
 export function useSupplierDebtItems() {
   return useQuery({
     queryKey: ["finance-supplier-debt-items"],
+    staleTime: 0,
     queryFn: async (): Promise<FinanceSupplierDebtItem[]> => {
       const { data, error } = await supabase
         .from("finance_supplier_debt_items")
@@ -149,6 +150,29 @@ export function useUpsertDebtItem() {
       qc.invalidateQueries({ queryKey: ["finance-supplier-debt-items"] })
       qc.invalidateQueries({ queryKey: ["finance-supplier-debt-items-all"] })
       qc.invalidateQueries({ queryKey: ["financial-headroom"] })
+    },
+  })
+}
+
+export function useUpdateDebtItemCategory() {
+  const qc = useQueryClient()
+  const profile = useAuthStore((s) => s.profile)
+  return useMutation({
+    mutationFn: async (input: { id: string; category: DebtCategory }) => {
+      if (!profile?.id) throw new Error("Not authenticated")
+      const { data, error } = await supabase
+        .from("finance_supplier_debt_items")
+        .update({ category: input.category, updated_at: new Date().toISOString(), updated_by: profile.id })
+        .eq("id", input.id)
+        .select(SELECT_COLS)
+        .single()
+      if (error) throw error
+      return data as FinanceSupplierDebtItem
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["finance-supplier-debt-items"] })
+      qc.invalidateQueries({ queryKey: ["finance-supplier-debt-items-all"] })
+      qc.invalidateQueries({ queryKey: ["cash-flow-paid-debt-full"] })
     },
   })
 }

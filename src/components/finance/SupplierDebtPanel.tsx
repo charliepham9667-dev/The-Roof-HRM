@@ -46,6 +46,7 @@ import {
   type DebtItemStatus,
 } from "@/lib/finance-headroom"
 import { DebtImportDialog } from "@/components/finance/DebtImportDialog"
+import { CashFlowHistoryPanel } from "@/components/finance/CashFlowHistoryPanel"
 import {
   nextStatusForAction,
   useDebtCategoryBreakdown,
@@ -65,13 +66,14 @@ import {
   type FinanceSupplierDebtReport,
 } from "@/hooks/useFinanceSupplierDebt"
 
-const CATEGORY_OPTIONS: DebtCategory[] = ["inventory", "rent", "capex", "utilities", "other"]
+const CATEGORY_OPTIONS: DebtCategory[] = ["inventory", "rent", "capex", "utilities", "dividend", "other"]
 
 const catBarColor: Record<DebtCategory, string> = {
   inventory: "#C74C3C",
   rent: "#6C2B29",
   capex: "#4A1F1C",
   utilities: "#2563EB",
+  dividend: "#7C3AED",
   other: "#78716C",
 }
 
@@ -628,6 +630,8 @@ export function SupplierDebtPanel() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CashFlowHistoryPanel />
     </div>
   )
 }

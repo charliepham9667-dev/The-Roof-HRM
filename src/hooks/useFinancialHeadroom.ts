@@ -21,8 +21,14 @@ export function useFinancialHeadroom() {
 
   const liquidity = Number(latestCash?.total_vnd ?? 0)
   const lineItemDebt = debtItems.reduce((s, i) => s + Number(i.amount_vnd), 0)
-  const debt =
-    lineItemDebt > 0 ? lineItemDebt : Number(latestWeeklyDebt?.total_debt_vnd ?? 0)
+  // Only fall back to the weekly snapshot when it was manually entered as a debt total
+  // (payment_channel === 'manual'). Payment-list imports represent payments made, not
+  // current outstanding debt, so they should never be used as a debt figure.
+  const manualWeeklyDebt =
+    latestWeeklyDebt?.payment_channel === "manual"
+      ? Number(latestWeeklyDebt.total_debt_vnd)
+      : 0
+  const debt = lineItemDebt > 0 ? lineItemDebt : manualWeeklyDebt
 
   const freeCashFlow = computeFreeCashFlow(liquidity, debt)
   const avgDailyBurn =
@@ -32,9 +38,9 @@ export function useFinancialHeadroom() {
   const runwayDays = computeRunwayDays(freeCashFlow, avgDailyBurn)
 
   const priorFridayCash = cashHistory[1]
-  const priorFridayDebt = debtHistory[1]
+  const priorFridayDebt = debtHistory.find((d) => d.payment_channel === "manual")
   const prevLiquidity = Number(priorFridayCash?.total_vnd ?? liquidity)
-  const prevDebt = Number(priorFridayDebt?.total_debt_vnd ?? debt)
+  const prevDebt = priorFridayDebt != null ? Number(priorFridayDebt.total_debt_vnd) : debt
   const prevFcf = computeFreeCashFlow(prevLiquidity, prevDebt)
   const fcfDelta = freeCashFlow - prevFcf
   const fcfWowPct = prevFcf !== 0 ? (fcfDelta / Math.abs(prevFcf)) * 100 : null

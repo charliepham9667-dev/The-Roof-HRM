@@ -669,6 +669,19 @@ export function ScheduleBuilder() {
         </div>
       )}
 
+      {/* ── Department color legend ── */}
+      <div className="flex flex-wrap items-center gap-3 px-1 text-[11px] text-muted-foreground">
+        <span className="uppercase tracking-wider text-[9.5px] font-semibold">Departments:</span>
+        {(Object.entries(DEPT_THEME) as [string, { accent: string }][])
+          .filter(([key]) => key !== "other")
+          .map(([key, theme]) => (
+            <span key={key} className="inline-flex items-center gap-1.5 capitalize">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: theme.accent }} />
+              {key.charAt(0).toUpperCase() + key.slice(1)}
+            </span>
+          ))}
+      </div>
+
       {/* Body */}
       {isDesktop ? (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

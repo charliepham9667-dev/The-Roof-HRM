@@ -2,9 +2,10 @@ import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { eachDayOfInterval, format, parseISO, subDays } from "date-fns"
 import { supabase } from "@/lib/supabase"
-import { buildPaidDebtOutflowsByDate } from "@/lib/cash-flow-outflows"
+import { buildOutflowEventLabel, buildPaidDebtOutflowsByDate } from "@/lib/cash-flow-outflows"
 import { formatIsoDateLabel, forwardFillLiquidity, isValidIsoDate, LARGE_OUTFLOW_VND } from "@/lib/finance-headroom"
 import { useCashPositionHistory } from "@/hooks/useFinanceCashPosition"
+import { useManualCashflowRange } from "@/hooks/useFinanceManualCashflow"
 
 export type CashFlowDay = {
   date: string
@@ -36,6 +37,8 @@ function buildDateRange(endIso: string, days: number): string[] {
 export function useCashFlowSeries() {
   const todayIso = new Date().toISOString().slice(0, 10)
   const dates = useMemo(() => buildDateRange(todayIso, RANGE_DAYS), [todayIso])
+  const rangeStart = dates[0]
+  const rangeEnd = dates[dates.length - 1]
 
   const { data: cashHistory = [] } = useCashPositionHistory(120)
 
@@ -58,7 +61,7 @@ export function useCashFlowSeries() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_supplier_debt_items")
-        .select("amount_vnd,paid_at,due_date,updated_at")
+        .select("amount_vnd,paid_at,due_date,updated_at,category,vendor")
         .eq("status", "paid")
       if (error) throw error
       return (data ?? []) as {
@@ -66,16 +69,33 @@ export function useCashFlowSeries() {
         paid_at: string | null
         due_date: string
         updated_at: string
+        category: string | null
+        vendor: string | null
       }[]
     },
   })
+
+  const { data: manualEntries = [] } = useManualCashflowRange(rangeStart, rangeEnd)
 
   const series = useMemo((): CashFlowDay[] => {
     const revenueByDate = new Map(
       (revenueQuery.data ?? []).map((r) => [r.date, Number(r.revenue) || 0]),
     )
 
+    // Debt-tracker paid items → outflows
     const outflowByDate = buildPaidDebtOutflowsByDate(paidDebtQuery.data ?? [])
+
+    // Manual log entries → add to inflow or outflow
+    for (const entry of manualEntries) {
+      const date = entry.flow_date.slice(0, 10)
+      const amt = Number(entry.amount_vnd) || 0
+      if (!date || amt <= 0) continue
+      if (entry.direction === "out") {
+        outflowByDate.set(date, (outflowByDate.get(date) ?? 0) + amt)
+      } else {
+        revenueByDate.set(date, (revenueByDate.get(date) ?? 0) + amt)
+      }
+    }
 
     const snapshots = cashHistory.map((c) => ({
       report_date: c.report_date,
@@ -95,7 +115,7 @@ export function useCashFlowSeries() {
         liquidity: liquiditySeries[i],
       }
     })
-  }, [cashHistory, dates, paidDebtQuery.data, revenueQuery.data])
+  }, [cashHistory, dates, paidDebtQuery.data, revenueQuery.data, manualEntries])
 
   const weekSummary = useMemo(() => {
     const last7 = series.slice(-7)
@@ -109,17 +129,27 @@ export function useCashFlowSeries() {
   }, [series])
 
   const events = useMemo((): CashFlowEvent[] => {
+    const paidRows = paidDebtQuery.data ?? []
     const found: CashFlowEvent[] = []
     for (const day of series) {
       if (day.outflow >= LARGE_OUTFLOW_VND) {
-        let label = "Large payment"
-        if (day.outflow >= 200_000_000) label = "Rent paid"
-        else if (day.outflow >= 90_000_000) label = "Supplier batch"
+        // Build label: prefer debt-item categories; fall back to manual entry descriptions
+        let label = buildOutflowEventLabel(paidRows, day.date)
+        if (label === "Cash out") {
+          // No debt items on this day — check manual entries
+          const dayManual = manualEntries.filter(
+            (e) => e.flow_date.slice(0, 10) === day.date && e.direction === "out",
+          )
+          if (dayManual.length > 0) {
+            const desc = dayManual[0].description || dayManual[0].category
+            label = dayManual.length === 1 ? desc : `${desc} +${dayManual.length - 1}`
+          }
+        }
         found.push({ date: day.date, label, amount: day.outflow })
       }
     }
     return found.slice(-4)
-  }, [series])
+  }, [series, paidDebtQuery.data, manualEntries])
 
   const hasPaidDebtData = (paidDebtQuery.data?.length ?? 0) > 0
   const hasRevenueData = (revenueQuery.data?.length ?? 0) > 0

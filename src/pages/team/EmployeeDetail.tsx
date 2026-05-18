@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Copy, ExternalLink, Loader2, Pencil, Plus, RefreshCcw, Save, Shield, Trash2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -180,7 +181,7 @@ export function EmployeeDetail() {
                         ? "text-[12px] font-semibold uppercase"
                         : "text-[12px] font-normal",
                       tab === it.key
-                        ? "bg-purple-600 text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "text-foreground hover:bg-muted"
                     )}
                   >
@@ -197,8 +198,19 @@ export function EmployeeDetail() {
           {/* Header card */}
           <div className="rounded-card border border-border bg-card p-5 shadow-card">
             {profileLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-16 w-16 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-36" />
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="h-3.5 w-40" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
               </div>
             ) : profileError || !profile ? (
               <div className="py-10 text-center text-sm text-error">
@@ -243,7 +255,7 @@ export function EmployeeDetail() {
                     <Button
                       variant="outline"
                       onClick={() => setAccessEditOpen(true)}
-                      className="border-purple-600/30 text-purple-700 hover:bg-purple-600/10"
+                      className="border-primary/30 text-primary hover:bg-primary/10"
                     >
                       <Shield className="mr-2 h-4 w-4" />
                       Change access
@@ -252,7 +264,7 @@ export function EmployeeDetail() {
                   <Button
                     variant="outline"
                     onClick={() => setTab("details")}
-                    className="border-purple-600/30 text-purple-700 hover:bg-purple-600/10"
+                    className="border-primary/30 text-primary hover:bg-primary/10"
                   >
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit employee information
@@ -388,6 +400,7 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
 
   const [draft, setDraft] = useState({
     full_name: "",
+    email: "",
     phone: "",
     hire_date: "",
     job_role: "",
@@ -409,6 +422,7 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
     if (!profile) return
     setDraft({
       full_name: profile.full_name || "",
+      email: profile.email || "",
       phone: profile.phone || "",
       hire_date: profile.hire_date || "",
       job_role: profile.job_role || "",
@@ -426,6 +440,8 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
       contract_type: profile.contract_type || "",
     })
   }, [profile?.id])
+
+  const isDraftEmail = draft.email.includes("@theroof.draft")
 
   if (isLoading) {
     return (
@@ -453,6 +469,7 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
           onClick={() =>
             mut.mutate({
               full_name: draft.full_name || null,
+              email: draft.email.trim() || null,
               phone: draft.phone || null,
               hire_date: draft.hire_date || null,
               job_role: draft.job_role || null,
@@ -470,7 +487,7 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
               contract_type: draft.contract_type || null,
             })
           }
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
           disabled={mut.isPending}
         >
           {mut.isPending ? (
@@ -494,8 +511,25 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
           <Input value={profile.id} readOnly className="bg-muted" />
         </div>
         <div className="grid gap-2">
-          <Label>Email</Label>
-          <Input value={profile.email || ""} placeholder="—" readOnly className="bg-muted" />
+          <Label>
+            Email
+            {isDraftEmail && (
+              <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                Draft — update me
+              </span>
+            )}
+          </Label>
+          <Input
+            type="email"
+            value={draft.email}
+            onChange={(e) => setDraft((s) => ({ ...s, email: e.target.value }))}
+            placeholder="john@theroof.com"
+          />
+          {isDraftEmail && (
+            <p className="text-xs text-amber-600">
+              This is a placeholder email. Enter the real one and save.
+            </p>
+          )}
         </div>
         <div className="grid gap-2">
           <Label>Full name</Label>
@@ -657,7 +691,7 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
         <h3 className="text-lg font-semibold">Employment history</h3>
         <Button
           onClick={() => setOpen(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add
@@ -795,7 +829,7 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={addMut.isPending || !form.job_title || !form.start_date}
                 onClick={async () => {
                   await addMut.mutateAsync({
@@ -893,7 +927,7 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={updateMut.isPending || !form.job_title || !form.start_date || !editId}
                 onClick={async () => {
                   if (!editId) return
@@ -984,7 +1018,7 @@ function LeaveDetailsTab({ userId }: { userId?: string }) {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-purple-600/30 text-purple-700 hover:bg-purple-600/10"
+                    className="border-primary/30 text-primary hover:bg-primary/10"
                     onClick={() => openEdit(t)}
                   >
                     Adjust
@@ -1041,7 +1075,7 @@ function LeaveDetailsTab({ userId }: { userId?: string }) {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={upsert.isPending}
                 onClick={async () => {
                   const balance = Number(form.balance_days || 0)
@@ -1092,7 +1126,7 @@ function ManagementNotesTab({ userId }: { userId?: string }) {
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">Management notes</h3>
         <Button
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
           onClick={async () => {
             if (!draft.trim() || !userId) return
             try {
@@ -1222,7 +1256,7 @@ function DocumentsTab({
           </Button>
           <Button
             onClick={() => setOpen(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
             disabled={!userId}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -1336,7 +1370,7 @@ function DocumentsTab({
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={!file || !userId || uploadMut.isPending}
                 onClick={async () => {
                   if (!file || !userId) return
@@ -1408,7 +1442,7 @@ function PaymentsBankingTab({ userId }: { userId?: string }) {
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold">Banking Details</h3>
         <Button
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
           disabled={!userId || upsertMut.isPending}
           onClick={handleSave}
         >
@@ -1587,7 +1621,7 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
         </div>
         <div className="md:col-span-2">
           <Button
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
             disabled={!userId || addMut.isPending || !rateValue.trim() || !effectiveDate}
             onClick={handleAdd}
           >
@@ -1703,7 +1737,7 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setEditId(null)}>Cancel</Button>
             <Button
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={!editRateValue.trim() || !editEffectiveDate || updateMut.isPending}
               onClick={handleUpdate}
             >
@@ -1868,7 +1902,7 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={!benefitType.trim() || addMut.isPending}
               onClick={handleAdd}
             >
@@ -1913,7 +1947,7 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
               Cancel
             </Button>
             <Button
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={!copyFromId || sourceBenefits.length === 0 || addMut.isPending}
               onClick={handleCopyFromEmployee}
             >

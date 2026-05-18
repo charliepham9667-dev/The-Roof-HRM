@@ -39,22 +39,25 @@ export function FinancialHeadroomView({ defaultTab }: Props) {
 
   return (
     <section className="space-y-0">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-        <p className="text-[11.5px] font-bold uppercase tracking-widest text-[#C74C3C]">
-          Money · {fridayLabel}
-        </p>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-4 mb-4 w-full">
+        <div className="min-w-0">
+          <p className="text-[11.5px] font-bold uppercase tracking-widest text-[#C74C3C] mb-0.5">
+            Money · {fridayLabel}
+          </p>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <h2 className="text-2xl font-semibold text-foreground tracking-tight whitespace-nowrap">
+              Cash position & supplier debt
+            </h2>
+            <p className="text-sm text-muted-foreground whitespace-nowrap">
+              Weekly Friday snapshot — track headroom, surface what&apos;s due, decide what to pay.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 shrink-0">
           {snapshotDate && <FinancePill tone="info">Snapshot {snapshotDate}</FinancePill>}
           <FinancePill tone="success">Friday workflow</FinancePill>
         </div>
       </div>
-      <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-        Cash position & supplier debt
-      </h2>
-      <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-2xl">
-        Weekly Friday snapshot from your accountant&apos;s report. Track headroom, surface what&apos;s
-        due, decide what to pay.
-      </p>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="bg-[#FAF4EF] border border-[#6C2B29]/10 p-1">

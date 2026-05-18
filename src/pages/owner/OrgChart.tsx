@@ -110,8 +110,8 @@ function OrgChartPage() {
               variant={editMode ? "default" : "outline"}
               className={
                 editMode
-                  ? "bg-purple-600 hover:bg-purple-700 text-white"
-                  : "border-purple-600/30 text-purple-700 hover:bg-purple-600/10"
+                  ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                  : "border-primary/30 text-primary hover:bg-primary/10"
               }
               onClick={() => {
                 setEditMode((v) => !v)
@@ -149,7 +149,7 @@ function OrgChartPage() {
       {(moveMessage || moveError || editMode) && (
         <div className="mb-4 space-y-2">
           {editMode && (
-            <div className="rounded-lg border border-purple-600/20 bg-purple-600/5 px-3 py-2 text-sm text-purple-800">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
               Drag an employee onto another employee to change who they report to. Drop onto “Top level” to remove a manager.
             </div>
           )}
@@ -195,7 +195,7 @@ function OrgChartPage() {
                 }}
                 className={cn(
                   "flex cursor-grab items-center gap-3 rounded-lg border border-border bg-background px-3 py-2",
-                  "hover:border-purple-600/30 hover:bg-purple-600/5 active:cursor-grabbing",
+                  "hover:border-primary/30 hover:bg-primary/5 active:cursor-grabbing",
                 )}
                 title="Drag onto a manager to assign"
               >
@@ -229,7 +229,7 @@ function OrgChartPage() {
 
       {editMode && (
         <div
-          className="mb-6 rounded-xl border border-dashed border-purple-600/30 bg-card px-4 py-3 text-sm text-muted-foreground"
+          className="mb-6 rounded-xl border border-dashed border-primary/30 bg-card px-4 py-3 text-sm text-muted-foreground"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDropTopLevel}
         >
@@ -237,7 +237,10 @@ function OrgChartPage() {
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden rounded-xl border border-border bg-muted/30">
+      <div
+        className="rounded-xl border border-border bg-muted/30"
+        style={{ minHeight: "480px", height: "calc(100vh - 320px)", overflowX: "auto", overflowY: "auto" }}
+      >
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-muted-foreground">Loading organization chart...</p>
@@ -256,11 +259,12 @@ function OrgChartPage() {
             </Button>
           </div>
         ) : (
-          <ScrollArea className="h-full">
-            <div
-              className="flex min-h-full justify-center p-8"
-              style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
-            >
+          <div style={{ padding: "2rem", width: "max-content", minWidth: "100%" }}>
+            <div style={{
+              transformOrigin: "top left",
+              transform: `scale(${zoom / 100})`,
+              width: `${100 / (zoom / 100)}%`,
+            }}>
               <OrgChartNode
                 member={orgTree}
                 onSelect={setSelectedMember}
@@ -269,7 +273,7 @@ function OrgChartPage() {
                 onMove={handleMove}
               />
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
 

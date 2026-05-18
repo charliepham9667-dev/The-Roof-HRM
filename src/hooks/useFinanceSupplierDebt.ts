@@ -28,6 +28,7 @@ const SOURCE_PREFIX = "supplier-debt"
 export function useLatestSupplierDebt() {
   return useQuery({
     queryKey: ["finance-supplier-debt-latest"],
+    staleTime: 0,
     queryFn: async (): Promise<FinanceSupplierDebtReport | null> => {
       const { data, error } = await supabase
         .from("finance_supplier_debt_weekly")

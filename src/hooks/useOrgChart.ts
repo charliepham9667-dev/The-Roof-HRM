@@ -76,15 +76,12 @@ export function useUpdateReportsTo() {
 
   return useMutation({
     mutationFn: async ({ memberId, reportsTo }: { memberId: string; reportsTo: string | null }) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({ reports_to: reportsTo })
-        .eq("id", memberId)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
+      const res = await supabase.functions.invoke("approve-employee", {
+        body: { profileId: memberId, action: "set-reports-to", reportsTo },
+      })
+      if (res.error) throw new Error(res.error.message)
+      if (res.data?.error) throw new Error(res.data.error)
+      return res.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org_chart"] })

@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, Clock, ShieldCheck } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
 import { useLastRlsAuditStatus, useSyncStatus } from "@/hooks/useDashboardData"
@@ -11,6 +12,7 @@ interface StatusPillProps {
   value: string
   tone: Tone
   icon: React.ComponentType<{ className?: string }>
+  onClick?: () => void
 }
 
 const TONE_CLASSES: Record<Tone, string> = {
@@ -20,14 +22,23 @@ const TONE_CLASSES: Record<Tone, string> = {
   idle: "border-border bg-secondary/40 text-muted-foreground",
 }
 
-function StatusPill({ label, value, tone, icon: Icon }: StatusPillProps) {
+function StatusPill({ label, value, tone, icon: Icon, onClick }: StatusPillProps) {
+  const base = cn(
+    "flex items-center gap-2 rounded-sm border px-3 py-1.5 text-xs transition-opacity",
+    TONE_CLASSES[tone],
+    onClick && "cursor-pointer hover:opacity-80",
+  )
+  if (onClick) {
+    return (
+      <button type="button" className={base} onClick={onClick}>
+        <Icon className="h-3.5 w-3.5" />
+        <span className="uppercase tracking-widest text-[9.5px] opacity-80">{label}</span>
+        <span className="font-medium text-foreground/90">{value}</span>
+      </button>
+    )
+  }
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2 rounded-sm border px-3 py-1.5 text-xs",
-        TONE_CLASSES[tone],
-      )}
-    >
+    <div className={base}>
       <Icon className="h-3.5 w-3.5" />
       <span className="uppercase tracking-widest text-[9.5px] opacity-80">{label}</span>
       <span className="font-medium text-foreground/90">{value}</span>
@@ -52,10 +63,12 @@ function formatDaysAgo(days: number): string {
 
 /**
  * One strip, three signals: sheet sync freshness, weekly RLS/drift audit
- * freshness, and count of unread operator notifications. This is the single
- * "is automation healthy" glance surface on the owner dashboard.
+ * freshness, and count of unread operator notifications. Each pill is now
+ * clickable — sync/audit pills navigate to the sync admin page; the alerts
+ * pill opens the notifications panel.
  */
 export function AutomationStatusStrip() {
+  const navigate = useNavigate()
   const { data: sync, isLoading: syncLoading } = useSyncStatus()
   const { data: audit, isLoading: auditLoading } = useLastRlsAuditStatus()
   const { data: unreadCount } = useUnreadNotificationCount()
@@ -95,6 +108,10 @@ export function AutomationStatusStrip() {
   const alertsValue = alertsCount === 0 ? "0 open" : `${alertsCount} open`
   const alertsIcon = alertsCount === 0 ? CheckCircle2 : AlertTriangle
 
+  function openNotificationsPanel() {
+    window.dispatchEvent(new CustomEvent("open-notifications-panel"))
+  }
+
   return (
     <div className="rounded-card border border-border bg-card p-3 shadow-card">
       <div className="mb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -106,18 +123,21 @@ export function AutomationStatusStrip() {
           value={syncValue}
           tone={syncTone}
           icon={Clock}
+          onClick={() => navigate("/admin/sync")}
         />
         <StatusPill
           label="Last RLS Audit"
           value={auditValue}
           tone={auditTone}
           icon={ShieldCheck}
+          onClick={() => navigate("/admin/sync")}
         />
         <StatusPill
           label="Open Alerts"
           value={alertsValue}
           tone={alertsTone}
           icon={alertsIcon}
+          onClick={openNotificationsPanel}
         />
       </div>
     </div>

@@ -1,19 +1,16 @@
 import { Fragment, useEffect, useMemo, useState, type ElementType } from "react"
 import { useNavigate } from "react-router-dom"
 import {
-  Activity,
   AlertTriangle,
   BarChart2,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Link2,
   Megaphone,
   Pencil,
   Sparkles,
   Trash2,
-  Wallet,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -46,7 +43,6 @@ import { useTodayPaxConfirmed, useReservationsCsv } from "@/hooks/useReservation
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
 import { TaskDescriptionEditor, SubTodoListEditor } from "@/components/tasks"
-import { AutomationStatusStrip } from "@/components/owner-dashboard/AutomationStatusStrip"
 const ICT_TZ = "Asia/Ho_Chi_Minh"
 
 function getIctParts(now: Date) {
@@ -593,60 +589,6 @@ export default function OwnerDashboardPage() {
     <div className="space-y-6 min-w-0 w-full">
       {/* Header */}
       <DashboardHeaderClock firstName={firstName} />
-
-      {/* Automation status — one glance: sheet sync, RLS audit, open alerts */}
-      <AutomationStatusStrip />
-
-      {/* Owner quick actions — optimized for daily operating rhythm */}
-      <div className="rounded-card border border-border bg-card p-3 shadow-card">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Quick Actions</div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <button
-            type="button"
-            onClick={() => navigate("/finance/summary")}
-            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-              Log Cash
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/finance/summary?tab=debt")}
-            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
-          >
-            <span className="inline-flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              Log Debt
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/operations")}
-            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Activity className="h-4 w-4 text-muted-foreground" />
-              Open Operations
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/marketing/integrations")}
-            className="flex items-center justify-between rounded-sm border border-border bg-background px-3 py-2 text-sm hover:bg-secondary"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Link2 className="h-4 w-4 text-muted-foreground" />
-              Open Integrations
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </div>
-      </div>
 
       {/* Revenue pulse */}
       <div className="space-y-3">
