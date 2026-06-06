@@ -1490,12 +1490,10 @@ function MobileDayList({
     keys.sort((a, b) => {
       if (a === "open") return -1
       if (b === "open") return 1
-      const adept = (employeeById.get(a)?.department || "").toLowerCase()
-      const bdept = (employeeById.get(b)?.department || "").toLowerCase()
-      if (adept && bdept && adept !== bdept) return adept.localeCompare(bdept)
-      const an = employeeById.get(a)?.full_name || employeeById.get(a)?.email || a
-      const bn = employeeById.get(b)?.full_name || employeeById.get(b)?.email || b
-      return an.localeCompare(bn)
+      // Sort by the earliest shift start time for the day
+      const aMin = Math.min(...(groups.get(a) || []).map((s) => parseTimeToMinutes(s.start_time)))
+      const bMin = Math.min(...(groups.get(b) || []).map((s) => parseTimeToMinutes(s.start_time)))
+      return aMin - bMin
     })
     return keys
   }, [groups, employeeById])
