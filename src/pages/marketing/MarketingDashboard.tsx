@@ -688,8 +688,8 @@ export default function MarketingDashboard() {
         </div>
       </div>
 
-      {/* ── 1. BRAND IDENTITY HERO ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1px_1fr_1px_1fr] rounded-card overflow-hidden border border-border shadow-card" style={{ background: "#1a1714" }}>
+      {/* ── 1. BRAND IDENTITY HERO — desktop only ── */}
+      <div className="hidden sm:grid sm:grid-cols-[1fr_1px_1fr_1px_1fr] rounded-card overflow-hidden border border-border shadow-card" style={{ background: "#1a1714" }}>
         {/* Mission */}
         <div className="p-7 border-b border-white/10 sm:border-b-0">
           <div className="text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Mission</div>
@@ -741,6 +741,40 @@ export default function MarketingDashboard() {
 
       {/* Brand Kit moved to Marketing Plans / Settings */}
 
+      {/* ── MOBILE ONLY: compact brand summary + USPs ── */}
+      <div className="sm:hidden rounded-card border border-border overflow-hidden shadow-card" style={{ background: "#1a1714" }}>
+        {/* Mission + Big Idea one-liners */}
+        <div className="px-4 pt-4 pb-3 border-b border-white/10">
+          <div className="text-[8px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-1">Mission</div>
+          <div className="font-subheading text-[13px] font-medium text-white/90 leading-snug">
+            The Roof brings <em className="not-italic" style={{ color: "#c9a84c" }}>like-minded souls</em> together
+          </div>
+          <div className="mt-2 text-[8px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-1">Big Idea</div>
+          <div className="font-subheading text-[13px] italic leading-snug" style={{ color: "#c9a84c" }}>
+            Nốt nhịp tắng không
+          </div>
+          <div className="text-[11px] text-white/45 leading-snug mt-0.5">
+            Da Nang's only beachfront rooftop — where east meets west.
+          </div>
+        </div>
+        {/* USP chips */}
+        <div className="px-4 py-3">
+          <div className="text-[8px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Our 5 Unique Selling Points</div>
+          <div className="flex flex-wrap gap-1.5">
+            {USPS.map((u) => (
+              <span
+                key={u.name}
+                className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c", border: "1px solid rgba(201,168,76,0.25)" }}
+              >
+                <span>{u.icon}</span>
+                {u.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* ── 2. SOCIAL PERFORMANCE ── */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
@@ -789,8 +823,8 @@ export default function MarketingDashboard() {
         </div>
       </div>
 
-      {/* ── 3. USP BAND ── */}
-      <div className="rounded-card border border-border overflow-hidden shadow-card" style={{ background: "#f5edd8", borderColor: "#e8d9b0" }}>
+      {/* ── 3. USP BAND — desktop only (mobile shows in compact summary above) ── */}
+      <div className="hidden sm:block rounded-card border border-border overflow-hidden shadow-card" style={{ background: "#f5edd8", borderColor: "#e8d9b0" }}>
         <div className="px-4 pt-4 pb-3 sm:px-6 sm:pt-5">
           <div className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3" style={{ color: "#b5620a" }}>Our 5 Unique Selling Points</div>
           {/* Mobile: 2-col wrap grid so all 5 are always visible */}
