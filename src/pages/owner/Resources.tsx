@@ -11,6 +11,8 @@ import {
   FlaskConical,
   FolderOpen,
   Grid3x3,
+  LayoutGrid,
+  LayoutList,
   Link,
   Loader2,
   Plus,
@@ -87,6 +89,7 @@ export function Resources() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | 'all'>('all')
   const [typeFilter, setTypeFilter] = useState<FileType | 'all'>('all')
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
   const [showAdd, setShowAdd] = useState(false)
   const [detailResource, setDetailResource] = useState<ResourceLink | null>(null)
 
@@ -180,6 +183,35 @@ export function Resources() {
         <span className="hidden sm:block text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
           {filtered.length} result{filtered.length !== 1 ? 's' : ''}
         </span>
+        {/* View toggle — desktop only */}
+        <div className="hidden sm:flex items-center rounded-lg border border-border bg-card p-0.5 gap-0.5 shrink-0">
+          <button
+            onClick={() => setViewMode('list')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors',
+              viewMode === 'list'
+                ? 'bg-foreground text-background shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            title="List view"
+          >
+            <LayoutList className="h-3.5 w-3.5" />
+            List
+          </button>
+          <button
+            onClick={() => setViewMode('cards')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors',
+              viewMode === 'cards'
+                ? 'bg-foreground text-background shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            title="Cards view"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Cards
+          </button>
+        </div>
       </div>
 
       {/* ── Resource list ── */}
@@ -207,7 +239,7 @@ export function Resources() {
       ) : (
         <>
           <div className="text-[10px] text-muted-foreground">{filtered.length} result{filtered.length !== 1 ? 's' : ''} · tap to open</div>
-          {/* Mobile: compact list */}
+          {/* Mobile: always compact list */}
           <div className="rounded-card border border-border bg-card shadow-card overflow-hidden sm:hidden">
             {filtered.map((r, i) => (
               <ResourceRow
@@ -218,12 +250,25 @@ export function Resources() {
               />
             ))}
           </div>
-          {/* Desktop: grid */}
-          <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((r) => (
-              <ResourceCard key={r.id} resource={r} onOpen={() => setDetailResource(r)} />
-            ))}
-          </div>
+          {/* Desktop: list or cards based on viewMode */}
+          {viewMode === 'list' ? (
+            <div className="hidden sm:block rounded-card border border-border bg-card shadow-card overflow-hidden">
+              {filtered.map((r, i) => (
+                <ResourceRow
+                  key={r.id}
+                  resource={r}
+                  isLast={i === filtered.length - 1}
+                  onOpen={() => setDetailResource(r)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((r) => (
+                <ResourceCard key={r.id} resource={r} onOpen={() => setDetailResource(r)} />
+              ))}
+            </div>
+          )}
         </>
       )}
 
