@@ -12,7 +12,6 @@ import {
   X,
   MapPin,
   AlertTriangle,
-  ClipboardList,
   FolderOpen,
   Building2,
   Users,
@@ -122,7 +121,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
       label: 'Marketing',
       items: [
         { title: 'Content Calendar',     url: '/marketing/content-calendar', icon: Calendar },
-        { title: 'Plans',                url: '/marketing/plans',        icon: ClipboardList },
       ],
     },
     {
@@ -233,7 +231,6 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Common Hub',
       items: [
-        { title: 'Marketing Plans',      url: '/marketing/plans',         icon: ClipboardList },
         { title: 'Integrations',         url: '/marketing/integrations',  icon: BarChart3 },
         { title: 'Resources',            url: '/manager/resources',      icon: FolderOpen },
       ],
