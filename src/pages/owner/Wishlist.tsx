@@ -505,10 +505,10 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 flex-1 min-h-0">
+    <div className="flex flex-col gap-3">
 
       {/* Controls bar */}
-      <div className="shrink-0 flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -574,7 +574,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-auto rounded-card border border-border bg-card shadow-card overflow-hidden">
+        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
           {STATUS_ORDER.map((status) => {
             const sectionItems = filtered.filter((i) => i.status === status)
             if (sectionItems.length === 0) return null
@@ -705,9 +705,9 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   const doneCount = filtered.filter((t) => t.status === "done").length
 
   return (
-    <div className="flex flex-col gap-3 flex-1 min-h-0">
+    <div className="flex flex-col gap-3">
       {/* Controls bar */}
-      <div className="shrink-0 flex items-center gap-2 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
         <select
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value as any)}
@@ -771,7 +771,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
           )}
 
           {/* Mobile: grouped list */}
-          <div className="md:hidden flex-1 overflow-auto space-y-2">
+          <div className="md:hidden space-y-2">
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2">
                 <div className="text-sm text-muted-foreground">No tasks found.</div>
@@ -786,8 +786,10 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                 const sectionTasks = grouped[status]
                 const isCollapsed = collapsedSections.has(status)
 
+                if (sectionTasks.length === 0) return null
+
                 return (
-                  <div key={status} className="rounded-card border border-border overflow-hidden shadow-card">
+                  <div key={status} className="rounded-card border border-border shadow-card" style={{ overflow: 'clip' }}>
                     <button
                       type="button"
                       onClick={() => toggleSection(status)}
@@ -812,65 +814,61 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                     </button>
 
                     {!isCollapsed && (
-                      sectionTasks.length === 0 ? (
-                        <div className="px-4 py-3 text-center text-[11px] text-muted-foreground">No tasks</div>
-                      ) : (
-                        <div className="divide-y divide-border/40">
-                          {sectionTasks.map((task) => {
-                            const pri = MAINT_PRIORITY_BADGE[task.priority]
-                            return (
-                              <div
-                                key={task.id}
-                                className="flex items-center gap-2 px-3 py-2"
-                                style={{ borderLeft: `3px solid ${accent}55` }}
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span
-                                      onClick={() => canManage && openEdit(task)}
-                                      className={cn("text-[13px] font-medium text-foreground leading-snug truncate", canManage && "cursor-pointer")}
+                      <div className="divide-y divide-border/40">
+                        {sectionTasks.map((task) => {
+                          const pri = MAINT_PRIORITY_BADGE[task.priority]
+                          return (
+                            <div
+                              key={task.id}
+                              className="flex items-center gap-2 px-3 py-2"
+                              style={{ borderLeft: `3px solid ${accent}55` }}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span
+                                    onClick={() => canManage && openEdit(task)}
+                                    className={cn("text-[13px] font-medium text-foreground leading-snug truncate", canManage && "cursor-pointer")}
+                                  >
+                                    {task.title}
+                                  </span>
+                                  <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                  <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
+                                  {task.location && (
+                                    <span className="text-[10px] text-muted-foreground">📍 {task.location}</span>
+                                  )}
+                                  {task.estimatedCost != null && (
+                                    <span className="text-[10px] tabular-nums text-muted-foreground">{formatVnd(task.estimatedCost)}</span>
+                                  )}
+                                  {canManage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cycleStatus(task)}
+                                      className="text-[9px] font-medium text-primary hover:underline transition-colors"
                                     >
-                                      {task.title}
-                                    </span>
-                                    <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                    <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
-                                    {task.location && (
-                                      <span className="text-[10px] text-muted-foreground">📍 {task.location}</span>
-                                    )}
-                                    {task.estimatedCost != null && (
-                                      <span className="text-[10px] tabular-nums text-muted-foreground">{formatVnd(task.estimatedCost)}</span>
-                                    )}
-                                    {canManage && (
-                                      <button
-                                        type="button"
-                                        onClick={() => cycleStatus(task)}
-                                        className="text-[9px] font-medium text-primary hover:underline transition-colors"
-                                      >
-                                        {status === "open" ? "→ In Progress" : status === "in_progress" ? "→ Done" : "↺ Reopen"}
-                                      </button>
-                                    )}
-                                  </div>
-                                  {task.description && (
-                                    <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
+                                      {status === "open" ? "→ In Progress" : status === "in_progress" ? "→ Done" : "↺ Reopen"}
+                                    </button>
                                   )}
                                 </div>
-                                {canManage && (
-                                  <div className="flex items-center gap-0.5 shrink-0">
-                                    <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                                      <Pencil className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                  </div>
+                                {task.description && (
+                                  <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
                                 )}
                               </div>
-                            )
-                          })}
-                        </div>
-                      )
+                              {canManage && (
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     )}
                   </div>
                 )
@@ -1430,7 +1428,7 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
   )
 
   return (
-    <div className="flex flex-col gap-4 flex-1 min-h-0">
+    <div className="flex flex-col gap-4">
 
       {/* Sync bar */}
       <div className="flex items-center gap-2 rounded-card border border-border bg-card px-3 py-1.5 shrink-0 shadow-card">
@@ -1471,19 +1469,19 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
       <div className="shrink-0 rounded-card border border-border bg-card shadow-card overflow-hidden">
         <div className="grid grid-cols-3 divide-x divide-border/50">
           {/* Sets */}
-          <div className="flex flex-col items-center px-2 py-2 gap-0.5">
+          <div className="flex flex-col items-center px-2 py-1.5 gap-0">
             <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Sets</span>
-            <span className="text-base font-bold text-foreground tabular-nums">{stats.totalSets}</span>
+            <span className="text-[13px] font-bold text-foreground tabular-nums">{stats.totalSets}</span>
           </div>
           {/* Total Paid */}
-          <div className="flex flex-col items-center px-2 py-2 gap-0.5">
+          <div className="flex flex-col items-center px-2 py-1.5 gap-0">
             <span className="text-[9px] font-bold uppercase tracking-widest text-green-700">Paid</span>
             <span className="text-[11px] font-semibold tabular-nums text-green-700 text-center leading-tight">
               {formatVndAmount(stats.totalPaid)}<span className="ml-0.5">₫</span>
             </span>
           </div>
           {/* Outstanding */}
-          <div className="flex flex-col items-center px-2 py-2 gap-0.5">
+          <div className="flex flex-col items-center px-2 py-1.5 gap-0">
             <span className="text-[9px] font-bold uppercase tracking-widest text-[#b5620a]">Owed</span>
             <span className="text-[11px] font-semibold tabular-nums text-[#b5620a] text-center leading-tight">
               {stats.outstanding > 0 ? <>{formatVndAmount(stats.outstanding)}<span className="ml-0.5">₫</span></> : <span className="text-muted-foreground">—</span>}
@@ -1503,50 +1501,49 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
         </div>
       </div>
 
-      {/* Filter bar — horizontal scroll on mobile */}
-      <div className="shrink-0">
-        <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-          {/* Status */}
-          <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5 shrink-0">
-            {(["all", "done", "scheduled", "no_show"] as const).map((v) => (
-              <button key={v} type="button" onClick={() => setStatusFilter(v)} className={filterBtnCls(statusFilter === v)}>
-                {v === "all" ? "All" : v === "no_show" ? "No Show" : v.charAt(0).toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
-          {/* Payment */}
-          <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5 shrink-0">
-            {(["all", "unpaid", "paid"] as const).map((v) => (
-              <button key={v} type="button" onClick={() => setPayFilter(v)} className={filterBtnCls(payFilter === v)}>
-                {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
-          {/* Payer */}
-          <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5 shrink-0">
-            {(["all", "foreigner_charlie", "local_company"] as const).map((v) => (
-              <button key={v} type="button" onClick={() => setPayerFilter(v)} className={filterBtnCls(payerFilter === v)}>
-                {v === "all" ? "All" : v === "foreigner_charlie" ? "Charlie" : "Company"}
-              </button>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-1.5 shrink-0">
-            <Button type="button" variant="outline" onClick={exportCsv} className="h-7 px-2.5 text-[10px]">
-              <Download className="h-3 w-3" />
-              <span className="hidden sm:inline">Export CSV</span>
+      {/* Filter bar — wraps naturally on mobile */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {/* Status */}
+        <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5">
+          {(["all", "done", "scheduled", "no_show"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => setStatusFilter(v)} className={filterBtnCls(statusFilter === v)}>
+              {v === "all" ? "All" : v === "no_show" ? "No Show" : v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
+        {/* Payment */}
+        <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5">
+          {(["all", "unpaid", "paid"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => setPayFilter(v)} className={filterBtnCls(payFilter === v)}>
+              {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
+        {/* Payer */}
+        <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5">
+          {(["all", "foreigner_charlie", "local_company"] as const).map((v) => (
+            <button key={v} type="button" onClick={() => setPayerFilter(v)} className={filterBtnCls(payerFilter === v)}>
+              {v === "all" ? "All" : v === "foreigner_charlie" ? "Charlie" : "Company"}
+            </button>
+          ))}
+        </div>
+        {/* Action buttons */}
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button type="button" variant="outline" onClick={exportCsv} className="h-7 px-2.5 text-[10px]">
+            <Download className="h-3 w-3" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+          {canManage && (
+            <Button type="button" onClick={openAdd} className="h-7 px-2.5 text-[10px]">
+              <Plus className="h-3 w-3" />
+              Add Set
             </Button>
-            {canManage && (
-              <Button type="button" onClick={openAdd} className="h-7 px-2.5 text-[10px]">
-                <Plus className="h-3 w-3" />
-                Add Set
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
       {/* Table */}
-      <div className="flex-1 min-h-0 overflow-auto rounded-card border border-border shadow-card">
+      <div className="overflow-x-auto rounded-card border border-border shadow-card">
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-xs text-muted-foreground">Loading…</div>
         ) : filtered.length === 0 ? (
@@ -1928,12 +1925,12 @@ export function Wishlist() {
   )
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4 pb-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-xl sm:text-[28px] font-bold leading-tight text-foreground">Operations</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Daily ops workspace: purchasing, maintenance, DJ payouts, and live sheet trackers.</p>
+          <p className="hidden sm:block mt-1 text-sm text-muted-foreground">Daily ops workspace: purchasing, maintenance, DJ payouts, and live sheet trackers.</p>
         </div>
       </div>
 
@@ -1977,7 +1974,7 @@ export function Wishlist() {
       ) : activeTab === "dj_payments" ? (
         <DJPaymentsTab canManage={canManage} />
       ) : activeTab === "purchase_request" ? (
-        <div className="flex flex-col gap-3 flex-1 min-h-0">
+        <div className="flex flex-col gap-3">
           <RequestOverviewPanel kind="purchase_request" />
           <SheetEmbedTab
             kind="purchase_request"
@@ -1988,7 +1985,7 @@ export function Wishlist() {
           />
         </div>
       ) : activeTab === "payment_request" ? (
-        <div className="flex flex-col gap-3 flex-1 min-h-0">
+        <div className="flex flex-col gap-3">
           <RequestOverviewPanel kind="payment_request" />
           <SheetEmbedTab
             kind="payment_request"
