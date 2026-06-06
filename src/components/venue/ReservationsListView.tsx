@@ -306,7 +306,7 @@ function SectionDivider({ label, count, pax }: { label: string; count: number; p
 
 function UpcomingDivider({ count, pax }: { count: number; pax: number }) {
   return (
-    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-primary/20 bg-primary/5 px-3 py-1.5">
+    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-primary/20 px-3 py-1.5" style={{ background: '#fdf6ee' }}>
       <Calendar className="h-3 w-3 shrink-0 text-primary" />
       <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Upcoming</span>
       <span className="rounded-full bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
