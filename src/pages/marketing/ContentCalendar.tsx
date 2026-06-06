@@ -547,17 +547,17 @@ export default function ContentCalendar() {
                   type="button"
                   onClick={() => setMobileSelectedDay(day)}
                   className={cn(
-                    "flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors",
+                    "flex flex-1 flex-col items-center gap-px py-1.5 transition-colors",
                     isSelected ? "bg-primary text-primary-foreground" : "hover:bg-secondary/60",
                   )}
                 >
-                  <span className={cn("text-[9px] uppercase tracking-wider font-medium",
+                  <span className={cn("text-[8px] uppercase tracking-wider font-medium",
                     isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
                   )}>
                     {format(day, "EEE")}
                   </span>
                   <span className={cn(
-                    "text-[15px] leading-none font-semibold",
+                    "text-[13px] leading-none font-semibold",
                     isSelected ? "text-primary-foreground" : isToday ? "text-primary" : "text-foreground",
                   )}>
                     {format(day, "d")}
@@ -592,38 +592,34 @@ export default function ContentCalendar() {
             <div className="divide-y divide-border">
               {(postsByDate.get(toIsoDate(mobileSelectedDay)) || []).map((p) => {
                 const pillar = pillarForPost(p)
-                const t = normalizeTime(p.scheduled_time) || "All day"
+                const t = normalizeTime(p.scheduled_time) || "—"
                 return (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => openPostModal(p)}
-                    className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-secondary/40 active:bg-secondary/70 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/40 active:bg-secondary/70 transition-colors"
                   >
-                    {/* Time + color bar */}
-                    <div className="flex flex-col items-center gap-1 w-10 shrink-0 pt-0.5">
-                      <span className="text-[10px] font-mono text-muted-foreground leading-none">{t}</span>
-                      <div className="w-0.5 rounded-full" style={{ background: PILLARS[pillar].color, minHeight: 24, flex: 1 }} />
-                    </div>
+                    {/* Color bar */}
+                    <div className="w-0.5 self-stretch rounded-full shrink-0" style={{ background: PILLARS[pillar].color }} />
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-medium text-foreground leading-snug truncate">{postTitle(p)}</div>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <div className="text-[12px] font-medium text-foreground leading-snug truncate">{postTitle(p)}</div>
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                        <span className="text-[9px] font-mono text-muted-foreground">{t}</span>
+                        <span className="text-muted-foreground text-[9px]">·</span>
                         <span
-                          className="text-[9px] px-1.5 py-0.5 rounded-full border leading-none"
+                          className="text-[8px] px-1 py-px rounded-full border leading-none"
                           style={{ color: PILLARS[pillar].color, background: PILLARS[pillar].dimBg, borderColor: PILLARS[pillar].dimBorder }}
                         >
                           {PILLARS[pillar].label}
                         </span>
-                        <Badge variant={statusVariant(p.status)} className="text-[9px] py-px">
+                        <Badge variant={statusVariant(p.status)} className="text-[8px] px-1 py-px">
                           {statusLabel(p.status)}
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground border border-border rounded-full px-1.5 py-px bg-secondary">
-                          {(p.content_type || "post").toUpperCase()}
-                        </span>
                       </div>
                     </div>
-                    <span className="text-xl shrink-0 mt-0.5">{postThumb(p)}</span>
+                    <span className="text-base shrink-0">{postThumb(p)}</span>
                   </button>
                 )
               })}
@@ -851,15 +847,15 @@ export default function ContentCalendar() {
         {/* end desktop calendar */}
 
         {/* POST OVERVIEW */}
-        <div className="px-4 md:px-6 py-6 bg-background border-t border-border">
-          <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="px-3 md:px-6 py-3 md:py-6 bg-background border-t border-border">
+          <div className="flex items-center justify-between gap-2 mb-2.5 sm:mb-4">
             <div className="min-w-0">
-              <div className="font-subheading text-[18px] font-light italic text-foreground">Post Overview</div>
-              <div className="text-sm tracking-wide text-muted-foreground mt-1">
-                {filteredPosts.length} posts · {awaitingCount} awaiting approval
+              <div className="font-subheading text-[15px] sm:text-[18px] font-light italic text-foreground leading-tight">Post Overview</div>
+              <div className="text-[11px] sm:text-sm tracking-wide text-muted-foreground">
+                {filteredPosts.length} posts · {awaitingCount} awaiting
               </div>
             </div>
-            <div className="flex overflow-hidden rounded-sm border border-border bg-secondary self-start sm:shrink-0">
+            <div className="flex overflow-hidden rounded-sm border border-border bg-secondary self-start shrink-0">
               <button
                 type="button"
                 onClick={() => setOverviewTab("kanban")}
@@ -884,54 +880,50 @@ export default function ContentCalendar() {
           </div>
 
           {overviewTab === "kanban" ? (
-            <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {[
-                { key: "toBeApproved", label: "TO BE APPROVED", dot: "#a06820", items: postOverview.toBeApproved },
-                { key: "approved", label: "APPROVED", dot: "#2e7a52", items: postOverview.approved },
-                { key: "scheduled", label: "SCHEDULED", dot: "#2c5f9e", items: postOverview.scheduled },
-                { key: "posted", label: "POSTED", dot: "#6b6256", items: postOverview.posted },
+                { key: "toBeApproved", label: "To Approve", dot: "#a06820", items: postOverview.toBeApproved },
+                { key: "approved", label: "Approved", dot: "#2e7a52", items: postOverview.approved },
+                { key: "scheduled", label: "Scheduled", dot: "#2c5f9e", items: postOverview.scheduled },
+                { key: "posted", label: "Posted", dot: "#6b6256", items: postOverview.posted },
               ].map((col) => (
-                <div key={col.key} className="rounded-card border border-border bg-card shadow-card p-3.5 min-h-[220px]">
-                  <div className="flex items-center justify-between border-b border-border pb-2.5 mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="h-[5px] w-[5px] rounded-full" style={{ background: col.dot }} />
-                      <div className="text-xs tracking-[2px] text-foreground uppercase">{col.label}</div>
+                <div key={col.key} className="rounded-card border border-border bg-card shadow-card p-2.5">
+                  <div className="flex items-center justify-between border-b border-border pb-1.5 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: col.dot }} />
+                      <div className="text-[9px] tracking-widest text-foreground uppercase font-semibold truncate">{col.label}</div>
                     </div>
-                    <div className="rounded-lg bg-secondary px-1.5 py-0.5 text-sm text-muted-foreground">{col.items.length}</div>
+                    <div className="rounded bg-secondary px-1 py-px text-[10px] text-muted-foreground shrink-0">{col.items.length}</div>
                   </div>
-                  <div className="space-y-2">
-                    {col.items.slice(0, 6).map((p) => {
+                  <div className="space-y-1">
+                    {col.items.slice(0, 5).map((p) => {
                       const pillar = pillarForPost(p)
-                      const t = normalizeTime(p.scheduled_time)
                       return (
                         <button
                           key={p.id}
                           type="button"
                           onClick={() => openPostModal(p)}
-                          className="w-full rounded-sm border border-border bg-background p-3 text-left transition-all hover:shadow-card hover:-translate-y-px"
+                          className="w-full rounded border border-border bg-background px-2 py-1.5 text-left transition-all hover:shadow-card"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-sm text-foreground leading-snug truncate">{postTitle(p)}</div>
-                              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                                <span className="rounded-sm border px-1.5 py-0.5 text-xs tracking-wide uppercase" style={{ color: PILLARS[pillar].color, borderColor: PILLARS[pillar].dimBorder, background: PILLARS[pillar].dimBg }}>
-                                  {(p.content_type || "post").toUpperCase()}
-                                </span>
-                                {t ? <span>{t}</span> : null}
+                          <div className="flex items-start gap-1.5">
+                            <div className="w-0.5 self-stretch rounded-full shrink-0 mt-0.5" style={{ background: PILLARS[pillar].color }} />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[11px] text-foreground leading-snug truncate">{postTitle(p)}</div>
+                              <div className="text-[9px] text-muted-foreground mt-0.5 font-mono">
+                                {p.scheduled_date ? format(new Date(p.scheduled_date + "T00:00:00"), "dd-MM-yy") : "—"}
                               </div>
-                              <div className="mt-1 text-xs text-muted-foreground">{p.scheduled_date ? format(new Date(p.scheduled_date + "T00:00:00"), "dd-MM-yy") : "—"}</div>
                             </div>
-                            <div className="shrink-0 text-sm">{postThumb(p)}</div>
                           </div>
                         </button>
                       )
                     })}
-                    {col.items.length === 0 ? <div className="text-xs text-muted-foreground">—</div> : null}
+                    {col.items.length > 5 && (
+                      <div className="text-[9px] text-muted-foreground text-center pt-0.5">+{col.items.length - 5} more</div>
+                    )}
+                    {col.items.length === 0 ? <div className="text-[10px] text-muted-foreground">—</div> : null}
                   </div>
                 </div>
               ))}
-            </div>
             </div>
           ) : (
             /* LIST VIEW */
