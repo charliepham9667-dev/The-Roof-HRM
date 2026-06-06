@@ -336,7 +336,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const todayIso = getTodayIso()
   const nextMonthIso = (() => {
     const d = new Date(todayIso + "T00:00:00")
-    d.setDate(d.getDate() + 60)
+    d.setFullYear(d.getFullYear() + 1)
     return d.toISOString().slice(0, 10)
   })()
 
