@@ -576,16 +576,16 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
           )}
         </div>
       ) : (
-        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+        <div className="rounded-card border border-border bg-card shadow-card" style={{ overflow: 'clip' }}>
           {STATUS_ORDER.map((status) => {
             const sectionItems = filtered.filter((i) => i.status === status)
             if (sectionItems.length === 0) return null
             const cfg = STATUS_SECTION[status]
             return (
               <div key={status}>
-                {/* Status divider header */}
+                {/* Status divider header — sticky within the single card */}
                 <div
-                  className="flex items-center gap-2 px-3 py-1.5 border-b border-border"
+                  className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 border-b border-border shadow-sm"
                   style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
                 >
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
