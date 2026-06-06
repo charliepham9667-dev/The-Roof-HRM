@@ -181,6 +181,7 @@ export default function ContentCalendar() {
   const [fMediaUrl, setFMediaUrl] = useState("")
   const [fStatus, setFStatus] = useState<ContentPost["status"]>("draft")
   const [overviewTab, setOverviewTab] = useState<"kanban" | "list">("kanban")
+  const [mobileSelectedDay, setMobileSelectedDay] = useState<Date>(() => new Date())
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveTimedOut, setSaveTimedOut] = useState(false)
@@ -370,7 +371,7 @@ export default function ContentCalendar() {
         <div className="flex flex-col gap-3 px-4 py-3.5 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4 md:px-6">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold leading-tight text-foreground sm:text-[28px]">Content Calendar</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Schedule and manage social media content</p>
+            <p className="hidden sm:block mt-1 text-sm text-muted-foreground">Schedule and manage social media content</p>
           </div>
           <button
             type="button"
@@ -416,16 +417,16 @@ export default function ContentCalendar() {
             </button>
 
             <div className="flex items-center gap-2.5 ml-auto flex-wrap">
-              {/* Sync status badge */}
+              {/* Sync status badge — desktop only */}
               {lastSynced && !isSyncing && (
-                <div className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-sm border border-success/25 bg-success/8 text-[10px] text-success tracking-wider">
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-[5px] rounded-sm border border-success/25 bg-success/8 text-[10px] text-success tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
                   Synced {format(lastSynced, "HH:mm")}
                   {lastResult && ` · ${lastResult.upserted} rows`}
                 </div>
               )}
               {isSyncing && (
-                <div className="flex items-center gap-1.5 px-2.5 py-[5px] rounded-sm border border-warning/25 bg-warning/8 text-[10px] text-warning tracking-wider">
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-[5px] rounded-sm border border-warning/25 bg-warning/8 text-[10px] text-warning tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0 animate-pulse" />
                   Syncing…
                 </div>
@@ -452,8 +453,8 @@ export default function ContentCalendar() {
                 <span className="sm:hidden">Sync</span>
               </button>
 
-              {/* view toggle */}
-              <div className="flex overflow-hidden rounded-sm border border-border bg-secondary">
+              {/* view toggle — desktop only */}
+              <div className="hidden sm:flex overflow-hidden rounded-sm border border-border bg-secondary">
                 <button
                   type="button"
                   onClick={() => setView("monthly")}
@@ -468,7 +469,7 @@ export default function ContentCalendar() {
                   type="button"
                   onClick={() => setView("weekly")}
                   className={cn(
-                    "hidden px-3.5 py-[5px] text-xs tracking-wider uppercase sm:block",
+                    "px-3.5 py-[5px] text-xs tracking-wider uppercase",
                     view === "weekly" ? "bg-card text-primary shadow-card" : "text-muted-foreground",
                   )}
                 >
@@ -509,8 +510,130 @@ export default function ContentCalendar() {
 
       {/* MAIN */}
       <div className="flex flex-col">
+
+        {/* ── MOBILE: week strip + day list ─────────────────────── */}
+        <div className="sm:hidden flex flex-col">
+          {/* Week nav */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-secondary/50">
+            <button
+              type="button"
+              onClick={() => setMobileSelectedDay((d) => addDays(d, -7))}
+              className="w-7 h-7 rounded border border-border flex items-center justify-center text-muted-foreground hover:text-foreground text-sm"
+            >
+              ←
+            </button>
+            <div className="flex-1 text-center text-xs font-medium text-foreground tracking-wide">
+              {format(startOfWeek(mobileSelectedDay, { weekStartsOn: 1 }), "d MMM")} – {format(addDays(startOfWeek(mobileSelectedDay, { weekStartsOn: 1 }), 6), "d MMM yyyy")}
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileSelectedDay((d) => addDays(d, 7))}
+              className="w-7 h-7 rounded border border-border flex items-center justify-center text-muted-foreground hover:text-foreground text-sm"
+            >
+              →
+            </button>
+          </div>
+
+          {/* Day chip strip */}
+          <div className="flex border-b border-border bg-card">
+            {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(mobileSelectedDay, { weekStartsOn: 1 }), i)).map((day) => {
+              const iso = toIsoDate(day)
+              const dayPosts = postsByDate.get(iso) || []
+              const isSelected = isSameDay(day, mobileSelectedDay)
+              const isToday = isSameDay(day, today)
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => setMobileSelectedDay(day)}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors",
+                    isSelected ? "bg-primary text-primary-foreground" : "hover:bg-secondary/60",
+                  )}
+                >
+                  <span className={cn("text-[9px] uppercase tracking-wider font-medium",
+                    isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
+                  )}>
+                    {format(day, "EEE")}
+                  </span>
+                  <span className={cn(
+                    "text-[15px] leading-none font-semibold",
+                    isSelected ? "text-primary-foreground" : isToday ? "text-primary" : "text-foreground",
+                  )}>
+                    {format(day, "d")}
+                  </span>
+                  <span className={cn(
+                    "w-1 h-1 rounded-full",
+                    dayPosts.length > 0
+                      ? isSelected ? "bg-primary-foreground" : "bg-primary"
+                      : "bg-transparent",
+                  )} />
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Posts for selected day */}
+          {isLoading ? (
+            <div className="py-10 text-center text-xs tracking-wider text-muted-foreground uppercase">Loading…</div>
+          ) : (postsByDate.get(toIsoDate(mobileSelectedDay)) || []).length === 0 ? (
+            <div className="py-10 text-center flex flex-col items-center gap-2">
+              <span className="text-2xl">📭</span>
+              <span className="text-xs text-muted-foreground">No posts for {format(mobileSelectedDay, "EEEE, d MMM")}</span>
+              <button
+                type="button"
+                onClick={() => openPostModal(undefined, mobileSelectedDay)}
+                className="mt-1 text-xs text-primary border border-primary/30 rounded-full px-3 py-1.5 hover:bg-primary/5 transition-colors"
+              >
+                + Schedule post
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {(postsByDate.get(toIsoDate(mobileSelectedDay)) || []).map((p) => {
+                const pillar = pillarForPost(p)
+                const t = normalizeTime(p.scheduled_time) || "All day"
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => openPostModal(p)}
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-secondary/40 active:bg-secondary/70 transition-colors"
+                  >
+                    {/* Time + color bar */}
+                    <div className="flex flex-col items-center gap-1 w-10 shrink-0 pt-0.5">
+                      <span className="text-[10px] font-mono text-muted-foreground leading-none">{t}</span>
+                      <div className="w-0.5 rounded-full" style={{ background: PILLARS[pillar].color, minHeight: 24, flex: 1 }} />
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-medium text-foreground leading-snug truncate">{postTitle(p)}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded-full border leading-none"
+                          style={{ color: PILLARS[pillar].color, background: PILLARS[pillar].dimBg, borderColor: PILLARS[pillar].dimBorder }}
+                        >
+                          {PILLARS[pillar].label}
+                        </span>
+                        <Badge variant={statusVariant(p.status)} className="text-[9px] py-px">
+                          {statusLabel(p.status)}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground border border-border rounded-full px-1.5 py-px bg-secondary">
+                          {(p.content_type || "post").toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xl shrink-0 mt-0.5">{postThumb(p)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ── DESKTOP: existing month/week calendar views ─────────── */}
         {/* Calendar views */}
-        <div className="min-h-[300px] overflow-x-auto scroll-smooth overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="hidden sm:block min-h-[300px] overflow-x-auto scroll-smooth overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isLoading ? (
             <div className="py-16 text-center text-xs tracking-wider text-muted-foreground uppercase">
               Loading…
@@ -725,6 +848,7 @@ export default function ContentCalendar() {
             </div>
           )}
         </div>
+        {/* end desktop calendar */}
 
         {/* POST OVERVIEW */}
         <div className="px-4 md:px-6 py-6 bg-background border-t border-border">
@@ -1069,8 +1193,8 @@ export default function ContentCalendar() {
           )}
         </div>
 
-        {/* LEGEND (sticky bottom like reference) */}
-        <div className="sticky bottom-0 z-20 border-t border-border bg-secondary px-4 md:px-6 py-2.5 flex flex-col gap-2">
+        {/* LEGEND — desktop only */}
+        <div className="hidden sm:flex sticky bottom-0 z-20 border-t border-border bg-secondary px-4 md:px-6 py-2.5 flex-col gap-2">
           {/* Row 1 — Pillars */}
           <div className="flex items-center gap-4 flex-wrap">
             <div className="text-xs tracking-wider text-muted-foreground uppercase">Pillars</div>
