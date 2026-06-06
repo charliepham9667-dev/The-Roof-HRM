@@ -97,23 +97,6 @@ const CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
   other:      "Other",
 }
 
-const CATEGORIES: Array<{ value: MaintenanceCategory | "all"; label: string }> = [
-  { value: "all",        label: "All Categories" },
-  { value: "electrical", label: "Electrical" },
-  { value: "plumbing",   label: "Plumbing" },
-  { value: "structural", label: "Structural" },
-  { value: "equipment",  label: "Equipment" },
-  { value: "aesthetic",  label: "Aesthetic" },
-  { value: "safety",     label: "Safety" },
-  { value: "other",      label: "Other" },
-]
-
-const PRIORITIES: Array<{ value: WishlistPriority | "all"; label: string }> = [
-  { value: "all",    label: "All Priorities" },
-  { value: "high",   label: "High" },
-  { value: "medium", label: "Medium" },
-  { value: "low",    label: "Low" },
-]
 
 
 function formatVnd(amount: number | null): string {
@@ -489,26 +472,29 @@ const STATUS_ORDER: WishlistStatus[] = ["request", "approved", "ordered", "deliv
 // ─── Procurement tab ───────────────────────────────────────────────────────────
 
 function ProcurementTab({ canManage }: { canManage: boolean }) {
-  const [collapsedSections, setCollapsedSections] = useState<Set<WishlistStatus>>(new Set())
+  const [statusFilter, setStatusFilter] = useState<WishlistStatus | "all">("all")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
 
   const { data: items = [], isLoading } = useWishlistItems()
   const deleteItem = useDeleteWishlistItem()
 
-  const filtered = items
+  const filtered = useMemo(() =>
+    statusFilter === "all" ? items : items.filter((i) => i.status === statusFilter),
+    [items, statusFilter]
+  )
 
   const grouped = useMemo(() =>
     STATUS_ORDER.reduce<Record<WishlistStatus, WishlistItem[]>>((acc, s) => {
-      acc[s] = filtered.filter((i) => i.status === s)
+      acc[s] = items.filter((i) => i.status === s)
       return acc
     }, {} as Record<WishlistStatus, WishlistItem[]>),
-    [filtered]
+    [items]
   )
 
   const totalPendingSpend = useMemo(() =>
-    filtered.filter((i) => i.status !== "delivered").reduce((s, i) => s + (i.estimatedCost ?? 0) * i.quantity, 0),
-    [filtered]
+    items.filter((i) => i.status !== "delivered").reduce((s, i) => s + (i.estimatedCost ?? 0) * i.quantity, 0),
+    [items]
   )
 
   function openAdd() { setEditingItem(null); setSheetOpen(true) }
@@ -517,211 +503,126 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
     if (!confirm("Delete this item?")) return
     await deleteItem.mutateAsync(id)
   }
-  function toggleSection(s: WishlistStatus) {
-    setCollapsedSections((prev) => {
-      const next = new Set(prev)
-      next.has(s) ? next.delete(s) : next.add(s)
-      return next
-    })
-  }
 
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0">
-      {/* Top bar: Add Item only */}
-      {canManage && (
-        <div className="shrink-0 flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            onClick={openAdd}
-            className="h-8 px-3 text-xs gap-1"
-          >
+
+      {/* Controls bar */}
+      <div className="shrink-0 flex items-center gap-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="shrink-0 rounded border border-border bg-card px-2 py-1 text-[11px] text-foreground outline-none cursor-pointer"
+        >
+          <option value="all">All Status</option>
+          {STATUS_ORDER.map((s) => (
+            <option key={s} value={s}>{STATUS_SECTION[s].label}</option>
+          ))}
+        </select>
+        {canManage && (
+          <Button type="button" size="sm" onClick={openAdd} className="ml-auto h-8 px-3 text-xs gap-1 shrink-0">
             <Plus className="h-3.5 w-3.5" />
             Add Item
           </Button>
+        )}
+      </div>
+
+      {/* Summary strip — tap a column to filter */}
+      {!isLoading && items.length > 0 && (
+        <div className="shrink-0 rounded-card border border-border bg-card shadow-card overflow-hidden">
+          <div className="grid grid-cols-4 divide-x divide-border/50">
+            {STATUS_ORDER.map((s) => {
+              const cfg = STATUS_SECTION[s]
+              const SHORT: Record<WishlistStatus, string> = { request: "Req", approved: "App", ordered: "Ord", delivered: "Del" }
+              const count = grouped[s].length
+              const spend = grouped[s].reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
+              const isActive = statusFilter === s
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatusFilter(isActive ? "all" : s)}
+                  className={cn("flex flex-col items-center px-2 py-2 gap-0.5 transition-colors hover:bg-secondary/30", isActive && "bg-secondary/40")}
+                >
+                  <div className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: cfg.accent }} />
+                    <span className="text-[10px] font-bold" style={{ color: cfg.accent }}>{SHORT[s]}</span>
+                    <span className="text-[10px] font-bold" style={{ color: cfg.accent }}>{count}</span>
+                  </div>
+                  <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
+                    {spend > 0 ? formatVnd(spend) : "—"}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="border-t border-border/50 px-3 py-1.5 flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">Pending spend</span>
+            <span className="text-[10px] font-bold tabular-nums text-foreground">{formatVnd(totalPendingSpend)}</span>
+          </div>
         </div>
       )}
 
-      {/* Summary strip */}
-      {!isLoading && filtered.length > 0 && (() => {
-        const SHORT: Record<WishlistStatus, string> = { request: "Req", approved: "App", ordered: "Ord", delivered: "Del" }
-        return (
-          <div className="shrink-0 rounded-card border border-border bg-card shadow-card overflow-hidden">
-            <div className="grid grid-cols-4 divide-x divide-border/50">
-              {STATUS_ORDER.map((s) => {
-                const cfg = STATUS_SECTION[s]
-                const count = grouped[s].length
-                const spend = grouped[s].reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
-                return (
-                  <div key={s} className="flex flex-col items-center px-2 py-2 gap-0.5">
-                    <div className="flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: cfg.accent }} />
-                      <span className="text-[10px] font-bold" style={{ color: cfg.accent }}>{SHORT[s]}</span>
-                      <span className="text-[10px] font-bold" style={{ color: cfg.accent }}>{count}</span>
-                    </div>
-                    <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
-                      {spend > 0 ? formatVnd(spend) : "—"}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="border-t border-border/50 px-3 py-1.5 flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground">Pending spend</span>
-              <span className="text-[10px] font-bold tabular-nums text-foreground">{formatVnd(totalPendingSpend)}</span>
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Status-grouped sections */}
-      <div className="flex-1 overflow-auto space-y-2">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">Loading…</div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-2">
-            <div className="text-sm text-muted-foreground">No items found.</div>
-            {canManage && (
-              <button type="button" onClick={openAdd} className="text-xs text-primary hover:underline">+ Add first item</button>
-            )}
-          </div>
-        ) : (
-          STATUS_ORDER.map((status) => {
-            const cfg = STATUS_SECTION[status]
-            const sectionItems = grouped[status]
-            const isCollapsed = collapsedSections.has(status)
-            const sectionSpend = sectionItems.reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
-
-            return (
-              <div key={status} className="rounded-card border border-border overflow-hidden shadow-card">
-                {/* Section header — sticky so label stays visible while scrolling */}
-                <button
-                  type="button"
-                  onClick={() => toggleSection(status)}
-                  className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border transition-colors hover:bg-secondary/30"
-                  style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
+      {/* Flat item list */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-2">
+          <div className="text-sm text-muted-foreground">No items found.</div>
+          {canManage && (
+            <button type="button" onClick={openAdd} className="text-xs text-primary hover:underline">+ Add first item</button>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto rounded-card border border-border bg-card shadow-card overflow-hidden">
+          <div className="divide-y divide-border/40">
+            {filtered.map((item) => {
+              const cfg = STATUS_SECTION[item.status]
+              const pri = PRIORITY_BADGE[item.priority]
+              const totalCost = (item.estimatedCost ?? 0) * item.quantity
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2 px-3 py-2"
+                  style={{ borderLeft: `3px solid ${cfg.accent}55` }}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: cfg.accent }}>{cfg.label}</span>
-                    <span className="rounded-full px-1.5 py-px text-[10px] font-semibold" style={{ background: cfg.badgeBg, color: cfg.accent }}>
-                      {sectionItems.length}
-                    </span>
-                    {sectionSpend > 0 && (
-                      <span className="text-[10px] text-muted-foreground tabular-nums">{formatVnd(sectionSpend)}</span>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[13px] font-medium text-foreground leading-snug truncate">{item.title}</span>
+                      <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span
+                        className="rounded-sm border px-1.5 py-px text-[9px] tracking-wide uppercase font-semibold"
+                        style={{ color: cfg.accent, borderColor: `${cfg.accent}40`, background: `${cfg.accent}12` }}
+                      >
+                        {cfg.label}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">×<span className="font-medium text-foreground">{item.quantity}</span></span>
+                      {(totalCost || item.estimatedCost) ? (
+                        <span className="text-[11px] tabular-nums font-medium text-foreground">{formatVnd(totalCost || item.estimatedCost)}</span>
+                      ) : null}
+                      {item.notes && (
+                        <span className="text-[10px] italic text-muted-foreground truncate">{item.notes}</span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-muted-foreground text-xs">{isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}</span>
-                </button>
-
-                {/* Section rows */}
-                {!isCollapsed && (
-                  <>
-                    {sectionItems.length === 0 ? (
-                      <div className="px-4 py-4 text-center text-[11px] text-muted-foreground">No items in this stage</div>
-                    ) : (
-                      <>
-                      <div className="hidden md:block overflow-x-auto">
-                        {/* Column headers */}
-                        <div className="grid grid-cols-[minmax(100px,1fr)_50px_120px_90px_36px] sm:grid-cols-[minmax(100px,1fr)_50px_130px_100px_1fr_36px] items-center px-4 py-2 bg-secondary/20 min-w-0">
-                          {["ITEM", "QTY", "EST. COST", "PRIORITY", "NOTES", ""].map((h, i) => (
-                            <div key={h || i} className={cn("text-[9.5px] tracking-widest font-semibold text-muted-foreground uppercase", h === "NOTES" && "hidden sm:block")}>{h}</div>
-                          ))}
-                        </div>
-                        {sectionItems.map((item) => {
-                          const pri = PRIORITY_BADGE[item.priority]
-                          const totalCost = (item.estimatedCost ?? 0) * item.quantity
-                          return (
-                            <div
-                              key={item.id}
-                              className="grid grid-cols-[minmax(100px,1fr)_50px_120px_90px_36px] sm:grid-cols-[minmax(100px,1fr)_50px_130px_100px_1fr_36px] items-center px-4 py-2.5 border-t border-border/50 hover:bg-secondary/20 transition-colors group"
-                              style={{ borderLeft: `3px solid ${cfg.accent}33` }}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => canManage && openEdit(item)}
-                                className={cn("text-sm text-left font-medium text-foreground truncate min-w-[100px]", canManage && "hover:text-primary transition-colors")}
-                              >
-                                {item.title}
-                              </button>
-                              <div className="text-sm text-foreground">{item.quantity}</div>
-                              <div className="text-sm text-foreground tabular-nums">{formatVnd(totalCost || item.estimatedCost)}</div>
-                              <div>
-                                <Badge variant={pri.variant}>{pri.label}</Badge>
-                              </div>
-                              <div className="hidden sm:block text-xs text-muted-foreground truncate pr-2">{item.notes || "—"}</div>
-                              <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {canManage && (
-                                  <>
-                                    <button type="button" onClick={() => openEdit(item)} className="rounded-sm p-1 text-muted-foreground hover:text-foreground transition-colors">
-                                      <Pencil className="h-3 w-3" />
-                                    </button>
-                                    <button type="button" onClick={() => handleDelete(item.id)} className="rounded-sm p-1 text-muted-foreground hover:text-error transition-colors">
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-
-                      {/* Mobile card list */}
-                      <div className="md:hidden divide-y divide-border/40">
-                        {sectionItems.map((item) => {
-                          const pri = PRIORITY_BADGE[item.priority]
-                          const totalCost = (item.estimatedCost ?? 0) * item.quantity
-                          return (
-                            <div
-                              key={item.id}
-                              className="flex items-center gap-2 px-3 py-2"
-                              style={{ borderLeft: `3px solid ${cfg.accent}55` }}
-                            >
-                              {/* Main content */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <span className="text-[13px] font-medium text-foreground leading-snug truncate">
-                                    {item.title}
-                                  </span>
-                                  <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
-                                </div>
-                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                  <span>×<span className="font-medium text-foreground">{item.quantity}</span></span>
-                                  {(totalCost || item.estimatedCost) ? (
-                                    <span className="tabular-nums font-medium text-foreground">
-                                      {formatVnd(totalCost || item.estimatedCost)}
-                                    </span>
-                                  ) : null}
-                                  {item.notes && (
-                                    <span className="italic text-muted-foreground truncate">{item.notes}</span>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Actions always visible */}
-                              {canManage && (
-                                <div className="flex items-center gap-0.5 shrink-0">
-                                  <button type="button" onClick={() => openEdit(item)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button type="button" onClick={() => handleDelete(item.id)} className="rounded p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted transition-colors">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            )
-          })
-        )}
-      </div>
+                  {canManage && (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button type="button" onClick={() => openEdit(item)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" onClick={() => handleDelete(item.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <WishlistItemSheet
         open={sheetOpen}
@@ -744,8 +645,6 @@ const MAINT_STATUS_ACCENT: Record<MaintenanceStatus, string> = {
 }
 
 function MaintenanceTab({ canManage }: { canManage: boolean }) {
-  const [priorityFilter, setPriorityFilter] = useState<MaintenancePriority | "all">("all")
-  const [categoryFilter, setCategoryFilter] = useState<MaintenanceCategory | "all">("all")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<MaintenanceTask | null>(null)
   // Collapse "done" by default — it tends to accumulate
@@ -755,11 +654,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   const deleteTask = useDeleteMaintenanceTask()
   const updateTask = useUpdateMaintenanceTask()
 
-  const filtered = useMemo(() => tasks.filter((t) => {
-    if (priorityFilter !== "all" && t.priority !== priorityFilter) return false
-    if (categoryFilter !== "all" && t.category !== categoryFilter) return false
-    return true
-  }), [tasks, priorityFilter, categoryFilter])
+  const filtered = tasks
 
   const grouped = useMemo(() =>
     MAINT_STATUS_ORDER.reduce<Record<MaintenanceStatus, MaintenanceTask[]>>((acc, s) => {
@@ -794,21 +689,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0">
       {/* Controls bar */}
-      <div className="shrink-0 flex items-center gap-2 overflow-x-auto scrollbar-none">
-        <select
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value as any)}
-          className="shrink-0 rounded border border-border bg-card px-2 py-1 text-[11px] text-foreground outline-none cursor-pointer"
-        >
-          {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-        </select>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value as any)}
-          className="shrink-0 rounded border border-border bg-card px-2 py-1 text-[11px] text-foreground outline-none cursor-pointer"
-        >
-          {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
+      <div className="shrink-0 flex items-center">
         {canManage && (
           <Button type="button" size="sm" onClick={openAdd} className="ml-auto h-8 px-3 text-xs gap-1 shrink-0">
             <Plus className="h-3.5 w-3.5" />
