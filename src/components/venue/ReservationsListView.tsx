@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
-import { type CsvReservation } from "@/hooks/useReservationsCsv"
+import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
 import { useWebFormReservations, useAcceptReservation, useDeclineReservation } from "@/hooks/useWebFormReservations"
 import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
@@ -340,20 +340,37 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     return d.toISOString().slice(0, 10)
   })()
 
-  const { data: csvAll = [], isLoading: csvLoading } = useWebFormReservations()
+  const { data: webFormAll = [], isLoading: webFormLoading } = useWebFormReservations()
+  const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
   const { data: dbAll = [], isLoading: dbLoading } = useReservations(todayIso, nextMonthIso)
 
   const [search, setSearch] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
 
-  const allReservations = useMemo<CsvReservation[]>(() => {
-    const merged = csvAll.filter((r) => r.status === "today" || r.status === "upcoming")
-    const csvKeys = new Set(merged.map((r) => `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${r.time ?? ""}`))
+  // isLoading covers all three sources
+  const csvLoading = webFormLoading || sheetLoading
 
+  const allReservations = useMemo<CsvReservation[]>(() => {
+    // Start with web-form reservations (today + upcoming only)
+    const merged = webFormAll.filter((r) => r.status === "today" || r.status === "upcoming")
+    const seenKeys = new Set(merged.map((r) => `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`))
+
+    // Add Google Sheets CSV reservations (today + upcoming), de-duped by name+date+time
+    for (const r of sheetAll) {
+      if (r.status !== "today" && r.status !== "upcoming") continue
+      const key = `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        merged.push(r)
+      }
+    }
+
+    // Add database reservations, de-duped
     for (const r of dbAll) {
       const key = `${r.customerName.toLowerCase()}|${r.reservationDate}|${r.reservationTime.slice(0, 5)}`
-      if (!csvKeys.has(key)) {
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
         merged.push({
           submittedAt: r.createdAt,
           email: r.customerEmail ?? null,
@@ -381,7 +398,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     })
 
     return merged
-  }, [csvAll, dbAll, todayIso])
+  }, [webFormAll, sheetAll, dbAll, todayIso])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return allReservations
