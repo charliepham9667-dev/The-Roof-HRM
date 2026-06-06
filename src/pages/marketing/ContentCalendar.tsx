@@ -5,7 +5,6 @@ import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { useContentCalendar, type ContentPost } from "@/hooks/useContentCalendar"
 import { useGoogleSheetsSync } from "@/hooks/useGoogleSheetsSync"
 import { Badge } from "@/components/ui/badge"
@@ -163,7 +162,6 @@ function postThumb(post: ContentPost) {
 
 export default function ContentCalendar() {
   const queryClient = useQueryClient()
-  const isMobile = useIsMobile()
   const { posts, isLoading, createPost, updatePost, deletePost } = useContentCalendar()
 
   const [view, setView] = useState<ViewMode>("monthly")
@@ -353,17 +351,6 @@ export default function ContentCalendar() {
   const weekStart = useMemo(() => startOfWeek(cursor, { weekStartsOn: 1 }), [cursor])
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
 
-  const monthPosts = useMemo(() => {
-    const monthKey = format(monthStart, "yyyy-MM")
-    return filteredPosts
-      .filter((p) => p.scheduled_date.startsWith(monthKey))
-      .sort((a, b) => {
-        const dateCmp = a.scheduled_date.localeCompare(b.scheduled_date)
-        if (dateCmp !== 0) return dateCmp
-        return normalizeTime(a.scheduled_time).localeCompare(normalizeTime(b.scheduled_time))
-      })
-  }, [filteredPosts, monthStart])
-
   // Post overview grouping (matches screenshot columns)
   const postOverview = useMemo(() => {
     const isoToday = toIsoDate(new Date())
@@ -523,56 +510,13 @@ export default function ContentCalendar() {
       {/* MAIN */}
       <div className="flex flex-col">
         {/* Calendar views */}
-        <div className={cn("min-h-[400px]", !isMobile && "overflow-x-auto scroll-smooth overscroll-x-contain")} style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="min-h-[300px] overflow-x-auto scroll-smooth overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isLoading ? (
             <div className="py-16 text-center text-xs tracking-wider text-muted-foreground uppercase">
               Loading…
             </div>
           ) : null}
-          {isMobile ? (
-            <div className="divide-y divide-border px-4 md:px-6">
-              {monthPosts.length === 0 ? (
-                <div className="py-12 text-center text-sm text-muted-foreground">
-                  No posts scheduled this month.
-                </div>
-              ) : (
-                monthPosts.map((p) => {
-                  const pillar = pillarForPost(p)
-                  const time = normalizeTime(p.scheduled_time) || "All day"
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => openPostModal(p)}
-                      className="flex w-full items-start gap-3 py-3 text-left transition-colors hover:bg-primary/[0.02]"
-                    >
-                      <div className="w-14 shrink-0 text-center">
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                          {format(new Date(p.scheduled_date + "T00:00:00"), "EEE")}
-                        </div>
-                        <div className="font-display text-lg leading-none text-foreground">
-                          {format(new Date(p.scheduled_date + "T00:00:00"), "d")}
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-foreground">{postTitle(p)}</div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <span>{time}</span>
-                          <span
-                            className="rounded-sm border px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
-                            style={{ color: PILLARS[pillar].color, borderColor: PILLARS[pillar].dimBorder, background: PILLARS[pillar].dimBg }}
-                          >
-                            {PILLARS[pillar].label}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-sm">{postThumb(p)}</div>
-                    </button>
-                  )
-                })
-              )}
-            </div>
-          ) : view === "monthly" ? (
+          {view === "monthly" ? (
             <div className="flex flex-col min-w-[700px]">
               {/* Month header row */}
               <div className="grid grid-cols-7 border-b border-border bg-secondary">
