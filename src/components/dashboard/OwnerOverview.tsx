@@ -123,40 +123,44 @@ export function OwnerOverview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
+      <div className="flex flex-col gap-2 lg:gap-4">
         {isLoading ? (
-          <div className="col-span-full flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : kpiError || !kpi || !velocity ? (
-          <div className="col-span-full rounded-lg border border-border bg-card p-6 text-center text-sm text-error">
+          <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-error">
             Failed to load KPIs. Check Supabase connection.
           </div>
         ) : (
           <>
-            <FinanceKpiTile
-              label="Total Revenue · MTD"
-              value={formatVND(kpi.revenue.value)}
-              trendPercent={kpi.revenue.trend}
-              comparisonLine={`vs ${formatVND(kpi.lastYear.revenue)} same period last year`}
-            />
-            <FinanceKpiTile
-              label="Pax · MTD"
-              value={kpi.pax.value.toLocaleString()}
-              trendPercent={kpi.pax.trend}
-              comparisonLine={`vs ${kpi.lastYear.pax.toLocaleString()} same period last year`}
-            />
-            <FinanceKpiTile
-              label="Avg Spend"
-              value={formatVND(kpi.avgSpend.value)}
-              trendPercent={kpi.avgSpend.trend}
-              tone={kpi.avgSpend.trend < 0 ? 'warning' : 'default'}
-              comparisonLine={
-                kpi.avgSpend.trend < 0
-                  ? 'Volume up, ticket down · check menu mix'
-                  : `vs ${formatVND(kpi.lastYear.avgSpend)} same period last year`
-              }
-            />
+            {/* Row 1: Revenue · Pax · Avg Spend */}
+            <div className="grid grid-cols-3 gap-2 lg:gap-4">
+              <FinanceKpiTile
+                label="Total Revenue · MTD"
+                value={formatVND(kpi.revenue.value)}
+                trendPercent={kpi.revenue.trend}
+                comparisonLine={`vs ${formatVND(kpi.lastYear.revenue)} same period last year`}
+              />
+              <FinanceKpiTile
+                label="Pax · MTD"
+                value={kpi.pax.value.toLocaleString()}
+                trendPercent={kpi.pax.trend}
+                comparisonLine={`vs ${kpi.lastYear.pax.toLocaleString()} same period last year`}
+              />
+              <FinanceKpiTile
+                label="Avg Spend"
+                value={formatVND(kpi.avgSpend.value)}
+                trendPercent={kpi.avgSpend.trend}
+                tone={kpi.avgSpend.trend < 0 ? 'warning' : 'default'}
+                comparisonLine={
+                  kpi.avgSpend.trend < 0
+                    ? 'Volume up, ticket down · check menu mix'
+                    : `vs ${formatVND(kpi.lastYear.avgSpend)} same period last year`
+                }
+              />
+            </div>
+            {/* Row 2: Month Pace — full width */}
             <MonthPaceCard
               mtdRevenue={velocity.mtdRevenue}
               monthlyTarget={velocity.monthlyTarget}

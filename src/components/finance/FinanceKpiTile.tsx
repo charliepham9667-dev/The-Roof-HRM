@@ -43,49 +43,49 @@ export function FinanceKpiTile({
   return (
     <div
       className={cn(
-        "rounded-card border shadow-card flex flex-col gap-1 px-3 py-2.5 sm:p-4",
+        "rounded-card border shadow-card flex flex-col gap-1 px-2.5 py-2 sm:p-4",
         isWarning ? "border-warning/25 bg-warning/[0.05]" : "border-border bg-card",
         className,
       )}
     >
-      {/* Label + trend pill row */}
-      <div className="flex items-center justify-between gap-1 min-w-0">
-        <span
-          className={cn(
-            "text-[9px] font-bold uppercase tracking-widest truncate",
-            isWarning ? "text-warning" : "text-muted-foreground",
-          )}
-        >
-          {label}
-        </span>
-        {trendPercent !== undefined && (
-          <span
-            className={cn(
-              "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-bold tracking-wide",
-              pillStyles[pillTone],
-            )}
-          >
-            {trendPillLabel(trendPercent)}
-          </span>
+      {/* Label */}
+      <span
+        className={cn(
+          "text-[8px] sm:text-[9px] font-bold uppercase tracking-widest truncate leading-none",
+          isWarning ? "text-warning" : "text-muted-foreground",
         )}
-      </div>
+      >
+        {label}
+      </span>
 
       {/* Value */}
       <p
         className={cn(
-          "whitespace-nowrap font-semibold tabular-nums leading-none",
-          "text-xl sm:text-[28px]",
+          "font-semibold tabular-nums leading-none",
+          "text-[15px] sm:text-xl lg:text-[28px]",
           isWarning ? "text-warning" : "text-foreground",
         )}
       >
         {value}
       </p>
 
-      {/* Comparison — hidden on mobile, shown on sm+ */}
+      {/* Trend pill — inline on sm+, compact below value on mobile */}
+      {trendPercent !== undefined && (
+        <span
+          className={cn(
+            "self-start inline-flex items-center whitespace-nowrap rounded-full px-1.5 py-px text-[8px] sm:text-[9px] font-bold tracking-wide",
+            pillStyles[pillTone],
+          )}
+        >
+          {trendPillLabel(trendPercent)}
+        </span>
+      )}
+
+      {/* Comparison — hidden on mobile */}
       {comparisonLine && (
         <p
           className={cn(
-            "hidden sm:block text-[11px] leading-snug",
+            "hidden sm:block text-[11px] leading-snug mt-0.5",
             isWarning ? "text-amber-900/80" : "text-muted-foreground",
           )}
         >
