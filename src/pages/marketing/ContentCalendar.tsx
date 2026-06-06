@@ -365,6 +365,7 @@ export default function ContentCalendar() {
   const awaitingCount = postOverview.toBeApproved.length
 
   return (
+    <div className="flex flex-col gap-0">
     <div className="w-full rounded-card border border-border bg-background shadow-card">
       {/* HEADER */}
       <div className="sticky top-0 z-30 border-b border-border bg-background/97 backdrop-blur-[12px] shadow-card">
@@ -1185,40 +1186,30 @@ export default function ContentCalendar() {
           )}
         </div>
 
-        {/* LEGEND — desktop only */}
-        <div className="hidden sm:flex sticky bottom-0 z-20 border-t border-border bg-secondary px-4 md:px-6 py-2.5 flex-col gap-2">
-          {/* Row 1 — Pillars */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="text-xs tracking-wider text-muted-foreground uppercase">Pillars</div>
-            {(Object.keys(PILLARS) as Array<Exclude<PillarKey, "all">>).map((k) => (
-              <div key={k} className="flex items-center gap-1.5 text-xs text-foreground">
-                <span className="w-[7px] h-[7px] rounded-full" style={{ background: PILLARS[k].color }} />
-                {PILLARS[k].label}
-              </div>
-            ))}
-          </div>
-          {/* Row 2 — Status */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="text-xs tracking-wider text-muted-foreground uppercase">Status</div>
-            <div className="flex items-center gap-1.5 text-xs text-foreground">
-              <span className="w-[7px] h-[7px] rounded-full bg-success" />
-              Approved
+      </div>
+
+      {/* LEGEND — sticky at bottom of page, desktop only */}
+      <div className="hidden sm:flex sticky bottom-0 z-20 border border-border rounded-b-card bg-secondary px-4 md:px-6 py-2.5 flex-col gap-1.5 shadow-card">
+        {/* Row 1 — Pillars */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="text-xs tracking-wider text-muted-foreground uppercase">Pillars</div>
+          {(Object.keys(PILLARS) as Array<Exclude<PillarKey, "all">>).map((k) => (
+            <div key={k} className="flex items-center gap-1.5 text-xs text-foreground">
+              <span className="w-[7px] h-[7px] rounded-full" style={{ background: PILLARS[k].color }} />
+              {PILLARS[k].label}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-foreground">
-              <span className="w-[7px] h-[7px] rounded-full bg-info" />
-              Scheduled
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-foreground">
-              <span className="w-[7px] h-[7px] rounded-full bg-warning" />
-              Pending
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-foreground">
-              <span className="w-[7px] h-[7px] rounded-full bg-error" />
-              Cancelled
-            </div>
-          </div>
+          ))}
+        </div>
+        {/* Row 2 — Status */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="text-xs tracking-wider text-muted-foreground uppercase">Status</div>
+          <div className="flex items-center gap-1.5 text-xs text-foreground"><span className="w-[7px] h-[7px] rounded-full bg-success" />Approved</div>
+          <div className="flex items-center gap-1.5 text-xs text-foreground"><span className="w-[7px] h-[7px] rounded-full bg-info" />Scheduled</div>
+          <div className="flex items-center gap-1.5 text-xs text-foreground"><span className="w-[7px] h-[7px] rounded-full bg-warning" />Pending</div>
+          <div className="flex items-center gap-1.5 text-xs text-foreground"><span className="w-[7px] h-[7px] rounded-full bg-error" />Cancelled</div>
         </div>
       </div>
+    </div>{/* end outer flex wrapper */}
 
       {/* POST DETAIL MODAL (rendered via portal to escape overflow-y-auto clipping) */}
       {modalOpen ? createPortal(
