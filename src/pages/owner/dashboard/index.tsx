@@ -2062,7 +2062,7 @@ export default function OwnerDashboardPage() {
           if (!open) setSelectedTaskId(null)
         }}
       >
-        <SheetContent side="right" className="sm:max-w-[540px] p-0 flex flex-col gap-0 overflow-hidden">
+        <SheetContent side="right" className="sm:max-w-[540px] p-0 flex flex-col gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           {selectedTask ? (
             <>
               {/* Scrollable body */}
@@ -2328,12 +2328,11 @@ export default function OwnerDashboardPage() {
 
       {/* ── Create task sheet (Notion style) ── */}
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent side="right" className="sm:max-w-[540px] p-0 flex flex-col gap-0 overflow-hidden">
+        <SheetContent side="right" className="sm:max-w-[540px] p-0 flex flex-col gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <div className="flex-1 overflow-y-auto px-4 pt-8 pb-6 space-y-6 sm:px-8 sm:pt-10">
 
             {/* Large title input */}
             <textarea
-              autoFocus
               rows={2}
               className="w-full resize-none bg-transparent text-2xl font-semibold text-foreground outline-none placeholder:text-muted-foreground/40 leading-snug"
               placeholder="Untitled"

@@ -184,7 +184,6 @@ export function SheetEmbedTab({ kind, title, description, canManage, fullView = 
                 placeholder="https://docs.google.com/spreadsheets/d/..."
                 value={draftUrl}
                 onChange={(e) => setDraftUrl(e.target.value)}
-                autoFocus
               />
             </div>
             <div className="grid gap-1.5">

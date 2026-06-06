@@ -466,7 +466,7 @@ export function ManagerMyTasks() {
 
       {/* Task detail sheet */}
       <Sheet open={!!viewTask} onOpenChange={(v) => !v && setViewTask(null)}>
-        <SheetContent side="right" className="sm:max-w-md">
+        <SheetContent side="right" className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
           {viewTask && (
             <div className="space-y-4 py-2">
               <h2 className="text-lg font-semibold text-foreground">{viewTask.title}</h2>

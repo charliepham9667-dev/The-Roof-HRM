@@ -159,6 +159,7 @@ function WishlistItemSheet({
       <SheetContent
         side={isMobile ? "bottom" : "right"}
         className={cn("p-0 flex flex-col", isMobile ? "max-h-[92dvh] rounded-t-2xl" : "sm:max-w-[440px] overflow-hidden")}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {isMobile && <div className="mx-auto mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />}
 
@@ -329,6 +330,7 @@ function MaintenanceTaskSheet({
       <SheetContent
         side={isMobile ? "bottom" : "right"}
         className={cn("p-0 flex flex-col", isMobile ? "max-h-[92dvh] rounded-t-2xl" : "sm:max-w-[440px] overflow-hidden")}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {isMobile && <div className="mx-auto mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />}
 
@@ -1072,6 +1074,7 @@ function DJPaymentSheet({
       <SheetContent
         side={isMobile ? "bottom" : "right"}
         className={cn("p-0 flex flex-col", isMobile ? "max-h-[92dvh] rounded-t-2xl" : "sm:max-w-[420px] overflow-hidden")}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {isMobile && <div className="mx-auto mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />}
 
