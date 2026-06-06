@@ -218,7 +218,7 @@ export function EmployeeDetail() {
               </div>
             ) : (
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex min-w-0 items-center gap-4">
                   <Avatar className="h-24 w-24">
                     <AvatarImage src={profile.avatar_url || undefined} alt={displayName} />
                     <AvatarFallback className="text-2xl font-semibold">
@@ -250,7 +250,7 @@ export function EmployeeDetail() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   {canChangeAccess && (
                     <Button
                       variant="outline"
@@ -715,7 +715,7 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
       ) : (
         <div className="space-y-3">
           <div className="font-medium text-foreground">Previous positions in company (if applicable)</div>
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="hidden overflow-hidden rounded-lg border border-border md:block">
             <div className="grid grid-cols-12 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
               <div className="col-span-5">Job title</div>
               <div className="col-span-2">Employment type</div>
@@ -760,6 +760,63 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile stacked cards */}
+          <div className="space-y-3 md:hidden">
+            {rows.map((r) => (
+              <div key={r.id} className="rounded-lg border border-border px-4 py-3 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium">{r.job_title}</div>
+                    {r.team && <div className="text-xs text-muted-foreground">{r.team}</div>}
+                  </div>
+                  <div className="flex shrink-0 justify-end gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setEditId(r.id)
+                        setForm({
+                          job_title: r.job_title,
+                          industry_job_title: r.industry_job_title || "",
+                          start_date: r.start_date,
+                          end_date: r.end_date || "",
+                          employment_type: r.employment_type,
+                          team: r.team || "",
+                        })
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteMut.mutate(r.id)}
+                      disabled={deleteMut.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  <div>
+                    <div className="text-muted-foreground">Employment type</div>
+                    <div className="mt-0.5">{titleCaseEmploymentType(r.employment_type) || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Start date</div>
+                    <div className="mt-0.5">{r.start_date}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">End date</div>
+                    <div className="mt-0.5">{r.end_date || "—"}</div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -997,37 +1054,71 @@ function LeaveDetailsTab({ userId }: { userId?: string }) {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <div className="grid grid-cols-12 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
-            <div className="col-span-4">Category</div>
-            <div className="col-span-3">Balance</div>
-            <div className="col-span-3">Used</div>
-            <div className="col-span-2 text-right">Actions</div>
-          </div>
-          {allTypes.map((t) => {
-            const r = byType.get(t)
-            return (
-              <div
-                key={t}
-                className="grid grid-cols-12 items-center px-4 py-3 text-sm border-t border-border"
-              >
-                <div className="col-span-4 font-medium">{leaveLabel(t)}</div>
-                <div className="col-span-3 text-muted-foreground">{r?.balance_days ?? 0}</div>
-                <div className="col-span-3 text-muted-foreground">{r?.used_days ?? 0}</div>
-                <div className="col-span-2 flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-primary/30 text-primary hover:bg-primary/10"
-                    onClick={() => openEdit(t)}
-                  >
-                    Adjust
-                  </Button>
+        <>
+          <div className="hidden overflow-hidden rounded-lg border border-border md:block">
+            <div className="grid grid-cols-12 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
+              <div className="col-span-4">Category</div>
+              <div className="col-span-3">Balance</div>
+              <div className="col-span-3">Used</div>
+              <div className="col-span-2 text-right">Actions</div>
+            </div>
+            {allTypes.map((t) => {
+              const r = byType.get(t)
+              return (
+                <div
+                  key={t}
+                  className="grid grid-cols-12 items-center px-4 py-3 text-sm border-t border-border"
+                >
+                  <div className="col-span-4 font-medium">{leaveLabel(t)}</div>
+                  <div className="col-span-3 text-muted-foreground">{r?.balance_days ?? 0}</div>
+                  <div className="col-span-3 text-muted-foreground">{r?.used_days ?? 0}</div>
+                  <div className="col-span-2 flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-primary/30 text-primary hover:bg-primary/10"
+                      onClick={() => openEdit(t)}
+                    >
+                      Adjust
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+
+          {/* Mobile stacked cards */}
+          <div className="space-y-3 md:hidden">
+            {allTypes.map((t) => {
+              const r = byType.get(t)
+              return (
+                <div key={t} className="rounded-lg border border-border px-4 py-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium">{leaveLabel(t)}</div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
+                      onClick={() => openEdit(t)}
+                    >
+                      Adjust
+                    </Button>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 text-xs">
+                    <div>
+                      <div className="text-muted-foreground">Balance</div>
+                      <div className="mt-0.5">{r?.balance_days ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Used</div>
+                      <div className="mt-0.5">{r?.used_days ?? 0}</div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -1290,47 +1381,96 @@ function DocumentsTab({
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <div className="grid grid-cols-12 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
-            <div className="col-span-7">File</div>
-            <div className="col-span-2">Size</div>
-            <div className="col-span-2">Uploaded</div>
-            <div className="col-span-1 text-right">Actions</div>
-          </div>
-          {docs.map((d) => (
-            <div key={d.id} className="grid grid-cols-12 items-center px-4 py-3 text-sm border-t border-border">
-              <div className="col-span-7 min-w-0">
-                <div className="truncate font-medium text-foreground">{d.file_name}</div>
-                <div className="truncate text-xs text-muted-foreground">{d.mime_type || "—"}</div>
-              </div>
-              <div className="col-span-2 text-muted-foreground">{formatBytes(d.size_bytes)}</div>
-              <div className="col-span-2 text-muted-foreground">
-                {d.created_at ? new Date(d.created_at).toLocaleDateString("en-US") : "—"}
-              </div>
-              <div className="col-span-1 flex justify-end gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={() => handleOpenDoc(d)}
-                  aria-label="Open document"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={() => deleteMut.mutate({ id: d.id, file_path: d.file_path, category })}
-                  disabled={deleteMut.isPending}
-                  aria-label="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+        <>
+          <div className="hidden overflow-hidden rounded-lg border border-border md:block">
+            <div className="grid grid-cols-12 bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
+              <div className="col-span-7">File</div>
+              <div className="col-span-2">Size</div>
+              <div className="col-span-2">Uploaded</div>
+              <div className="col-span-1 text-right">Actions</div>
             </div>
-          ))}
-        </div>
+            {docs.map((d) => (
+              <div key={d.id} className="grid grid-cols-12 items-center px-4 py-3 text-sm border-t border-border">
+                <div className="col-span-7 min-w-0">
+                  <div className="truncate font-medium text-foreground">{d.file_name}</div>
+                  <div className="truncate text-xs text-muted-foreground">{d.mime_type || "—"}</div>
+                </div>
+                <div className="col-span-2 text-muted-foreground">{formatBytes(d.size_bytes)}</div>
+                <div className="col-span-2 text-muted-foreground">
+                  {d.created_at ? new Date(d.created_at).toLocaleDateString("en-US") : "—"}
+                </div>
+                <div className="col-span-1 flex justify-end gap-2">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => handleOpenDoc(d)}
+                    aria-label="Open document"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => deleteMut.mutate({ id: d.id, file_path: d.file_path, category })}
+                    disabled={deleteMut.isPending}
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile stacked cards */}
+          <div className="space-y-3 md:hidden">
+            {docs.map((d) => (
+              <div key={d.id} className="rounded-lg border border-border px-4 py-3 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-foreground">{d.file_name}</div>
+                    <div className="truncate text-xs text-muted-foreground">{d.mime_type || "—"}</div>
+                  </div>
+                  <div className="flex shrink-0 justify-end gap-2">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => handleOpenDoc(d)}
+                      aria-label="Open document"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => deleteMut.mutate({ id: d.id, file_path: d.file_path, category })}
+                      disabled={deleteMut.isPending}
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-x-4 text-xs">
+                  <div>
+                    <div className="text-muted-foreground">Size</div>
+                    <div className="mt-0.5">{formatBytes(d.size_bytes)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Uploaded</div>
+                    <div className="mt-0.5">
+                      {d.created_at ? new Date(d.created_at).toLocaleDateString("en-US") : "—"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -1649,10 +1789,13 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
                 key={p.id}
                 className="flex items-start justify-between rounded-lg border border-border bg-muted/30 px-4 py-3"
               >
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
-                      {p.pay_type === "hourly" ? "Hourly" : "Salary"}: {p.rate_value.toLocaleString()} {p.currency}
+                      {p.pay_type === "hourly" ? "Hourly" : "Salary"}:{" "}
+                      <span className="whitespace-nowrap tabular-nums">
+                        {p.rate_value.toLocaleString()} {p.currency}
+                      </span>
                     </span>
                   </div>
                   <span className="text-sm text-muted-foreground">

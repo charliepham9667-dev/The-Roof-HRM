@@ -496,8 +496,8 @@ export function TeamDirectory() {
           </div>
 
           {/* ── Filter bar ──────────────────────────────────────────────── */}
-          <div style={{ padding: "10px 24px", background: "rgba(255, 255, 255, 1)", borderBottom: "1px solid rgba(255, 255, 255, 1)", display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 6, padding: "6px 12px", flex: 1, maxWidth: 320 }}>
+          <div style={{ padding: "10px 24px", background: "rgba(255, 255, 255, 1)", borderBottom: "1px solid rgba(255, 255, 255, 1)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 6, padding: "6px 12px", flex: 1, minWidth: 200, maxWidth: 320 }}>
               <Search size={13} color="#A89E8C" />
               <input
                 value={searchQuery}
@@ -627,7 +627,7 @@ export function TeamDirectory() {
                 return (
                   <div key={p.id} style={{
                     display: "flex", alignItems: "center", gap: 14, background: "#FDFAF5", border: "1px solid #E0D8C8",
-                    borderRadius: 8, padding: "12px 16px",
+                    borderRadius: 8, padding: "12px 16px", flexWrap: "wrap",
                   }}>
                     <div style={{
                       width: 38, height: 38, borderRadius: "50%", background: "#EDE8DD", display: "flex",
@@ -636,12 +636,12 @@ export function TeamDirectory() {
                     }}>
                       {initials(name)}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1814" }}>{name}</div>
-                      <div style={{ fontSize: 12, color: "#7A7260" }}>{email}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1814", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+                      <div style={{ fontSize: 12, color: "#7A7260", overflow: "hidden", textOverflow: "ellipsis" }}>{email}</div>
                       <div style={{ fontSize: 11, color: "#A89E8C", marginTop: 2 }}>Signed up {signedUp}</div>
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0, marginLeft: "auto" }}>
                       <button
                         type="button"
                         onClick={() => setApproveTarget({ id: p.id, name, email })}
@@ -797,6 +797,7 @@ function ContractsView({
         </div>
       ) : (
         <div
+          className="hidden md:block"
           style={{
             background: "#FFFFFF",
             border: "1px solid #E0D8C8",
@@ -879,6 +880,65 @@ function ContractsView({
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {!isLoading && rows.length > 0 && (
+        <div className="space-y-3 md:hidden">
+          {rows.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E0D8C8",
+                borderRadius: 10,
+                padding: "12px 14px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <Link
+                    to={`/team/${p.id}?tab=details`}
+                    style={{ color: "#1A1814", textDecoration: "none", fontWeight: 600, fontSize: 14 }}
+                  >
+                    {p.full_name ?? "—"}
+                  </Link>
+                  <div style={{ fontSize: 11.5, color: "#7A7260", overflow: "hidden", textOverflow: "ellipsis" }}>{p.email ?? ""}</div>
+                </div>
+                <Link
+                  to={`/team/${p.id}?tab=details`}
+                  style={{ fontSize: 11.5, fontWeight: 600, color: "#B8922A", textDecoration: "none", flexShrink: 0 }}
+                >
+                  Edit →
+                </Link>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <ContractBadge person={p} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", marginTop: 10, fontSize: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7260", fontWeight: 700 }}>Role</div>
+                  <div style={{ color: "#1A1814", textTransform: "capitalize", marginTop: 2 }}>{p.job_role ?? p.role}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7260", fontWeight: 700 }}>Department</div>
+                  <div style={{ color: "#7A7260", marginTop: 2 }}>{normalizeDepartment(p.department) || "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7260", fontWeight: 700 }}>Type</div>
+                  <div style={{ color: "#7A7260", textTransform: "capitalize", marginTop: 2 }}>{(p.contract_type ?? "").replace(/_/g, " ") || "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7260", fontWeight: 700 }}>Start</div>
+                  <div style={{ color: "#7A7260", marginTop: 2 }}>{fmtDate(p.contract_start_date)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7260", fontWeight: 700 }}>End</div>
+                  <div style={{ color: "#7A7260", marginTop: 2 }}>{fmtDate(p.contract_end_date)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1328,7 +1388,10 @@ function TeamMemberCard({
 function OrgChartInline() {
   const { members, orgTree, isLoading, error } = useOrgChart()
   const [selected, setSelected] = useState<OrgMember | null>(null)
-  const [zoom, setZoom] = useState(100)
+  // Lower the default zoom on small screens so the chart fits without forced panning.
+  const [zoom, setZoom] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 768 ? 60 : 100,
+  )
   const [editMode, setEditMode] = useState(false)
   const [pickerQuery, setPickerQuery] = useState("")
   const [unassignedQuery, setUnassignedQuery] = useState("")

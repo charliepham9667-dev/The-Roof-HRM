@@ -208,12 +208,12 @@ export function Reservations() {
             {todayList.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="h-2.5 w-2.5 rounded-full bg-green-400 ring-4 ring-green-400/20" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-green-400">
+                  <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-400 ring-4 ring-green-400/20" />
+                  <span className="min-w-0 truncate text-xs font-semibold uppercase tracking-widest text-green-400">
                     Today — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                   </span>
                   <div className="flex-1 h-px bg-green-500/20" />
-                  <span className="text-xs text-green-400/70">{todayPax} guests</span>
+                  <span className="shrink-0 text-xs text-green-400/70">{todayPax} guests</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {todayList.map((r, idx) => {
@@ -236,12 +236,12 @@ export function Reservations() {
             {upcomingList.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="h-2.5 w-2.5 rounded-full bg-blue-400 ring-4 ring-blue-400/20" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-blue-400">
+                  <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-400 ring-4 ring-blue-400/20" />
+                  <span className="min-w-0 truncate text-xs font-semibold uppercase tracking-widest text-blue-400">
                     Upcoming
                   </span>
                   <div className="flex-1 h-px bg-blue-500/20" />
-                  <span className="text-xs text-blue-400/70">{upcomingPax} guests</span>
+                  <span className="shrink-0 text-xs text-blue-400/70">{upcomingPax} guests</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {upcomingList.map((r, idx) => {
@@ -264,12 +264,12 @@ export function Reservations() {
             {pastList.length > 0 && statusFilter !== 'upcoming' && statusFilter !== 'today' && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="h-2.5 w-2.5 rounded-full bg-red-400/60" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-red-400/70">
+                  <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-400/60" />
+                  <span className="min-w-0 truncate text-xs font-semibold uppercase tracking-widest text-red-400/70">
                     Past
                   </span>
                   <div className="flex-1 h-px bg-red-500/20" />
-                  <span className="text-xs text-red-400/50">{pastList.length}</span>
+                  <span className="shrink-0 text-xs text-red-400/50">{pastList.length}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {pastList.map((r, idx) => {

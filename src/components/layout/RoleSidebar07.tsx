@@ -711,10 +711,10 @@ export function RoleSidebar07() {
                       isActive={isActive(item.url)}
                       tooltip={item.title}
                     >
-                      <Link to={item.url} className="flex items-center justify-between">
-                        <div className="flex items-center gap-[5px]">
-                          <item.icon className="h-4 w-4" />
-                          <span className="font-serif text-xs font-medium">{item.title}</span>
+                      <Link to={item.url} className="flex min-w-0 items-center justify-between">
+                        <div className="flex min-w-0 items-center gap-[5px]">
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate font-serif text-xs font-medium">{item.title}</span>
                         </div>
                         {item.badge && (
                           <Badge variant="secondary" className="ml-auto h-5 min-w-5 justify-center">
@@ -751,7 +751,7 @@ export function RoleSidebar07() {
                       {getInitials(profile?.fullName)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-1 flex-col text-left text-sm leading-tight">
+                  <div className="flex min-w-0 flex-1 flex-col text-left text-sm leading-tight">
                     <span className="truncate font-medium">
                       {profile?.fullName || 'User'}
                     </span>

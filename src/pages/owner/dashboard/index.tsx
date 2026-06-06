@@ -716,7 +716,7 @@ export default function OwnerDashboardPage() {
                 </div>
               }
             >
-              <div className="font-display text-[34px] leading-none tracking-[2px] text-foreground">
+              <div className="font-display text-[26px] sm:text-[34px] leading-none tracking-[2px] text-foreground">
                 {csvPaxLoading ? "—" : allCsvReservations.filter((r) => r.status === "today").length}
               </div>
               <div className="mt-2 text-xs text-muted-foreground">Confirmed tonight</div>
@@ -742,7 +742,7 @@ export default function OwnerDashboardPage() {
               }
             >
               <div className="text-[13px] text-primary">★★★★★</div>
-              <div className="font-display text-[34px] leading-none tracking-[2px] text-foreground">
+              <div className="font-display text-[26px] sm:text-[34px] leading-none tracking-[2px] text-foreground">
                 {googleReviews?.rating ? googleReviews.rating.toFixed(1) : "—"}
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
@@ -786,7 +786,7 @@ export default function OwnerDashboardPage() {
                 )
               }
             >
-              <div className="font-display text-[34px] leading-none tracking-[2px] text-foreground">
+              <div className="font-display text-[26px] sm:text-[34px] leading-none tracking-[2px] text-foreground">
                 {kpiLoading ? "—" : mtdPax.toLocaleString()}
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
@@ -898,16 +898,16 @@ export default function OwnerDashboardPage() {
                         : ` · Goal ${formatCompactVnd(monthlyTarget)} đ/month`}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                     <button
                       type="button"
                       onClick={() => setTonightEditOpen(true)}
-                      className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1.5 text-xs tracking-wider text-secondary-foreground uppercase hover:border-primary/30"
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-sm border border-border px-2 py-1.5 text-xs tracking-wider text-secondary-foreground uppercase hover:border-primary/30"
                     >
                       <Pencil className="h-3 w-3" />
                       {tonightHasInput ? formatCompactVnd(tonightsRevenue) + " đ" : "Log tonight"}
                     </button>
-                    <div className={cn("rounded-sm border px-3 py-1.5 text-xs tracking-wider uppercase", statusStyle)}>
+                    <div className={cn("whitespace-nowrap rounded-sm border px-3 py-1.5 text-xs tracking-wider uppercase", statusStyle)}>
                       {statusLabel}
                     </div>
                   </div>
@@ -915,8 +915,8 @@ export default function OwnerDashboardPage() {
 
                 {/* Progress bar: MTD vs target (or stretch when target cleared) */}
                 <div className="space-y-1 mb-3">
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>MTD {formatCompactVnd(mtdRevenue)} đ ({showStretchGoal ? stretchPct : mtdPct}%)</span>
+                  <div className="flex flex-wrap justify-between gap-x-2 text-[10px] text-muted-foreground">
+                    <span className="whitespace-nowrap">MTD {formatCompactVnd(mtdRevenue)} đ ({showStretchGoal ? stretchPct : mtdPct}%)</span>
                     {showStretchGoal ? (
                       <span>Stretch {formatCompactVnd(stretchGoal)} đ <span className="opacity-70">(target cleared)</span></span>
                     ) : (
@@ -935,19 +935,19 @@ export default function OwnerDashboardPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                   <div className="rounded-md bg-secondary/50 px-3 py-2">
                     <div className="text-[9.5px] uppercase tracking-widest text-muted-foreground mb-0.5">Avg/day</div>
-                    <div className={cn("text-xs font-semibold", momentumGood ? "text-success" : momentumCritical ? "text-destructive" : "text-warning")}>
+                    <div className={cn("whitespace-nowrap text-xs font-semibold tabular-nums", momentumGood ? "text-success" : momentumCritical ? "text-destructive" : "text-warning")}>
                       {velocityLoading ? "—" : formatCompactVnd(avgDailyRevenue)} đ
                     </div>
                   </div>
                   <div className="rounded-md bg-secondary/50 px-3 py-2">
                     <div className="text-[9.5px] uppercase tracking-widest text-muted-foreground mb-0.5">Yesterday</div>
-                    <div className={cn("text-xs font-semibold", yesterdayRevenue >= avgDailyRevenue ? "text-success" : "text-warning")}>
+                    <div className={cn("whitespace-nowrap text-xs font-semibold tabular-nums", yesterdayRevenue >= avgDailyRevenue ? "text-success" : "text-warning")}>
                       {velocityLoading ? "—" : formatCompactVnd(yesterdayRevenue)} đ
                     </div>
                   </div>
                   <div className="rounded-md bg-secondary/50 px-3 py-2">
                     <div className="text-[9.5px] uppercase tracking-widest text-muted-foreground mb-0.5">Projected</div>
-                    <div className={cn("text-xs font-semibold", projectedEnd >= monthlyTarget ? "text-success" : "text-warning")}>
+                    <div className={cn("whitespace-nowrap text-xs font-semibold tabular-nums", projectedEnd >= monthlyTarget ? "text-success" : "text-warning")}>
                       {velocityLoading ? "—" : formatCompactVnd(projectedEnd)} đ
                     </div>
                   </div>
@@ -961,11 +961,11 @@ export default function OwnerDashboardPage() {
 
                 {/* Previous sales table with range filters */}
                 <div className="mb-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <div className="text-[9.5px] uppercase tracking-widest text-muted-foreground">
                       Previous sales
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {salesRangeFilters.map((range) => (
                         <button
                           key={range}
@@ -983,7 +983,52 @@ export default function OwnerDashboardPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="overflow-hidden rounded-md border border-border bg-secondary/30">
+                  {/* Mobile card list */}
+                  <div className="space-y-2 md:hidden">
+                    {showLookbackValues ? (
+                      filteredLookbackRows.length === 0 ? (
+                        <div className="rounded-md border border-border bg-secondary/30 px-3 py-3 text-center text-xs text-muted-foreground">—</div>
+                      ) : (
+                        filteredLookbackRows.map((row, index) => {
+                          const currentWeek = getIsoWeekMeta(row.date)
+                          const prevWeek = index > 0 ? getIsoWeekMeta(filteredLookbackRows[index - 1].date) : null
+                          const showWeekDivider = !prevWeek || prevWeek.key !== currentWeek.key
+                          const summary = weeklySummaries.get(currentWeek.key)
+                          const weekAvg = summary && summary.totalPax > 0 ? summary.totalSales / summary.totalPax : 0
+                          return (
+                            <Fragment key={row.date}>
+                              {showWeekDivider && (
+                                <div className="rounded-md border border-border/60 bg-secondary/40 px-3 py-2">
+                                  <div className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                                    Week {currentWeek.week} · {currentWeek.rangeLabel}
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-medium text-foreground">
+                                    <span className="whitespace-nowrap tabular-nums">{formatCompactVnd(summary?.totalSales ?? 0)} đ</span>
+                                    <span className="whitespace-nowrap tabular-nums">{(summary?.totalPax ?? 0).toLocaleString()} pax</span>
+                                    <span className="whitespace-nowrap tabular-nums">{formatCompactVnd(weekAvg)} đ avg</span>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="rounded-md border border-border bg-card px-3 py-2">
+                                <div className="text-xs font-medium text-foreground">
+                                  {new Date(`${row.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: ICT_TZ })}
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                                  <span className="whitespace-nowrap tabular-nums">Sales <span className="font-medium text-foreground">{formatCompactVnd(row.revenue)} đ</span></span>
+                                  <span className="whitespace-nowrap tabular-nums">Pax <span className="font-medium text-foreground">{row.pax.toLocaleString()}</span></span>
+                                  <span className="whitespace-nowrap tabular-nums">Avg <span className="font-medium text-foreground">{formatCompactVnd(row.avgSpend)} đ</span></span>
+                                </div>
+                              </div>
+                            </Fragment>
+                          )
+                        })
+                      )
+                    ) : (
+                      <div className="rounded-md border border-border bg-secondary/30 px-3 py-3 text-center text-xs text-muted-foreground">—</div>
+                    )}
+                  </div>
+
+                  <div className="hidden overflow-x-auto rounded-md border border-border bg-secondary/30 md:block">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-border bg-secondary/50">
@@ -1040,13 +1085,13 @@ export default function OwnerDashboardPage() {
                                         timeZone: ICT_TZ,
                                       })}
                                     </td>
-                                    <td className="px-3 py-2 text-right font-medium text-foreground">
+                                    <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-foreground">
                                       {formatCompactVnd(row.revenue)} đ
                                     </td>
-                                    <td className="px-3 py-2 text-right font-medium text-foreground">
+                                    <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-foreground">
                                       {row.pax.toLocaleString()}
                                     </td>
-                                    <td className="px-3 py-2 text-right font-medium text-foreground">
+                                    <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-foreground">
                                       {formatCompactVnd(row.avgSpend)} đ
                                     </td>
                                   </tr>
@@ -1075,10 +1120,10 @@ export default function OwnerDashboardPage() {
                 {/* Tonight's log vs required — only shown when input exists */}
                 {tonightHasInput && tonightVsRequired !== null && (
                   <div className={cn(
-                    "mb-3 flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
+                    "mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md border px-3 py-2 text-xs",
                     tonightVsRequired >= 1 ? "border-success/25 bg-success/8 text-success" : "border-warning/25 bg-warning/8 text-warning"
                   )}>
-                    <span className="font-semibold">Tonight logged: {formatCompactVnd(tonightsRevenue)} đ</span>
+                    <span className="whitespace-nowrap font-semibold">Tonight logged: {formatCompactVnd(tonightsRevenue)} đ</span>
                     <span className="text-[10px] opacity-70">
                       {tonightVsRequired >= 1
                         ? `+${formatCompactVnd(tonightsRevenue - effectiveRequiredToday)} đ above required`
@@ -1278,12 +1323,12 @@ export default function OwnerDashboardPage() {
           {/* Right: Delegated — Follow Up */}
           <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
             {/* Header */}
-            <div className="px-4 py-3 border-b border-border flex items-center gap-3">
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase whitespace-nowrap">
+            <div className="px-4 py-3 border-b border-border flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <div className="min-w-0 text-xs tracking-widest font-semibold text-foreground uppercase">
                 Delegated — Follow Up
               </div>
               {followUpList.length > 0 && (
-                <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto sm:shrink-0">
                   {followUpList.filter((x) => x.task.priority === "urgent").length > 0 && (
                     <Badge variant="danger">
                       {followUpList.filter((x) => x.task.priority === "urgent").length} urgent
@@ -1474,14 +1519,14 @@ export default function OwnerDashboardPage() {
             Live calendar feed is unavailable. Showing events from your internal calendar where available.
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <SectionTitle label="THIS WEEK" />
-          <div className="h-px flex-1 bg-border" />
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="hidden h-px flex-1 bg-border sm:block" />
+          <div className="flex items-center gap-1.5 sm:shrink-0">
             <button onClick={() => setWeekOffset((p) => p - 1)} className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-secondary transition-colors">
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <span className="min-w-[120px] text-center text-xs font-medium text-foreground">{fmtWeekRange(weekDates)}</span>
+            <span className="min-w-[100px] text-center text-xs font-medium text-foreground sm:min-w-[120px]">{fmtWeekRange(weekDates)}</span>
             <button onClick={() => setWeekOffset((p) => p + 1)} className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-secondary transition-colors">
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -2130,7 +2175,7 @@ export default function OwnerDashboardPage() {
           {selectedTask ? (
             <>
               {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto px-8 pt-10 pb-6 space-y-6">
+              <div className="flex-1 overflow-y-auto px-4 pt-8 pb-6 space-y-6 sm:px-8 sm:pt-10">
                 {/* Large editable title */}
                 <textarea
                   rows={2}
@@ -2332,7 +2377,7 @@ export default function OwnerDashboardPage() {
               </div>
 
               {/* Fixed footer */}
-              <div className="shrink-0 border-t border-border px-8 py-4 flex items-center justify-between gap-3 bg-card">
+              <div className="shrink-0 border-t border-border px-4 py-4 flex flex-wrap items-center justify-between gap-3 bg-card sm:px-8">
                 <button
                   type="button"
                   disabled={deleteTask.isPending}
@@ -2393,7 +2438,7 @@ export default function OwnerDashboardPage() {
       {/* ── Create task sheet (Notion style) ── */}
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
         <SheetContent side="right" className="sm:max-w-[540px] p-0 flex flex-col gap-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-8 pt-10 pb-6 space-y-6">
+          <div className="flex-1 overflow-y-auto px-4 pt-8 pb-6 space-y-6 sm:px-8 sm:pt-10">
 
             {/* Large title input */}
             <textarea
@@ -2597,7 +2642,7 @@ export default function OwnerDashboardPage() {
           </div>
 
           {/* Fixed footer */}
-          <div className="shrink-0 border-t border-border px-8 py-4 flex items-center justify-end gap-2 bg-card">
+          <div className="shrink-0 border-t border-border px-4 py-4 flex flex-wrap items-center justify-end gap-2 bg-card sm:px-8">
             <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)}>
               Cancel
             </Button>

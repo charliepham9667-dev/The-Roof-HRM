@@ -229,7 +229,7 @@ export function Calendar() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Input className="h-9 w-full sm:w-56" placeholder="Search events..." />
                 <Select defaultValue="month">
                   <SelectTrigger className="h-9 w-[120px]">
@@ -246,8 +246,8 @@ export function Calendar() {
           </CardHeader>
 
           <CardContent className="p-0">
-            {/* Day Headers */}
-            <div className="grid grid-cols-7 border-b border-border bg-background/40">
+            {/* Day Headers (desktop month grid) */}
+            <div className="hidden grid-cols-7 border-b border-border bg-background/40 md:grid">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                 <div key={day} className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">
                   {day}
@@ -255,13 +255,13 @@ export function Calendar() {
               ))}
             </div>
 
-            {/* Calendar Grid */}
+            {/* Calendar Grid (desktop only — md and up) */}
             {isLoading ? (
-              <div className="flex items-center justify-center py-20">
+              <div className="hidden items-center justify-center py-20 md:flex">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="grid grid-cols-7">
+              <div className="hidden grid-cols-7 md:grid">
                 {calendarDays.map((day, index) => {
                   const isCurrentMonth = day.getMonth() === currentDate.getMonth()
                   const isToday = day.toDateString() === new Date().toDateString()
@@ -329,6 +329,78 @@ export function Calendar() {
                 })}
               </div>
             )}
+
+            {/* Mobile agenda view (below md) */}
+            <div className="md:hidden">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (() => {
+                const agendaDays = calendarDays.filter(
+                  (day) =>
+                    day.getMonth() === currentDate.getMonth() &&
+                    getEventsForDate(day).length > 0,
+                )
+                if (agendaDays.length === 0) {
+                  return (
+                    <div className="py-10 text-center text-sm text-muted-foreground">
+                      No events this month
+                    </div>
+                  )
+                }
+                return (
+                  <div className="divide-y divide-border">
+                    {agendaDays.map((day, idx) => {
+                      const dayEvents = getEventsForDate(day)
+                      const isToday = day.toDateString() === new Date().toDateString()
+                      return (
+                        <div key={idx} className="px-4 py-3">
+                          <div className="mb-2 flex items-center gap-2">
+                            <span
+                              className={[
+                                "inline-flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-sm font-semibold",
+                                isToday ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                              ].join(" ")}
+                            >
+                              {day.getDate()}
+                            </span>
+                            <span className="text-sm font-medium text-foreground">
+                              {day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            {dayEvents.map((event) => {
+                              const config = eventTypeConfig[event.eventType]
+                              return (
+                                <button
+                                  key={event.id}
+                                  onClick={() => setSelectedEvent(event)}
+                                  className={[
+                                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs",
+                                    `${config.bg}/15`,
+                                    `${config.color}`,
+                                    "hover:opacity-90",
+                                  ].join(" ")}
+                                >
+                                  <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${config.bg}`} />
+                                  <span className="truncate">{event.title}</span>
+                                  {event.startTime && (
+                                    <span className="ml-auto flex-shrink-0 text-[11px] text-muted-foreground">
+                                      {event.startTime}
+                                    </span>
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -466,7 +538,7 @@ function EventForm({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-card border border-border bg-card p-6 shadow-card">
+      <div className="relative w-full max-w-lg rounded-card border border-border bg-card p-4 shadow-card sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">New Event</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -579,7 +651,7 @@ function EventForm({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button type="button" onClick={onClose} className="px-4 py-2 text-muted-foreground hover:text-foreground">
               Cancel
             </button>
@@ -612,7 +684,7 @@ function EventDetail({ event, onClose }: { event: CalendarEvent; onClose: () => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-card border border-border bg-card p-6 shadow-card">
+      <div className="relative w-full max-w-md rounded-card border border-border bg-card p-4 shadow-card sm:p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <span className={`inline-block rounded-full px-2 py-0.5 text-xs mb-2 ${config.bg}/20 ${config.color}`}>
@@ -657,7 +729,7 @@ function EventDetail({ event, onClose }: { event: CalendarEvent; onClose: () => 
           )}
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+        <div className="flex flex-col-reverse gap-3 mt-6 pt-4 border-t border-border sm:flex-row sm:justify-end">
           <button
             onClick={handleDelete}
             className="px-4 py-2 text-sm text-error hover:text-error/80"

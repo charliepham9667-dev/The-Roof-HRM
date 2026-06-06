@@ -153,15 +153,15 @@ export default function DJSchedule() {
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                           <Music className="h-5 w-5 text-primary" />
                         </div>
-                        <div>
-                          <p className="font-medium text-foreground">{booking.dj_name}</p>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">{booking.dj_name}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1 whitespace-nowrap">
                               <Clock className="h-3 w-3" />
                               {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
                             </span>
                             {booking.event && (
-                              <span className="text-primary">{booking.event.title}</span>
+                              <span className="min-w-0 truncate text-primary">{booking.event.title}</span>
                             )}
                           </div>
                         </div>
@@ -216,7 +216,7 @@ export default function DJSchedule() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="date">Date *</Label>
                 <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />

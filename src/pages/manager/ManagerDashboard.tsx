@@ -900,7 +900,7 @@ export function ManagerDashboard() {
             {allTasks.filter(t => t.status !== "done" && t.status !== "cancelled").length > 0 && (
               <div className="mx-3 mb-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/8 px-3 py-2">
                 <span className="text-[11px]">⚑</span>
-                <span className="flex-1 text-[11px] text-warning">
+                <span className="min-w-0 flex-1 truncate text-[11px] text-warning">
                   {allTasks.filter(t => t.status !== "done" && t.status !== "cancelled").length} tasks pending
                   {allTasks.filter(t => t.assignedBy !== myUserId && t.status !== "done").length > 0
                     ? ` · ${allTasks.filter(t => t.assignedBy !== myUserId && t.status !== "done").length} from owner`
@@ -1038,7 +1038,7 @@ export function ManagerDashboard() {
                 if (!next) return null
                 return (
                   <div className="mt-2 flex items-center gap-2 rounded-md border border-info/25 bg-info/8 px-2.5 py-2">
-                    <span className="flex-1 text-[11px] text-info">
+                    <span className="min-w-0 flex-1 truncate text-[11px] text-info">
                       🕐 Next: {next.name} {next.numberOfGuests ? `(${next.numberOfGuests} pax)` : ""}
                       {next.notes ? ` — ${next.notes}` : ""}
                     </span>
@@ -1287,7 +1287,7 @@ export function ManagerDashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className={cn("text-sm font-medium leading-snug truncate", isDone ? "line-through text-muted-foreground" : "text-foreground")}>{task.title}</div>
-                          <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
                             <span>Assigned:</span>
                             <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/20 text-[7px] font-bold text-primary">{assigneeInitials}</span>
                             <span>{assigneeFirst}</span>
@@ -1344,7 +1344,7 @@ export function ManagerDashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium leading-snug truncate text-foreground">{task.title}</div>
-                          <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
                             <span>From:</span>
                             <span>{assignerFirst}</span>
                             <span className="text-muted-foreground/40">·</span>
@@ -1402,7 +1402,7 @@ export function ManagerDashboard() {
                         ? "border-l-[#f59e0b]"
                         : "border-l-border"
                   return (
-                    <div key={issue.id} className={cn("flex items-start gap-3 px-5 py-3.5 border-l-[3px]", priorityCls)}>
+                    <div key={issue.id} className={cn("flex flex-col items-start gap-2 px-5 py-3.5 border-l-[3px] sm:flex-row sm:gap-3", priorityCls)}>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-foreground leading-snug">{issue.title}</div>
                         {issue.location && (
@@ -1746,7 +1746,7 @@ export function ManagerDashboard() {
                 />
               </div>
               {/* Footer */}
-              <div className="shrink-0 border-t border-border px-8 py-4 flex items-center justify-between gap-3 bg-card">
+              <div className="shrink-0 border-t border-border px-8 py-4 flex flex-col gap-3 bg-card sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" disabled={deleteTask.isPending}
                   onClick={async () => {
                     setTaskError(null)

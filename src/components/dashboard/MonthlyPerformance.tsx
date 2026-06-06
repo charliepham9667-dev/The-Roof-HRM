@@ -245,7 +245,7 @@ export function MonthlyPerformance({
   const [period, setPeriod] = React.useState<Period>('6m');
 
   React.useEffect(() => {
-    if (isMobile && !isFinanceSummary) setPeriod('3m');
+    if (isMobile) setPeriod('3m');
   }, [isMobile, isFinanceSummary]);
 
   const { data: monthlyData, isLoading, isFetching, error } = useMonthlyPerformance(period);
@@ -325,7 +325,7 @@ export function MonthlyPerformance({
 
   // ── Header ────────────────────────────────────────────────────────────────
   const header = isFinanceSummary ? (
-    <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <h3 className="font-serif text-[18px] font-semibold leading-tight text-foreground">
           Monthly Performance
@@ -334,7 +334,7 @@ export function MonthlyPerformance({
           {periodLabel} · revenue vs prior year vs target
         </p>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
         {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
         {legend}
         {periodSelect}
@@ -355,10 +355,12 @@ export function MonthlyPerformance({
 
   // ── Chart ─────────────────────────────────────────────────────────────────
   const chart = (
-    <div className="flex w-full gap-1 sm:gap-2">
-      {monthlyData.map((entry) => (
-        <MonthColumn key={entry.monthKey} entry={entry} chartMax={chartMax} />
-      ))}
+    <div className="w-full overflow-x-auto">
+      <div className="flex w-full min-w-[280px] gap-1 sm:gap-2">
+        {monthlyData.map((entry) => (
+          <MonthColumn key={entry.monthKey} entry={entry} chartMax={chartMax} />
+        ))}
+      </div>
     </div>
   );
 

@@ -39,8 +39,8 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Mobile: bottom sheet — slides up from the bottom, full width, rounded top corners
-        "fixed bottom-0 left-0 right-0 z-50 grid w-full gap-4 border-t bg-background p-6 shadow-lg duration-200",
-        "rounded-t-2xl max-h-[90dvh] overflow-y-auto",
+        "fixed bottom-0 left-0 right-0 z-50 grid w-full min-w-0 gap-4 border-t bg-background p-6 shadow-lg duration-200",
+        "rounded-t-2xl max-h-[90dvh] overflow-y-auto pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         // Desktop (sm+): centered modal, original behaviour

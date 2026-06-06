@@ -144,7 +144,7 @@ function TaskRow({ task, myId, onToggleDone, onEscalate, onEdit, onView }: TaskR
       </div>
 
       {!isDone && (
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
           {fromOwner && (
             <button
               onClick={() => onEscalate(task)}

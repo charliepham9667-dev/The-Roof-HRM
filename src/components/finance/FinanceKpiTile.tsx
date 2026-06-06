@@ -54,7 +54,7 @@ export function FinanceKpiTile({
       <div className="flex items-start justify-between gap-2">
         <span
           className={cn(
-            "text-[10.5px] font-semibold uppercase tracking-wide",
+            "min-w-0 text-[10.5px] font-semibold uppercase tracking-wide",
             isWarning ? "text-warning" : "text-muted-foreground",
           )}
         >
@@ -63,7 +63,7 @@ export function FinanceKpiTile({
         {trendPercent !== undefined && (
           <span
             className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-wide",
+              "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-wide",
               pillStyles[pillTone],
             )}
           >
@@ -73,7 +73,7 @@ export function FinanceKpiTile({
       </div>
       <p
         className={cn(
-          "mt-1.5 font-serif text-2xl font-semibold tracking-tight sm:text-[30px]",
+          "mt-1.5 whitespace-nowrap font-serif text-xl font-semibold tabular-nums tracking-tight sm:text-[30px]",
           isWarning ? "text-warning" : "text-foreground",
         )}
       >

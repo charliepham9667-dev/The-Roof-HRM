@@ -621,7 +621,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
             {/* Weekly analysis strip — pinned to bottom */}
             <div style={{ borderTop: '2px solid #e2ddd7', background: '#fff' }}>
               {/* Stats bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px', borderBottom: '1px solid #e2ddd7', gap: 8, backgroundColor: '#faf8f5' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px', borderBottom: '1px solid #e2ddd7', gap: 8, rowGap: 8, flexWrap: 'wrap' as const, backgroundColor: '#faf8f5' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                   <Sparkles style={{ width: 10, height: 10, color: '#c9a84c', flexShrink: 0 }} />
                   <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#9c9590' }}>Weekly Analysis</span>
@@ -646,7 +646,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
                 {insights.map((ins, i) => {
                   const InsIcon = ins.icon;
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderTop: i > 0 ? '1px solid #f0ece6' : 'none' }}>
+                    <div key={i} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-2" style={{ padding: '5px 14px', borderTop: i > 0 ? '1px solid #f0ece6' : 'none' }}>
                       <InsIcon style={{ width: 11, height: 11, flexShrink: 0, color: '#9c9590' }} />
                       <div>
                         <span style={{ fontSize: 10, fontWeight: 700, color: '#1a1714' }}>{ins.title}</span>
@@ -676,10 +676,10 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
 
         {/* Row 1 — Daily Happy Hour hero */}
         <div className="rounded-lg border border-primary/20 bg-primary/[0.03] shadow-card overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-3 border-b border-primary/15">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 border-b border-primary/15">
             <div className="text-sm font-semibold text-foreground">Daily Happy Hour</div>
             <span className="rounded-sm border border-primary/25 bg-primary/[0.08] px-2 py-0.5 text-[10px] tracking-widest text-primary uppercase">Every day</span>
-            <span className="ml-auto text-xs text-muted-foreground tabular-nums">14:00 – 18:00</span>
+            <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground tabular-nums">14:00 – 18:00</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-primary/10">
             {HAPPY_HOUR_ITEMS.map((item) => (
@@ -713,7 +713,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
                 <div className={cn('rounded-md border px-2.5 py-2 text-xs text-secondary-foreground leading-snug mb-3', isToday ? 'border-primary/20 bg-primary/[0.05]' : 'border-primary/15 bg-primary/[0.04]')}>
                   {p.deal}
                 </div>
-                <div className="text-[10px] text-muted-foreground tabular-nums">{p.hours}</div>
+                <div className="whitespace-nowrap text-[10px] text-muted-foreground tabular-nums">{p.hours}</div>
               </div>
             );
           })}

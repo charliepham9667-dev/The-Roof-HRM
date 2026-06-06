@@ -784,14 +784,14 @@ export default function ContentCalendar() {
 
         {/* POST OVERVIEW */}
         <div className="px-4 md:px-6 py-6 bg-background border-t border-border">
-          <div className="flex items-start justify-between mb-4">
-            <div>
+          <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <div className="font-subheading text-[18px] font-light italic text-foreground">Post Overview</div>
               <div className="text-sm tracking-wide text-muted-foreground mt-1">
                 {filteredPosts.length} posts · {awaitingCount} awaiting approval
               </div>
             </div>
-            <div className="flex overflow-hidden rounded-sm border border-border bg-secondary">
+            <div className="flex overflow-hidden rounded-sm border border-border bg-secondary self-start sm:shrink-0">
               <button
                 type="button"
                 onClick={() => setOverviewTab("kanban")}
@@ -930,7 +930,84 @@ export default function ContentCalendar() {
             </div>
 
             <div className="rounded-card border border-border overflow-hidden">
-              <div className="overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {/* Mobile stacked card list */}
+              <div className="md:hidden divide-y divide-border">
+                {filteredPosts.length === 0 ? (
+                  <div className="py-10 text-center text-xs text-muted-foreground tracking-wider uppercase">No posts yet</div>
+                ) : (
+                  [...filteredPosts]
+                    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+                    .map((p, idx) => {
+                      const pillar = pillarForPost(p)
+                      const mediaUrl = p.media_url || getNoteField(p.notes, "link_air") || getNoteField(p.notes, "brief")
+                      const FORMAT_LABELS: Record<string, string> = {
+                        post: "Poster",
+                        reel: "Videos/Reels",
+                        video: "Photos",
+                        story: "Story",
+                        carousel: "Carousel",
+                      }
+                      const PLATFORM_LABELS: Record<string, string> = {
+                        all: "Facebook/Instagram",
+                        instagram: "Instagram",
+                        facebook: "Facebook",
+                        tiktok: "TikTok",
+                      }
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => openPostModal(p)}
+                          className={cn(
+                            "w-full px-4 py-3 text-left transition-colors hover:bg-primary/[0.02]",
+                            idx % 2 === 0 ? "bg-card" : "bg-background",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2 min-w-0">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium text-foreground leading-snug truncate">{postTitle(p)}</div>
+                              {p.caption ? (
+                                <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">{p.caption}</div>
+                              ) : null}
+                            </div>
+                            <Badge variant={statusVariant(p.status)} className="shrink-0">
+                              {statusLabel(p.status)}
+                            </Badge>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <span className="font-mono whitespace-nowrap">
+                              {p.scheduled_date ? format(new Date(p.scheduled_date + "T00:00:00"), "dd-MM-yy") : "—"}
+                            </span>
+                            <span
+                              className="rounded-full px-2 py-0.5"
+                              style={{ color: PILLARS[pillar].color, background: PILLARS[pillar].dimBg, border: `1px solid ${PILLARS[pillar].dimBorder}` }}
+                            >
+                              {PILLARS[pillar].label}
+                            </span>
+                            <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-foreground">
+                              {FORMAT_LABELS[p.content_type ?? "post"] ?? (p.content_type || "—")}
+                            </span>
+                            <span className="truncate">{PLATFORM_LABELS[p.platform] ?? p.platform}</span>
+                            {mediaUrl ? (
+                              <a
+                                href={mediaUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-info underline underline-offset-2 hover:text-info/80"
+                              >
+                                Open ↗
+                              </a>
+                            ) : null}
+                          </div>
+                        </button>
+                      )
+                    })
+                )}
+              </div>
+
+              {/* Desktop wide table (md+) */}
+              <div className="hidden md:block overflow-x-auto scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div style={{ minWidth: 780 }}>
               {/* Table header */}
               <div className="grid bg-secondary border-b border-border text-xs tracking-widest text-muted-foreground uppercase" style={{ gridTemplateColumns: "100px 160px 110px 140px 1.4fr 60px 110px" }}>
@@ -1116,7 +1193,7 @@ export default function ContentCalendar() {
                 {postThumb(editingPost || ({ content_type: fContentType } as any))}
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <div className="text-xs tracking-widest text-muted-foreground uppercase">Time to post</div>
                   <div className="text-sm text-foreground mt-1">{fScheduledTime || "—"}</div>
@@ -1132,7 +1209,7 @@ export default function ContentCalendar() {
               </div>
 
               {/* editable fields */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <div className="text-xs tracking-widest text-muted-foreground uppercase">Title</div>
                   <input
@@ -1165,7 +1242,7 @@ export default function ContentCalendar() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <div className="text-xs tracking-widest text-muted-foreground uppercase">Date</div>
                   <input
@@ -1186,7 +1263,7 @@ export default function ContentCalendar() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <div className="text-xs tracking-widets text-muted-foreground uppercase mb-1.5">Platform</div>
                   <div className="flex gap-1.5 flex-wrap">
@@ -1274,7 +1351,7 @@ export default function ContentCalendar() {
 
               <div>
                 <div className="text-xs tracking-widest text-muted-foreground uppercase">Approval status</div>
-                <div className="mt-1 flex gap-2">
+                <div className="mt-1 grid grid-cols-2 gap-2 sm:flex">
                   {([
                     { label: "✓ Approved", value: "published" as const, variant: "positive" },
                     { label: "◷ Scheduled", value: "scheduled" as const, variant: "brand" },
@@ -1320,7 +1397,7 @@ export default function ContentCalendar() {
                   )}
                 </div>
               )}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}

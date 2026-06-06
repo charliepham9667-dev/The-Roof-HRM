@@ -101,11 +101,11 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <div>
-      <header className="flex min-h-[3.5rem] md:min-h-16 items-center justify-between border-b border-[#dad4c8] bg-card/97 px-4 md:px-6 rounded-t-card shadow-none pt-[env(safe-area-inset-top)]">
+      <header className="flex min-h-[3.5rem] md:min-h-16 min-w-0 items-center justify-between border-b border-[#dad4c8] bg-card/97 px-4 md:px-6 rounded-t-card shadow-none pt-[env(safe-area-inset-top)]">
         {/* Left side: Menu button (mobile) + Breadcrumb */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           {/* Sidebar trigger - hidden on mobile (use MobileBottomNav), visible md+ */}
-          <SidebarTrigger className="flex shrink-0" onClick={onMenuClick} />
+          <SidebarTrigger className="hidden shrink-0 md:inline-flex" onClick={onMenuClick} />
           
           {/* Breadcrumb - hidden on mobile, visible on md+ */}
           <div className="hidden md:flex items-center gap-2 text-sm whitespace-nowrap">
@@ -122,7 +122,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <button
               type="button"
               onClick={() => navigate(dashboardUrl)}
-              className="md:hidden text-foreground font-medium truncate hover:text-primary transition-colors"
+              className="md:hidden min-w-0 flex-1 text-left text-foreground font-medium truncate hover:text-primary transition-colors"
               aria-label="Go to dashboard"
             >
               The Roof

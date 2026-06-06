@@ -56,11 +56,6 @@ function formatTickLabel(dateISO: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function shouldShowTick(index: number, total: number) {
-  if (index === 0 || index === total - 1) return true;
-  return index % 3 === 0;
-}
-
 function WeeklyTotalsLegend({
   actualTotal,
   lastYearTotal,
@@ -255,21 +250,15 @@ export function WeeklySalesTrend({
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    interval={0}
-                    tickFormatter={(value, index) => {
-                      const i =
-                        typeof index === 'number'
-                          ? index
-                          : weeklyData.findIndex((d) => d.date === value);
-                      if (!shouldShowTick(i, weeklyData.length)) return '';
-                      return formatTickLabel(String(value));
-                    }}
+                    interval="preserveStartEnd"
+                    minTickGap={24}
+                    tickFormatter={(value) => formatTickLabel(String(value))}
                   />
 
                   <YAxis
                     tickLine={false}
                     axisLine={false}
-                    width={64}
+                    width={isMobile ? 44 : 64}
                     tickFormatter={(v) => formatVndAxis(Number(v))}
                   />
 

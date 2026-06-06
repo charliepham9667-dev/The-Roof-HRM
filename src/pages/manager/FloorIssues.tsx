@@ -202,7 +202,7 @@ function IssueRow({ task, myName, onEscalate, onResolve, onClose }: IssueRowProp
 
   return (
     <div className="py-4 border-b border-border/50 last:border-0">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground leading-snug">{task.title}</p>
           {task.description && (
@@ -217,7 +217,7 @@ function IssueRow({ task, myName, onEscalate, onResolve, onClose }: IssueRowProp
           </div>
         </div>
         {!isResolved && (
-          <div className="flex flex-col gap-1.5 shrink-0">
+          <div className="flex flex-wrap gap-1.5 sm:flex-col sm:shrink-0">
             {task.status === 'open' && (
               <button
                 onClick={onEscalate}

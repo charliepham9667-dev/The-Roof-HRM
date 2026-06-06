@@ -88,7 +88,7 @@ export function DashboardLayout() {
         <UnreadNotificationsBanner />
         <PushPromptBanner />
         <ViewAsPreviewBanner />
-        <main className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6 pb-20 md:pb-6">
+        <main className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background px-4 py-4 md:px-6 md:py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6">
           <ErrorBoundary>
             <Suspense
               fallback={

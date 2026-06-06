@@ -49,7 +49,7 @@ export function Staffing() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Staffing & Team</h1>
+          <h1 className="text-xl font-semibold text-foreground sm:text-[28px]">Staffing & Team</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage shifts and team schedules</p>
         </div>
         <button
@@ -69,8 +69,8 @@ export function Staffing() {
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <div className="text-center">
-          <p className="text-lg font-semibold text-foreground">{formatWeekRange()}</p>
+        <div className="min-w-0 flex-1 text-center">
+          <p className="truncate text-lg font-semibold text-foreground">{formatWeekRange()}</p>
           <button
             onClick={() => setSelectedDate(new Date())}
             className="text-sm text-primary hover:underline"

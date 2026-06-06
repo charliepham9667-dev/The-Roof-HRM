@@ -63,7 +63,7 @@ export function FinanceKpiCard({
   return (
     <div className={cn("rounded-card border p-4 shadow-card", variants[variant], className)}>
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <div
             className={cn(
               "text-[10.5px] font-semibold uppercase tracking-wide",
@@ -87,7 +87,7 @@ export function FinanceKpiCard({
       </div>
       <div
         className={cn(
-          "mt-2 text-2xl font-semibold tracking-tight",
+          "mt-2 whitespace-nowrap text-2xl font-semibold tabular-nums tracking-tight",
           variant === "hero" ? "text-[#14532D]" : variant === "active" ? "text-white" : "text-foreground",
         )}
       >
@@ -140,7 +140,7 @@ export function FinanceSummaryStatCell({
       )}
     >
       <p className="text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-0.5 font-serif text-lg font-semibold leading-tight", valueClassName)}>
+      <p className={cn("mt-0.5 whitespace-nowrap font-serif text-lg font-semibold leading-tight tabular-nums", valueClassName)}>
         {value}
       </p>
       {sub && <p className="mt-0.5 text-[10.5px] text-muted-foreground">{sub}</p>}

@@ -51,7 +51,7 @@ function MonthPicker({ selected, onChange }: { selected: MonthParam; onChange: (
       <button onClick={prev} className="p-1 rounded hover:bg-muted transition-colors" aria-label="Previous month">
         <ChevronLeft className="h-4 w-4 text-muted-foreground" />
       </button>
-      <span className="text-sm font-medium text-foreground min-w-[130px] text-center select-none">
+      <span className="text-sm font-medium text-foreground min-w-0 sm:min-w-[130px] text-center select-none">
         {MONTH_NAMES[selected.month]} {selected.year}
         {isCurrentMonth && <span className="ml-1 text-xs text-primary font-normal">(current)</span>}
       </span>
@@ -107,7 +107,7 @@ export function OwnerOverview() {
           <p className="text-[11.5px] font-bold uppercase tracking-wide text-primary">
             {headerDateLabel}
           </p>
-          <h1 className="font-serif text-[28px] font-semibold leading-tight tracking-tight text-foreground sm:text-[32px]">
+          <h1 className="font-serif text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[32px]">
             Finance Summary
           </h1>
         </div>

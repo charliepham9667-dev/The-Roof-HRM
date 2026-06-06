@@ -587,7 +587,7 @@ export function ScheduleBuilder() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="min-w-[140px] text-center text-sm font-semibold sm:min-w-[160px]">{weekRangeShort}</span>
+            <span className="min-w-0 max-w-full flex-1 truncate text-center text-sm font-semibold sm:min-w-[160px] sm:flex-none">{weekRangeShort}</span>
             <Button
               variant="outline"
               size="icon"

@@ -90,13 +90,13 @@ export function RevenueMixChart({ data, className = '' }: RevenueMixChartProps) 
         
         {/* Center text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-xl font-bold text-foreground">{formatVND(displayTotal)}</span>
+          <span className="whitespace-nowrap text-base font-bold tabular-nums text-foreground sm:text-xl">{formatVND(displayTotal)}</span>
           <span className="text-xs text-muted-foreground">TOTAL</span>
         </div>
       </div>
 
       {/* Legend - compact grid for 8 categories */}
-      <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-x-2 gap-y-1 mt-2 sm:grid-cols-2 lg:grid-cols-4">
         {chartData.map((item) => (
           <div key={item.name} className="flex items-center gap-1">
             <div 

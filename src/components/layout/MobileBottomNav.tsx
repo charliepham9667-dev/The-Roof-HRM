@@ -398,13 +398,13 @@ export function MobileBottomNav() {
                   type="button"
                   onClick={() => setMoreOpen(true)}
                   className={cn(
-                    'relative flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] px-1 py-2 text-[10px] transition-colors',
+                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] px-1 py-2 text-[10px] transition-colors',
                     moreOpen ? 'text-primary' : 'text-muted-foreground',
                   )}
                   aria-label="More menu"
                 >
                   <Icon className="h-5 w-5 shrink-0" />
-                  <span>More</span>
+                  <span className="max-w-full truncate">More</span>
                 </button>
               )
             }
@@ -416,7 +416,7 @@ export function MobileBottomNav() {
                 end={false}
                 className={({ isActive }) =>
                   cn(
-                    'relative flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] px-1 py-2 text-[10px] transition-colors',
+                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] px-1 py-2 text-[10px] transition-colors',
                     isActive
                       ? tab.primary
                         ? 'text-primary font-semibold bg-primary/8'
@@ -426,7 +426,7 @@ export function MobileBottomNav() {
                 }
               >
                 <Icon className="h-5 w-5 shrink-0" />
-                <span>{tab.label}</span>
+                <span className="max-w-full truncate">{tab.label}</span>
               </NavLink>
             )
           })}

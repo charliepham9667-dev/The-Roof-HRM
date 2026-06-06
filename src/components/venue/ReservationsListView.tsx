@@ -84,10 +84,17 @@ function ReservationRow({
 
   return (
     <div className="group border-b border-border last:border-0 transition-colors hover:bg-muted/30">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded((v) => !v)}
-        className="w-full text-left px-3 py-3 sm:px-5 sm:py-3.5"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            setExpanded((v) => !v)
+          }
+        }}
+        className="w-full cursor-pointer text-left px-3 py-3 sm:px-5 sm:py-3.5"
       >
         <div className="flex items-start gap-2.5 sm:items-center sm:gap-4">
           {/* Date badge */}
@@ -115,7 +122,7 @@ function ReservationRow({
                     type="button"
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); onEdit(r) }}
-                    className="rounded border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
+                    className="rounded border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:py-1 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     Edit
                   </button>
@@ -157,7 +164,7 @@ function ReservationRow({
             )}
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Expanded */}
       {expanded && (

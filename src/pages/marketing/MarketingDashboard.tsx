@@ -377,8 +377,8 @@ function SocialCard({ ch }: { ch: Channel }) {
         {/* ② Primary metric */}
         <div>
           <div className={cn(
-            "font-display leading-none tracking-[2px]",
-            isAlert ? "text-[32px] text-error" : "text-[38px] text-foreground",
+            "font-display leading-none tracking-[2px] tabular-nums",
+            isAlert ? "text-[26px] sm:text-[32px] text-error" : "text-[30px] sm:text-[38px] text-foreground",
           )}>
             {ch.primaryValue}
           </div>
@@ -740,14 +740,14 @@ export default function MarketingDashboard() {
       <div className="space-y-3">
         <SectionTitle label="Social Media Performance — Monthly Update" />
         <div className="rounded-card border border-border bg-card p-3 shadow-card space-y-2">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <p className="text-[11px] text-muted-foreground">
               Monthly source uploads now live in <strong>Integrations</strong>.
             </p>
             <button
               type="button"
               onClick={() => navigate("/marketing/integrations")}
-              className="rounded-sm border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary"
+              className="w-full shrink-0 rounded-sm border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary sm:w-auto sm:py-1"
             >
               Open Integrations
             </button>
@@ -787,7 +787,7 @@ export default function MarketingDashboard() {
           {/* Calendar */}
           <div className="rounded-card border border-border bg-card p-5 shadow-card">
             {/* toolbar */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4">
               <div className="flex gap-1">
                 <button type="button" onClick={() => setWeekCursor(d => addDays(d, -7))} className="w-[26px] h-[26px] rounded-sm border border-border text-muted-foreground text-sm flex items-center justify-center hover:bg-secondary">‹</button>
                 <button type="button" onClick={() => setWeekCursor(d => addDays(d, 7))}  className="w-[26px] h-[26px] rounded-sm border border-border text-muted-foreground text-sm flex items-center justify-center hover:bg-secondary">›</button>
@@ -994,19 +994,19 @@ export default function MarketingDashboard() {
 
           {/* ── Partnership Tracker ── */}
           <div className="rounded-card border border-border bg-card shadow-card flex flex-col" style={{ height: 380 }}>
-            <div className="flex items-center justify-between px-[18px] pt-4 pb-3 border-b border-border shrink-0">
-              <div className="text-xs tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
-                <span className="text-primary">◈</span> Partnership Tracker — Pax Conversion
+            <div className="flex items-center justify-between gap-2 px-[18px] pt-4 pb-3 border-b border-border shrink-0">
+              <div className="min-w-0 text-xs tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                <span className="text-primary shrink-0">◈</span> <span className="truncate">Partnership Tracker — Pax Conversion</span>
               </div>
               <button
                 onClick={() => { setShowAddPartner(true); setEditingPartner(null) }}
-                className="text-[11px] text-primary hover:text-primary/70 transition-colors"
+                className="shrink-0 text-[11px] text-primary hover:text-primary/70 transition-colors"
               >
                 + Add
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-auto">
               {showAddPartner && (
                 <div className="px-[18px] py-3 border-b border-border bg-secondary/30 space-y-2">
                   <div className="grid grid-cols-2 gap-2">
@@ -1411,7 +1411,69 @@ function UpcomingEventsTable({
         )}
       </div>
 
-      <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+      {/* Mobile card list */}
+      <div className="space-y-2 md:hidden">
+        {visible.map((row) => {
+          const dt = new Date(row.iso + "T00:00:00")
+          const daysUntil = differenceInDays(dt, new Date())
+          const isToday = daysUntil === 0
+          const isTomorrow = daysUntil === 1
+          const isPast = daysUntil < 0
+          const isSoon = daysUntil > 0 && daysUntil <= 2
+          const djs = row.csv ? [row.csv.dj1, row.csv.dj2].filter(Boolean).join(" · ") : ""
+          const time = row.csv?.startTime && row.csv?.endTime ? `${row.csv.startTime} – ${row.csv.endTime}` : ""
+          const headline = row.csv?.eventName || row.supa?.title || "Untitled"
+          const clickable = !!row.supa
+          const statusLabel = row.supa
+            ? mktStatusConfig[row.supa.marketingStatus ?? "not_started"]?.label
+            : isPast ? "Past" : isToday ? "Tonight" : isTomorrow ? "Tomorrow" : isSoon ? "Soon" : "Upcoming"
+          const statusCls = row.supa
+            ? mktStatusConfig[row.supa.marketingStatus ?? "not_started"]?.cls
+            : isPast ? "border-border bg-secondary text-muted-foreground"
+            : isToday ? "border-primary/30 bg-primary/8 text-primary"
+            : isSoon || isTomorrow ? "border-warning/25 bg-warning/8 text-warning"
+            : "border-success/25 bg-success/8 text-success"
+          const checklist = row.supa?.checklist ?? []
+          const done = checklist.filter((c) => c.done).length
+          const total = checklist.length
+          const detailBits: string[] = []
+          if (djs) detailBits.push(djs)
+          if (row.csv?.genre) detailBits.push(row.csv.genre)
+          if (row.csv?.promotion) detailBits.push(`Promo: ${row.csv.promotion}`)
+          const detailStr = detailBits.join(" · ") || "—"
+          return (
+            <div
+              key={"m-" + row.iso + (row.supa?.id ?? "")}
+              onClick={clickable ? () => onSelectEvent(row.supa!) : undefined}
+              className={cn(
+                "rounded-card border border-border bg-card p-3 shadow-card",
+                isPast && "opacity-60",
+                clickable && "cursor-pointer active:bg-secondary/50",
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{format(dt, "EEE, MMM d")}</div>
+                  <div className="mt-0.5 font-subheading text-sm font-semibold text-foreground">{headline}</div>
+                  {time && <div className="mt-0.5 text-xs tabular-nums text-muted-foreground">{time}</div>}
+                </div>
+                <span className={cn("shrink-0 rounded-sm border px-[7px] py-[2px] text-[10px] uppercase tracking-wide whitespace-nowrap", statusCls)}>
+                  {statusLabel}
+                </span>
+              </div>
+              <div className="mt-1.5 text-xs text-foreground">{detailStr}</div>
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-muted-foreground">
+                  {row.supa ? (total > 0 ? `${done}/${total} prep` : "No tasks") : "Not in CRM"}
+                </span>
+                {clickable && <span className="text-[11px] font-semibold text-primary">Manage →</span>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="hidden rounded-card border border-border bg-card shadow-card overflow-hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[720px]">
             <thead className="bg-secondary/40">
@@ -2080,7 +2142,7 @@ function LivePaidAdsPanel({ onNavigate }: { onNavigate: (path: string) => void }
                           style={{ width: `${Math.min(100, spendShare)}%` }}
                         />
                       </div>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         {[
                           { val: formatNumber(c.impressions), label: "Impr." },
                           { val: formatNumber(c.clicks), label: "Clicks" },
@@ -2121,7 +2183,7 @@ function KpiCell({
   return (
     <div className="px-5 py-4">
       <div className="text-[10px] tracking-widest text-muted-foreground uppercase font-semibold">{label}</div>
-      <div className="font-display text-[26px] leading-none tracking-[1.5px] text-foreground mt-1.5 tabular-nums">
+      <div className="font-display text-[22px] sm:text-[26px] leading-none tracking-[1.5px] text-foreground mt-1.5 tabular-nums whitespace-nowrap">
         {hero}
       </div>
       <div className="flex items-center gap-2 mt-1.5 min-h-[14px]">

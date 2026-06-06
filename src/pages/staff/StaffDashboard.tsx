@@ -417,7 +417,7 @@ export function StaffDashboard() {
       <div className="grid grid-cols-1 gap-3.5">
 
         {/* Weather placeholder */}
-        <Panel className="flex items-center px-5 py-4">
+        <Panel className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:gap-0">
           <div className="flex-1">
             <p className="mb-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted-foreground"><CloudSun className="h-3 w-3 shrink-0" /> Da Nang — Weather</p>
             <div className="flex items-center gap-2 mb-1">
@@ -425,8 +425,8 @@ export function StaffDashboard() {
               <span className="text-[22px] sm:text-[28px] font-light text-foreground">27°</span>
             </div>
             <p className="text-[11px] text-muted-foreground">Broken Clouds · Humidity 78%</p>
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-              <Zap className="h-3 w-3 shrink-0" /> Rain expected Saturday — prep covers &amp; heaters by 13:00
+            <div className="mt-2 flex items-start gap-1.5 rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 sm:inline-flex sm:items-center">
+              <Zap className="mt-0.5 h-3 w-3 shrink-0 sm:mt-0" /> Rain expected Saturday — prep covers &amp; heaters by 13:00
             </div>
           </div>
           {/* forecast */}
@@ -524,11 +524,13 @@ export function StaffDashboard() {
           </div>
           <div className="divide-y divide-border">
             {todayPromos.map((promo, i) => (
-              <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="shrink-0 text-2xl">{promo.icon}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium leading-tight text-foreground">{promo.label}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">{promo.sub}</div>
+              <div key={i} className="flex flex-col gap-2 px-5 py-3.5 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                  <span className="shrink-0 text-2xl">{promo.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium leading-tight text-foreground">{promo.label}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">{promo.sub}</div>
+                  </div>
                 </div>
                 <div className={`shrink-0 whitespace-nowrap rounded-sm border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
                   promo.type === 'all_night'

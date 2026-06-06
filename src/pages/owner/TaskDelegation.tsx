@@ -69,7 +69,7 @@ export function TaskDelegation() {
       {/* Header */}
       <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold text-foreground">Task Delegation</h1>
+          <h1 className="text-xl font-semibold text-foreground sm:text-[28px]">Task Delegation</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Assign and track tasks for your team
           </p>
@@ -155,7 +155,7 @@ export function TaskDelegation() {
       {viewTask && (
         <div className="fixed inset-0 z-50">
           <div className="fixed inset-0 bg-black/50" onClick={() => setViewTask(null)} />
-          <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-card border-l border-border shadow-xl overflow-y-auto p-6">
+          <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-card border-l border-border shadow-xl overflow-y-auto p-4 sm:p-6">
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-lg font-semibold text-foreground">{viewTask.title}</h2>
               <button
@@ -363,7 +363,7 @@ function TaskForm({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-card border border-border bg-card p-6 shadow-card">
+      <div className="relative w-full max-w-lg rounded-card border border-border bg-card p-4 shadow-card sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">New Task</h2>
           <button
@@ -490,7 +490,7 @@ function TaskForm({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="ghost"

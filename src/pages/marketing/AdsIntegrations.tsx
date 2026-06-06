@@ -240,7 +240,7 @@ export default function AdsIntegrations() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[28px] font-bold text-foreground">Integrations</h1>
+        <h1 className="text-xl font-bold text-foreground sm:text-[28px]">Integrations</h1>
         <p className="text-sm text-muted-foreground mt-1">Configure platform connections and sync marketing metrics.</p>
       </div>
 
@@ -393,7 +393,7 @@ export default function AdsIntegrations() {
       </div>
 
       <div className="rounded-card border border-border bg-card p-4 shadow-card space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             Upload Campaign CSV (Recommended)
           </div>
@@ -483,11 +483,11 @@ export default function AdsIntegrations() {
         {csvError && <div className="text-xs text-destructive">{csvError}</div>}
         {csvResult && (
           <div className="rounded border border-border bg-background p-3 text-xs space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold text-foreground">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 truncate font-semibold text-foreground">
                 Parsed {csvResult.rows.length} rows from {csvFileName || "CSV"}
               </div>
-              <div className="text-muted-foreground">
+              <div className="text-muted-foreground sm:shrink-0">
                 {csvResult.totalRowsParsed} lines read · {csvResult.skipped.length} skipped
               </div>
             </div>
@@ -654,9 +654,9 @@ export default function AdsIntegrations() {
         <div className="rounded-card border border-border bg-card p-4 shadow-card space-y-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">Connected Integrations</div>
           {integrations.map((row) => (
-            <div key={row.id} className="rounded border border-border bg-background px-3 py-2">
-              <div className="text-sm font-medium text-foreground">{row.account_name || row.account_id}</div>
-              <div className="text-xs text-muted-foreground">
+            <div key={row.id} className="rounded border border-border bg-background px-3 py-2 min-w-0">
+              <div className="truncate text-sm font-medium text-foreground">{row.account_name || row.account_id}</div>
+              <div className="truncate text-xs text-muted-foreground">
                 {row.platform} · {row.is_active ? "active" : "inactive"}
               </div>
               {!row.has_refresh_token ? (
@@ -676,9 +676,9 @@ export default function AdsIntegrations() {
         <div className="rounded-card border border-border bg-card p-4 shadow-card space-y-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">Latest Campaign Metrics</div>
           {campaigns.slice(0, 12).map((c: any) => (
-            <div key={c.id} className="rounded border border-border bg-background px-3 py-2">
-              <div className="text-sm font-medium text-foreground">{c.campaign_name}</div>
-              <div className="text-xs text-muted-foreground">
+            <div key={c.id} className="rounded border border-border bg-background px-3 py-2 min-w-0">
+              <div className="truncate text-sm font-medium text-foreground">{c.campaign_name}</div>
+              <div className="text-xs text-muted-foreground break-words">
                 {c.platform} · {c.metric_date} · Spend {Number(c.spend || 0).toLocaleString("en-US")} · Clicks {Number(c.clicks || 0)}
               </div>
             </div>

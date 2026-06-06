@@ -301,7 +301,7 @@ export function CheckIn() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 px-6 pb-5">
+        <div className="flex flex-wrap items-center gap-3 px-6 pb-5">
 
           {/* Toast */}
           {toast && (
@@ -392,21 +392,23 @@ export function CheckIn() {
         </div>
 
         {/* Filter bar */}
-        <div className="mb-3 flex items-center gap-2">
-          {(['all', 'overtime', 'break'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setLogFilter(f)}
-              className={`rounded-full border px-3.5 py-1 text-xs font-medium transition-colors ${
-                logFilter === f
-                  ? 'border-foreground bg-foreground text-background'
-                  : 'border-border bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              {f === 'all' ? 'All Shifts' : f === 'overtime' ? 'Overtime' : 'With Breaks'}
-            </button>
-          ))}
-          <div className="flex-1" />
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {(['all', 'overtime', 'break'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setLogFilter(f)}
+                className={`rounded-full border px-3.5 py-1 text-xs font-medium transition-colors ${
+                  logFilter === f
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
+                }`}
+              >
+                {f === 'all' ? 'All Shifts' : f === 'overtime' ? 'Overtime' : 'With Breaks'}
+              </button>
+            ))}
+          </div>
+          <div className="hidden flex-1 sm:block" />
           {/* Month navigation */}
           <div className="flex items-center gap-2">
             <button
@@ -426,8 +428,94 @@ export function CheckIn() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-card border border-border bg-card shadow-card overflow-x-auto">
+        {/* Mobile: card list */}
+        <div className="space-y-2 md:hidden">
+          {histLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-24 animate-pulse rounded-card bg-muted" />
+              ))}
+            </div>
+          ) : histError ? (
+            <div className="rounded-card border border-border bg-card py-12 text-center text-sm text-muted-foreground shadow-card">
+              <p>Unable to load shift history.</p>
+              <button
+                type="button"
+                onClick={() => refetchHistory()}
+                className="mt-2 text-xs underline hover:text-foreground transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : displayRows.length === 0 ? (
+            <div className="rounded-card border border-border bg-card py-12 text-center text-sm text-muted-foreground shadow-card">
+              {filteredHistory.length === 0
+                ? `No shifts recorded for ${monthLabel}.`
+                : 'No shifts match this filter.'}
+            </div>
+          ) : (
+            displayRows.map((row) => {
+              const isToday = row.date === todayStr;
+              const isOT = row.overtimeMinutes > 0;
+              const isInProgress = row.clockIn && !row.clockOut;
+              return (
+                <div
+                  key={row.date}
+                  className={`rounded-card border p-4 shadow-card ${isToday ? 'border-blue-200 bg-blue-50' : 'border-border bg-card'}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-medium text-foreground">{formatDateLabel(row.date)}</div>
+                      <div className="text-[11px] text-muted-foreground">{formatWeekday(row.date)}</div>
+                    </div>
+                    {isInProgress ? (
+                      <span className="inline-flex shrink-0 items-center rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                        In Progress
+                      </span>
+                    ) : isOT ? (
+                      <span className="inline-flex shrink-0 items-center rounded border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">
+                        +{fmtMinutes(row.overtimeMinutes)} OT
+                      </span>
+                    ) : (
+                      <span className="inline-flex shrink-0 items-center rounded border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                        Regular
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Clock In</div>
+                      <div className="font-mono text-foreground">{fmtShortTime(row.clockIn)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Clock Out</div>
+                      <div className="font-mono text-foreground">{fmtShortTime(row.clockOut)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Break</div>
+                      <div className="font-mono text-foreground">{row.breakMinutes > 0 ? fmtMinutes(row.breakMinutes) : '—'}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5 border-t border-border pt-2 text-xs">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Net Hours:</span>
+                    {isInProgress ? (
+                      <span className="text-muted-foreground">Live</span>
+                    ) : row.totalMinutes > 0 ? (
+                      <span className={`font-mono font-semibold ${isOT ? 'text-red-600' : 'text-foreground'}`}>
+                        {fmtMinutes(row.totalMinutes)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden rounded-card border border-border bg-card shadow-card overflow-x-auto md:block">
           {histLoading ? (
             <div className="space-y-3 px-6 py-6">
               {Array.from({ length: 6 }).map((_, i) => (

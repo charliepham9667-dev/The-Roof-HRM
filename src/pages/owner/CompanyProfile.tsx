@@ -6,7 +6,7 @@ export function CompanyProfile() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4 min-w-0">
         <div className="min-w-0">
-          <h1 className="text-[28px] font-bold leading-tight text-foreground">Company Profile</h1>
+          <h1 className="text-xl font-bold leading-tight text-foreground sm:text-[28px]">Company Profile</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Brand identity, vision, values, and long-term targets for The Roof
           </p>

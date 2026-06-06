@@ -327,8 +327,8 @@ export function MyShifts() {
 
       {/* ── SWAP PENDING BANNER ──────────────────────────────────────── */}
       {showBanner && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-          <span className="text-lg">🔄</span>
+        <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 sm:flex-row sm:items-center">
+          <span className="text-lg shrink-0">🔄</span>
           <span className="flex-1">
             <strong className="font-semibold">Swap request pending:</strong>{' '}
             {swapBannerText.replace('Swap request pending: ', '')}

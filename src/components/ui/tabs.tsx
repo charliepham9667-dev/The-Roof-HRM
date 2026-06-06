@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 const Tabs = TabsPrimitive.Root
 
-const tabsListVariants = cva("inline-flex items-center justify-center", {
+const tabsListVariants = cva("inline-flex max-w-full items-center justify-center overflow-x-auto", {
   variants: {
     variant: {
       default: "h-10 rounded-md bg-muted p-1 text-muted-foreground",

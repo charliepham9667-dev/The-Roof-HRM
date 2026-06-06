@@ -51,7 +51,7 @@ export default function MarketingPlans() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[28px] font-bold text-foreground">Marketing Plans</h1>
+        <h1 className="text-xl font-bold text-foreground sm:text-[28px]">Marketing Plans</h1>
         <p className="text-sm text-muted-foreground mt-1">Create, track, and store campaign plans and assets.</p>
       </div>
 
@@ -85,8 +85,8 @@ export default function MarketingPlans() {
                 onClick={() => setSelectedPlanId(plan.id)}
                 className={`w-full rounded border px-3 py-2 text-left ${selectedPlanId === plan.id ? "border-primary bg-primary/5" : "border-border bg-background"}`}
               >
-                <div className="text-sm font-medium text-foreground">{plan.title}</div>
-                <div className="text-xs text-muted-foreground">{plan.objective || "No objective"} · {plan.status}</div>
+                <div className="truncate text-sm font-medium text-foreground">{plan.title}</div>
+                <div className="truncate text-xs text-muted-foreground">{plan.objective || "No objective"} · {plan.status}</div>
               </button>
             ))}
             {plans.length === 0 && <div className="text-sm text-muted-foreground">No plans yet.</div>}
@@ -94,15 +94,15 @@ export default function MarketingPlans() {
 
           {selectedPlan && (
             <div className="border-t border-border pt-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-foreground">{selectedPlan.title}</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 truncate text-sm font-semibold text-foreground">{selectedPlan.title}</div>
                 <button
                   onClick={async () => {
                     if (!confirm("Delete this plan?")) return
                     await deletePlan.mutateAsync(selectedPlan.id)
                     setSelectedPlanId(null)
                   }}
-                  className="text-xs text-error"
+                  className="shrink-0 text-xs text-error"
                 >
                   Delete
                 </button>
@@ -134,9 +134,9 @@ export default function MarketingPlans() {
                 />
                 <div className="space-y-1">
                   {assets.map((asset) => (
-                    <div key={asset.id} className="flex items-center justify-between rounded border border-border bg-background px-2 py-1.5">
+                    <div key={asset.id} className="flex items-center justify-between gap-2 rounded border border-border bg-background px-2 py-1.5">
                       <button
-                        className="text-xs text-foreground underline-offset-2 hover:underline"
+                        className="min-w-0 truncate text-left text-xs text-foreground underline-offset-2 hover:underline"
                         onClick={async () => {
                           const { data } = await getMarketingAssetSignedUrl(asset.file_path)
                           if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener,noreferrer")
@@ -144,7 +144,7 @@ export default function MarketingPlans() {
                       >
                         {asset.file_name}
                       </button>
-                      <button onClick={() => deleteAsset.mutate({ id: asset.id, file_path: asset.file_path })} className="text-xs text-error">
+                      <button onClick={() => deleteAsset.mutate({ id: asset.id, file_path: asset.file_path })} className="shrink-0 text-xs text-error">
                         Remove
                       </button>
                     </div>

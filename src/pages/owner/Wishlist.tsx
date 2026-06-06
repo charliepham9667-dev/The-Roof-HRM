@@ -634,7 +634,8 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                     {sectionItems.length === 0 ? (
                       <div className="px-4 py-4 text-center text-[11px] text-muted-foreground">No items in this stage</div>
                     ) : (
-                      <div className="overflow-x-auto">
+                      <>
+                      <div className="hidden md:block overflow-x-auto">
                         {/* Column headers */}
                         <div className="grid grid-cols-[minmax(100px,1fr)_50px_120px_90px_36px] sm:grid-cols-[minmax(100px,1fr)_50px_130px_100px_1fr_36px] items-center px-4 py-2 bg-secondary/20 min-w-0">
                           {["ITEM", "QTY", "EST. COST", "PRIORITY", "NOTES", ""].map((h, i) => (
@@ -679,6 +680,50 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                           )
                         })}
                       </div>
+
+                      {/* Mobile card list */}
+                      <div className="md:hidden divide-y divide-border/50">
+                        {sectionItems.map((item) => {
+                          const pri = PRIORITY_BADGE[item.priority]
+                          const totalCost = (item.estimatedCost ?? 0) * item.quantity
+                          return (
+                            <div
+                              key={item.id}
+                              className="px-4 py-3"
+                              style={{ borderLeft: `3px solid ${cfg.accent}33` }}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => canManage && openEdit(item)}
+                                  className={cn("text-sm text-left font-medium text-foreground", canManage && "hover:text-primary transition-colors")}
+                                >
+                                  {item.title}
+                                </button>
+                                {canManage && (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <button type="button" onClick={() => openEdit(item)} className="rounded-sm p-1 text-muted-foreground hover:text-foreground transition-colors">
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button type="button" onClick={() => handleDelete(item.id)} className="rounded-sm p-1 text-muted-foreground hover:text-error transition-colors">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>Qty: <span className="text-foreground">{item.quantity}</span></span>
+                                <span className="whitespace-nowrap tabular-nums text-foreground">{formatVnd(totalCost || item.estimatedCost)}</span>
+                                <Badge variant={pri.variant}>{pri.label}</Badge>
+                              </div>
+                              {item.notes && (
+                                <div className="mt-1.5 text-xs text-muted-foreground">{item.notes}</div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      </>
                     )}
                   </>
                 )}
@@ -1472,7 +1517,7 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
           </div>
         ) : (
           <>
-            <table className="w-full border-collapse text-xs min-w-[900px]">
+            <table className="hidden md:table w-full border-collapse text-xs min-w-[900px]">
               <thead>
                 <tr className="bg-muted/40 border-b border-border">
                   {["Date", "Event", "DJ", "Set Time", "Dur.", "Rate", "Status", "Payment", "Amount (₫)", "Payer", "Receipt", "Notes", ""].map((h) => (
@@ -1675,6 +1720,130 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
               </tbody>
             </table>
 
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-border">
+              {Array.from(grouped.entries()).map(([monthKey, rows]) => {
+                const isExpanded = !expandedMonths.has(monthKey)
+                const monthPaid = rows.filter((r) => r.payment_status === "paid").reduce((s, r) => s + (r.amount_vnd ?? 0), 0)
+                const monthOut = rows.filter((r) => r.payment_status === "unpaid" && r.status !== "no_show").reduce((s, r) => s + (r.amount_vnd ?? 0), 0)
+
+                return (
+                  <div key={`m-${monthKey}`}>
+                    {/* Month header */}
+                    <button
+                      type="button"
+                      onClick={() => toggleMonth(monthKey)}
+                      className="flex w-full flex-wrap items-center gap-2 bg-muted/30 px-4 py-2 text-left border-b border-border"
+                    >
+                      {isExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronUp className="h-3 w-3 text-muted-foreground" />}
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{monthLabel(monthKey)}</span>
+                      <span className="rounded-full bg-border/60 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">{rows.length}</span>
+                      {monthPaid > 0 && <span className="text-[10px] text-green-700 tabular-nums whitespace-nowrap">Paid: {formatVndAmount(monthPaid)} ₫</span>}
+                      {monthOut > 0 && <span className="text-[10px] text-[#b5620a] tabular-nums whitespace-nowrap">Outstanding: {formatVndAmount(monthOut)} ₫</span>}
+                    </button>
+
+                    {/* Cards */}
+                    {isExpanded && rows.map((p) => {
+                      const isTonight = p.date === todayIso
+                      const isOutstanding = p.payment_status === "unpaid" && p.status === "done"
+                      const isNoShow = p.status === "no_show"
+                      const statusCfg = DJ_STATUS_CONFIG[p.status as keyof typeof DJ_STATUS_CONFIG]
+                        ?? { label: p.status, variant: "neutral" as BadgeVariant }
+                      const payCfg = DJ_PAY_CONFIG[p.payment_status as keyof typeof DJ_PAY_CONFIG]
+                        ?? { label: p.payment_status, variant: "neutral" as BadgeVariant }
+                      const payerCfg = p.payer_type ? (DJ_PAYER_CONFIG[p.payer_type as keyof typeof DJ_PAYER_CONFIG] ?? null) : null
+
+                      const STATUS_CYCLE: DJPayment["status"][] = ["scheduled", "done", "no_show"]
+                      const PAY_CYCLE: DJPayment["payment_status"][] = ["unpaid", "paid", "na"]
+
+                      function cycleStatus(e: React.MouseEvent) {
+                        e.stopPropagation()
+                        if (!canManage) return
+                        const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(p.status) + 1) % STATUS_CYCLE.length]
+                        update.mutate({ id: p.id, status: next })
+                      }
+
+                      function cyclePayment(e: React.MouseEvent) {
+                        e.stopPropagation()
+                        if (!canManage || isNoShow) return
+                        const next = PAY_CYCLE[(PAY_CYCLE.indexOf(p.payment_status) + 1) % PAY_CYCLE.length]
+                        update.mutate({ id: p.id, payment_status: next })
+                      }
+
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => canManage && openEdit(p)}
+                          className={cn(
+                            "px-4 py-3 transition-colors",
+                            isNoShow ? "opacity-55" : "",
+                            isTonight ? "bg-amber-50/50" : "",
+                            isOutstanding ? "border-l-2 border-l-[#b5620a]" : "",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm text-foreground truncate">{p.event_name}</div>
+                              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <span className="font-mono">
+                                  {new Date(p.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" })}
+                                </span>
+                                {isTonight && <span className="text-[9px] font-bold text-[#b5620a] uppercase tracking-wide">Tonight</span>}
+                              </div>
+                            </div>
+                            {isNoShow ? (
+                              <span className="text-[11px] text-muted-foreground/40 whitespace-nowrap tabular-nums">—</span>
+                            ) : (
+                              <span className={cn(
+                                "font-mono text-sm font-medium whitespace-nowrap tabular-nums",
+                                p.payment_status === "paid" ? "text-green-700" :
+                                p.payment_status === "unpaid" ? "text-[#b5620a]" :
+                                "text-muted-foreground"
+                              )}>
+                                {formatVndAmount(p.amount_vnd)} ₫
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                            <span className="font-semibold text-foreground">{p.dj_name}</span>
+                            {isOwnerDJ(p.dj_name) ? (
+                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-amber-50 text-[#b5620a] border-amber-200">👑 Owner</span>
+                            ) : payerCfg ? (
+                              <span className={cn("text-[11px] font-medium", payerCfg.cls)}>{payerCfg.label}</span>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={cycleStatus}
+                              title="Click to change status"
+                              className={cn(canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default")}
+                            >
+                              <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
+                            </button>
+                            {isNoShow ? (
+                              <span className="text-[10px] text-muted-foreground">N/A</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={cyclePayment}
+                                title="Click to change payment status"
+                                className={cn(canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default")}
+                              >
+                                <Badge variant={payCfg.variant}>{payCfg.label}</Badge>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+
             {/* Footer */}
             <div className="px-4 py-2.5 border-t border-border bg-muted/20 flex items-center justify-between flex-wrap gap-2">
               <span className="text-[10px] text-muted-foreground">Showing {filtered.length} of {payments.length} sets</span>
@@ -1722,7 +1891,7 @@ export function Wishlist() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-[28px] font-bold leading-tight text-foreground">Operations</h1>
+          <h1 className="text-xl sm:text-[28px] font-bold leading-tight text-foreground">Operations</h1>
           <p className="mt-1 text-sm text-muted-foreground">Daily ops workspace: purchasing, maintenance, DJ payouts, and live sheet trackers.</p>
         </div>
       </div>

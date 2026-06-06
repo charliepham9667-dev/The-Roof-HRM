@@ -9,7 +9,10 @@ import { cn } from "@/lib/utils"
 function OrgChartPage() {
   const { members, orgTree, isLoading, error } = useOrgChart()
   const [selectedMember, setSelectedMember] = useState<OrgMember | null>(null)
-  const [zoom, setZoom] = useState(100)
+  // Lower the default zoom on small screens so the chart fits without forced panning.
+  const [zoom, setZoom] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 768 ? 60 : 100,
+  )
   const [editMode, setEditMode] = useState(false)
   const [unassignedQuery, setUnassignedQuery] = useState("")
   const [moveMessage, setMoveMessage] = useState<string | null>(null)
