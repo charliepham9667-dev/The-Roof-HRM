@@ -465,10 +465,10 @@ const STATUS_SECTION: Record<WishlistStatus, {
   badgeBg: string
   borderTop: string
 }> = {
-  request:   { label: "Requested",  accent: "#6b7280", sectionBg: "#f4f4f5", badgeBg: "#f3f4f6", borderTop: "#6b7280" },
-  approved:  { label: "Approved",   accent: "#3b82f6", sectionBg: "#eff6ff", badgeBg: "#dbeafe", borderTop: "#3b82f6" },
-  ordered:   { label: "Ordered",    accent: "#f59e0b", sectionBg: "#fffbeb", badgeBg: "#fef3c7", borderTop: "#f59e0b" },
-  delivered: { label: "Delivered",  accent: "#10b981", sectionBg: "#ecfdf5", badgeBg: "#d1fae5", borderTop: "#10b981" },
+  request:   { label: "Requested",  accent: "#6b7280", sectionBg: "#e5e7eb", badgeBg: "#f3f4f6", borderTop: "#6b7280" },
+  approved:  { label: "Approved",   accent: "#3b82f6", sectionBg: "#dbeafe", badgeBg: "#dbeafe", borderTop: "#3b82f6" },
+  ordered:   { label: "Ordered",    accent: "#f59e0b", sectionBg: "#fef3c7", badgeBg: "#fef3c7", borderTop: "#f59e0b" },
+  delivered: { label: "Delivered",  accent: "#10b981", sectionBg: "#bbf7d0", badgeBg: "#d1fae5", borderTop: "#10b981" },
 }
 
 const STATUS_ORDER: WishlistStatus[] = ["request", "approved", "ordered", "delivered"]
@@ -589,7 +589,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                 {/* Status divider header — sticky within scroll container */}
                 <div
                   className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 border-b border-border shadow-sm"
-                  style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
+                  style={{ backgroundColor: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
                 >
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
                   <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: cfg.accent }}>{cfg.label}</span>
@@ -604,7 +604,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                       <div
                         key={item.id}
                         className="flex items-center gap-2 px-3 py-2"
-                        style={{ borderLeft: `3px solid ${cfg.accent}55`, background: cfg.sectionBg }}
+                        style={{ borderLeft: `3px solid ${cfg.accent}55`, backgroundColor: cfg.sectionBg }}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -663,9 +663,9 @@ const MAINT_STATUS_ACCENT: Record<MaintenanceStatus, string> = {
 }
 
 const MAINT_STATUS_BG: Record<MaintenanceStatus, string> = {
-  open:        "#f4f4f5",
-  in_progress: "#fef9ef",
-  done:        "#f0fdf4",
+  open:        "#e5e7eb",
+  in_progress: "#fef3c7",
+  done:        "#bbf7d0",
 }
 
 function MaintenanceTab({ canManage }: { canManage: boolean }) {
@@ -809,7 +809,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                         type="button"
                         onClick={() => toggleSection(status)}
                         className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border shadow-sm transition-colors"
-                        style={{ borderTop: `2px solid ${accent}`, background: MAINT_STATUS_BG[status] }}
+                        style={{ borderTop: `2px solid ${accent}`, backgroundColor: MAINT_STATUS_BG[status] }}
                       >
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full shrink-0" style={{ background: accent }} />
@@ -836,7 +836,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                               <div
                                 key={task.id}
                                 className="flex items-center gap-2 px-3 py-2"
-                                style={{ borderLeft: `3px solid ${accent}55`, background: MAINT_STATUS_BG[status] }}
+                                style={{ borderLeft: `3px solid ${accent}55`, backgroundColor: MAINT_STATUS_BG[status] }}
                               >
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 min-w-0">
