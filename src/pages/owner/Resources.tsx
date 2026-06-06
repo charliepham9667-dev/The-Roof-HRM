@@ -108,16 +108,16 @@ export function Resources() {
     <div className="space-y-6">
 
       {/* ── Page header ── */}
-      <div className="flex items-start justify-between gap-4 min-w-0">
+      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-[28px] font-bold leading-tight text-foreground">Resource Library</h1>
+          <h1 className="text-xl font-bold leading-tight text-foreground sm:text-[28px]">Resource Library</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             SOPs, training materials, and important documents — all linked to Google Drive
           </p>
         </div>
         <Button
           onClick={() => setShowAdd(true)}
-          className="shrink-0 whitespace-nowrap"
+          className="w-full shrink-0 sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           + Add Resource

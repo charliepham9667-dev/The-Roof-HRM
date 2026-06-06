@@ -270,9 +270,9 @@ export function StaffDashboard() {
       {/* ── CHECK-IN STRIP ──────────────────────────────────────────────────── */}
       <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
         {/* Top row */}
-        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3.5">
+        <div className="flex flex-col gap-3 px-5 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
           {/* Left: avatar + name + status + timer */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-700">
               {initials}
             </div>
@@ -298,7 +298,7 @@ export function StaffDashboard() {
           </div>
 
           {/* Right: buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {toast && (
               <div className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs ${
                 toast.type === 'success' ? 'bg-success/10 text-success' :

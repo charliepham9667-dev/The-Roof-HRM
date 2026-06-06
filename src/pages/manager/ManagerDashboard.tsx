@@ -677,9 +677,9 @@ export function ManagerDashboard() {
           </div>
         )}
         {/* Top row: identity + status + buttons */}
-        <div className="flex items-center justify-between gap-4 flex-wrap px-5 py-3.5">
+        <div className="flex flex-col gap-3 px-5 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
           {/* Left: avatar + name + status */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/20 text-sm font-semibold text-warning">
               {managerInitials}
             </div>
@@ -701,9 +701,9 @@ export function ManagerDashboard() {
           </div>
 
           {/* Right: action buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {showCheckoutConfirm && (
-              <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+              <div className="flex w-full flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 sm:w-auto sm:flex-row sm:items-center">
                 <span className="text-xs text-destructive">End your shift and submit EOD report?</span>
                 <button
                   onClick={handleClockOut}

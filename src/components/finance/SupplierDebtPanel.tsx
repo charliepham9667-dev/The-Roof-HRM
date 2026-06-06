@@ -246,9 +246,9 @@ export function SupplierDebtPanel() {
       </div>
 
       <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border">
-          <h3 className="text-lg font-semibold text-foreground">Supplier ledger · who, what, when</h3>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-3 px-4 py-3 border-b border-border sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
+          <h3 className="text-base font-semibold text-foreground sm:text-lg">Supplier ledger · who, what, when</h3>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <div className="flex rounded-md border border-border overflow-hidden text-xs">
               {(["all", "bank", "cash"] as const).map((ch) => (
                 <button

@@ -380,15 +380,15 @@ export default function ContentCalendar() {
     <div className="w-full rounded-card border border-border bg-background shadow-card">
       {/* HEADER */}
       <div className="sticky top-0 z-30 border-b border-border bg-background/97 backdrop-blur-[12px] shadow-card">
-        <div className="px-4 md:px-6 py-3.5 flex items-start justify-between gap-4 min-w-0">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[28px] font-bold leading-tight text-foreground">Content Calendar</h1>
+        <div className="flex flex-col gap-3 px-4 py-3.5 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4 md:px-6">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-bold leading-tight text-foreground sm:text-[28px]">Content Calendar</h1>
             <p className="mt-1 text-sm text-muted-foreground">Schedule and manage social media content</p>
           </div>
           <button
             type="button"
             onClick={() => openPostModal()}
-            className="shrink-0 whitespace-nowrap px-4 py-[7px] rounded-sm bg-primary text-card text-xs tracking-wider uppercase hover:brightness-95 transition-all"
+            className="w-full shrink-0 rounded-sm bg-primary px-4 py-2 text-xs uppercase tracking-wider text-card transition-all hover:brightness-95 sm:w-auto sm:py-[7px]"
           >
             + Create post
           </button>

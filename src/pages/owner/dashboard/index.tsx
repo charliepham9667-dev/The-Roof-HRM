@@ -41,7 +41,8 @@ import {
 } from "@/hooks/useExecutiveDashboardInputs"
 import { useTodayPaxConfirmed, useReservationsCsv } from "@/hooks/useReservationsCsv"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
+import { mergeRoofCalendarWithDbEvents, useRoofCalendarWeekData } from "@/hooks/useWeekAtGlanceCsv"
+import { useEvents } from "@/hooks/useEvents"
 import { TaskDescriptionEditor, SubTodoListEditor } from "@/components/tasks"
 const ICT_TZ = "Asia/Ho_Chi_Minh"
 
@@ -316,13 +317,6 @@ export default function OwnerDashboardPage() {
 
 
   const { data: roofCalendar, isLoading: weekCsvLoading, error: weekCsvError } = useRoofCalendarWeekData()
-  const weekCsv = roofCalendar?.byDate ?? []
-  const roofEvents = roofCalendar?.events ?? []
-  const weekByDate = useMemo(() => {
-    const map = new Map<string, (typeof weekCsv)[number]>()
-    for (const x of weekCsv || []) map.set(x.dateIso, x)
-    return map
-  }, [weekCsv])
 
   const [weekOffset, setWeekOffset] = useState(0)
   const isCurrentWeek = weekOffset === 0
@@ -334,6 +328,23 @@ export default function OwnerDashboardPage() {
     const shifted = new Date(Date.UTC(y, m - 1, d + weekOffset * 7))
     return buildWeekDates(shifted.toISOString().slice(0, 10))
   }, [todayIso, weekOffset])
+
+  const weekStartIso = weekDates[0]?.iso ?? todayIso
+  const weekEndIso = weekDates[6]?.iso ?? todayIso
+  const { data: dbWeekEvents = [], isLoading: dbEventsLoading } = useEvents(weekStartIso, weekEndIso)
+
+  const mergedCalendar = useMemo(
+    () => mergeRoofCalendarWithDbEvents(roofCalendar, dbWeekEvents, weekStartIso, weekEndIso),
+    [roofCalendar, dbWeekEvents, weekStartIso, weekEndIso],
+  )
+  const weekCsv = mergedCalendar.byDate
+  const roofEvents = mergedCalendar.events
+  const weekByDate = useMemo(() => {
+    const map = new Map<string, (typeof weekCsv)[number]>()
+    for (const x of weekCsv || []) map.set(x.dateIso, x)
+    return map
+  }, [weekCsv])
+  const weekDataLoading = weekCsvLoading || dbEventsLoading
 
   const pipelineRows = useMemo(() => {
     const byDate = new Map<string, typeof roofEvents>()
@@ -599,17 +610,17 @@ export default function OwnerDashboardPage() {
 
           {/* Team on Shift Today */}
           <div className="rounded-card border border-border bg-card shadow-card flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Team on Shift Today</div>
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-foreground">Team on Shift Today</div>
               {todayShifts.length > 0 && (
-                <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                <span className="rounded-full border border-border bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
                   {new Set(todayShifts.map((s) => s.staffId)).size} members
                 </span>
               )}
             </div>
-            <div className="flex-1 px-5 py-2">
+            <div className="flex-1 px-3 py-1">
               {todayShifts.length === 0 ? (
-                <div className="py-8 text-center text-xs text-muted-foreground">No shifts scheduled today</div>
+                <div className="py-6 text-center text-xs text-muted-foreground">No shifts scheduled today</div>
               ) : (() => {
                 const DEPT_COLORS: Record<string, { accent: string; badgeBg: string }> = {
                   bar:        { accent: '#1565C0', badgeBg: '#E3F0FF' },
@@ -635,41 +646,40 @@ export default function OwnerDashboardPage() {
                   return acc
                 }, {})
                 return (
-                  <div className="space-y-1 py-1">
+                  <div className="space-y-0.5 py-0.5">
                     {Object.entries(grouped).map(([dept, shifts]) => {
                       const theme = DEPT_COLORS[dept] || DEPT_COLORS.other
                       const label = dept.charAt(0).toUpperCase() + dept.slice(1)
                       return (
                         <div key={dept}>
-                          <div className="flex items-center gap-2 py-2">
-                            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: theme.accent }} />
-                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{label}</span>
-                            <span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold" style={{ background: theme.badgeBg, color: theme.accent }}>{shifts.length}</span>
+                          <div className="flex items-center gap-1.5 py-1">
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: theme.accent }} />
+                            <span className="text-[9.5px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{label}</span>
+                            <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: theme.badgeBg, color: theme.accent }}>{shifts.length}</span>
                           </div>
                           {shifts.map((shift) => {
                             const initials = (shift.staffName || "?")
                               .split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()
                             const isActive = isOnShiftNow(shift.shiftDate, shift.startTime, shift.endTime, now)
                             return (
-                              <div key={shift.id} className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                                style={{ borderLeft: `2px solid ${theme.accent}22`, marginLeft: '4px', paddingLeft: '10px' }}>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold text-white shrink-0" style={{ background: theme.accent }}>
-                                    {initials}
-                                  </div>
-                                  <div>
-                                    <div className="text-sm text-foreground">{shift.staffName}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {(shift as any).jobRole || shift.role}
-                                    </div>
+                              <div
+                                key={shift.id}
+                                className="flex items-center gap-2 border-b border-border py-1 pl-2 last:border-0"
+                                style={{ borderLeft: `2px solid ${theme.accent}22`, marginLeft: "3px", paddingLeft: "8px" }}
+                              >
+                                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white" style={{ background: theme.accent }}>
+                                  {initials}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-xs font-medium text-foreground">{shift.staffName}</div>
+                                  <div className="truncate text-[10px] text-muted-foreground">
+                                    {(shift as any).jobRole || shift.role}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground tabular-nums">
-                                    {shift.startTime?.slice(0, 5)} – {shift.endTime?.slice(0, 5)}
-                                  </span>
-                                  <span className={cn("h-2 w-2 rounded-full", isActive ? "bg-success" : "bg-border")} />
-                                </div>
+                                <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                                  {shift.startTime?.slice(0, 5)}–{shift.endTime?.slice(0, 5)}
+                                </span>
+                                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive ? "bg-success" : "bg-border")} />
                               </div>
                             )
                           })}
@@ -684,13 +694,13 @@ export default function OwnerDashboardPage() {
               <button
                 type="button"
                 onClick={() => navigate("/owner/schedule")}
-                className="flex items-center justify-between w-full px-5 py-3 border-t border-border text-left hover:bg-secondary/40 transition-colors"
+                className="flex w-full items-center justify-between border-t border-border px-3 py-2 text-left transition-colors hover:bg-secondary/40"
               >
                 <div>
-                  <div className="text-sm font-semibold text-foreground">View full roster</div>
-                  <div className="text-xs text-muted-foreground">See all {new Set(todayShifts.map((s) => s.staffId)).size} members scheduled today</div>
+                  <div className="text-xs font-semibold text-foreground">View full roster</div>
+                  <div className="text-[10px] text-muted-foreground">See all {new Set(todayShifts.map((s) => s.staffId)).size} members scheduled today</div>
                 </div>
-                <span className="text-xs text-muted-foreground">—</span>
+                <span className="text-[10px] text-muted-foreground">→</span>
               </button>
             )}
           </div>
@@ -1459,6 +1469,11 @@ export default function OwnerDashboardPage() {
 
       {/* Week at a glance + Pipeline — side-by-side two-column layout */}
       <div className="space-y-3">
+        {weekCsvError && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Live calendar feed is unavailable. Showing events from your internal calendar where available.
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <SectionTitle label="THIS WEEK" />
           <div className="h-px flex-1 bg-border" />
@@ -1556,11 +1571,9 @@ export default function OwnerDashboardPage() {
 
                 {/* Body */}
                 <div style={{ padding: "8px 10px", backgroundColor: "rgba(255, 255, 255, 1)", overflowY: "auto", maxHeight: 90 }}>
-                  {weekCsvLoading ? (
+                  {weekDataLoading && dayEvents.length === 0 && djLines.length === 0 ? (
                     <div style={{ fontSize: 10, color: "#9c9590" }}>Loading…</div>
-                  ) : weekCsvError ? (
-                    <div style={{ fontSize: 10, color: "#b5620a" }}>Unable to load.</div>
-                  ) : (
+                  ) : dayEvents.length > 0 || djLines.length > 0 ? (
                     <>
                       {dayEvents.length > 0 ? dayEvents.map((ev, evIdx) => (
                         <div key={evIdx} style={{ marginTop: evIdx > 0 ? 6 : 0, borderTop: evIdx > 0 ? "1px solid #e2ddd7" : "none", paddingTop: evIdx > 0 ? 5 : 0 }}>
@@ -1590,6 +1603,10 @@ export default function OwnerDashboardPage() {
                         </div>
                       )}
                     </>
+                  ) : (
+                    <div style={{ fontSize: 10, color: "#9c9590", fontStyle: "italic" }}>
+                      {weekCsvError ? "No events scheduled" : "TBD"}
+                    </div>
                   )}
                 </div>
               </div>

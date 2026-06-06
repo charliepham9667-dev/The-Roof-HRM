@@ -93,7 +93,7 @@ function OrgChartPage() {
         title="Org Chart"
         description="View your organization structure and team hierarchy"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <div className="flex items-center gap-1 rounded-lg border border-border p-1">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut}>
                 <ZoomOut className="h-4 w-4" />
@@ -125,7 +125,7 @@ function OrgChartPage() {
         }
       />
 
-      <div className="mb-6 flex gap-4">
+      <div className="mb-6 flex flex-wrap gap-3 sm:gap-4">
         <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2">
           <Users className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">

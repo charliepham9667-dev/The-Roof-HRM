@@ -532,9 +532,9 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
       {/* Controls */}
-      <div className="flex items-center justify-between gap-3 shrink-0 flex-wrap">
+      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         {/* Priority pills */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] tracking-widest text-muted-foreground uppercase font-semibold mr-1">Priority</span>
           {PRIORITIES.map((p) => (
             <button
@@ -556,7 +556,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
           <Button
             type="button"
             onClick={openAdd}
-            className="shrink-0"
+            className="w-full shrink-0 sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             + Add Item
@@ -735,8 +735,8 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
       {/* Controls */}
-      <div className="flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as any)}
@@ -762,7 +762,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
             type="button"
             size="sm"
             onClick={openAdd}
-            className="h-auto px-3 py-1.5 text-xs font-medium"
+            className="h-auto w-full px-3 py-1.5 text-xs font-medium sm:w-auto"
           >
             <Plus className="h-3.5 w-3.5" />
             Log Task
@@ -1418,9 +1418,9 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Status */}
-        <div className="flex items-center gap-1 rounded border border-border bg-card p-0.5">
+        <div className="flex flex-wrap items-center gap-1 rounded border border-border bg-card p-0.5">
           {(["all", "done", "scheduled", "no_show"] as const).map((v) => (
             <button key={v} type="button" onClick={() => setStatusFilter(v)} className={filterBtnCls(statusFilter === v)}>
               {v === "all" ? "All" : v === "no_show" ? "No Show" : v.charAt(0).toUpperCase() + v.slice(1)}
@@ -1444,13 +1444,13 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={exportCsv} className="h-auto px-3 py-1 text-[10px] font-medium">
+        <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
+          <Button type="button" variant="outline" onClick={exportCsv} className="h-auto flex-1 px-3 py-1 text-[10px] font-medium sm:flex-none">
             <Download className="h-3 w-3" />
             Export CSV
           </Button>
           {canManage && (
-            <Button type="button" onClick={openAdd} className="h-auto px-3 py-1.5 text-[10px] font-semibold">
+            <Button type="button" onClick={openAdd} className="h-auto flex-1 px-3 py-1.5 text-[10px] font-semibold sm:flex-none">
               <Plus className="h-3.5 w-3.5" />
               Add DJ Set
             </Button>

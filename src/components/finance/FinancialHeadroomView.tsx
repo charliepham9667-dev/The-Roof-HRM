@@ -39,21 +39,21 @@ export function FinancialHeadroomView({ defaultTab }: Props) {
 
   return (
     <section className="space-y-0">
-      <div className="flex items-center justify-between gap-4 mb-4 w-full">
+      <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <p className="text-[11.5px] font-bold uppercase tracking-widest text-[#C74C3C] mb-0.5">
             Money · {fridayLabel}
           </p>
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <h2 className="text-2xl font-semibold text-foreground tracking-tight whitespace-nowrap">
+          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-3">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               Cash position & supplier debt
             </h2>
-            <p className="text-sm text-muted-foreground whitespace-nowrap">
+            <p className="text-sm text-muted-foreground">
               Weekly Friday snapshot — track headroom, surface what&apos;s due, decide what to pay.
             </p>
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
           {snapshotDate && <FinancePill tone="info">Snapshot {snapshotDate}</FinancePill>}
           <FinancePill tone="success">Friday workflow</FinancePill>
         </div>

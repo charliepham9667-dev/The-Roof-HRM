@@ -14,7 +14,7 @@ export function VenueManager() {
   const canEdit = canEditReservations(profile)
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="shrink-0 pb-2">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -24,7 +24,7 @@ export function VenueManager() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0">
         <ReservationsListView canEdit={canEdit} />
       </div>
     </div>

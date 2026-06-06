@@ -358,7 +358,7 @@ function OverviewTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Employee information</h3>
       </div>
       <Separator className="my-4" />
@@ -463,7 +463,7 @@ function EmploymentDetailsTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Employee information</h3>
         <Button
           onClick={() =>
@@ -687,7 +687,7 @@ function EmploymentHistoryTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Employment history</h3>
         <Button
           onClick={() => setOpen(true)}
@@ -987,7 +987,7 @@ function LeaveDetailsTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Leave details</h3>
       </div>
       <Separator className="my-4" />
@@ -1123,7 +1123,7 @@ function ManagementNotesTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Management notes</h3>
         <Button
           className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -1242,7 +1242,7 @@ function DocumentsTab({
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">{title}</h3>
         <div className="flex items-center gap-2">
           <Button
@@ -1439,7 +1439,7 @@ function PaymentsBankingTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Banking Details</h3>
         <Button
           className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -1572,7 +1572,7 @@ function PaymentsPayTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Pay Details</h3>
       </div>
       <Separator className="my-4" />
@@ -1817,7 +1817,7 @@ function PaymentsBenefitsTab({ userId }: { userId?: string }) {
 
   return (
     <div className="rounded-card border border-border bg-card p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h3 className="text-lg font-semibold">Employee Benefits</h3>
         <div className="flex gap-2">
           <Button variant="outline" disabled={!userId || sourceStaff.length === 0} onClick={() => setCopyFromOpen(true)}>

@@ -67,8 +67,8 @@ export function TaskDelegation() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 min-w-0">
-        <div className="flex-1 min-w-0">
+      <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold text-foreground">Task Delegation</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Assign and track tasks for your team
@@ -76,7 +76,7 @@ export function TaskDelegation() {
         </div>
         <Button
           onClick={() => setShowForm(true)}
-          className="shrink-0 whitespace-nowrap"
+          className="w-full shrink-0 sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           New Task

@@ -328,14 +328,14 @@ export function TeamDirectory() {
   return (
     <div>
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 min-w-0">
-        <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
+      <div className="flex flex-col gap-4 min-w-0 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div>
-            <h1 className="text-[28px] font-bold leading-tight text-foreground">Team Overview</h1>
+            <h1 className="text-xl font-bold leading-tight text-foreground sm:text-[28px]">Team Overview</h1>
             <p className="mt-1 text-sm text-muted-foreground">View your organisation and manage employee profiles</p>
           </div>
           {/* View toggle */}
-          <div style={{ display: "flex", background: "#EDE8DD", border: "1px solid #E0D8C8", borderRadius: 6, overflow: "hidden" }}>
+          <div className="flex flex-wrap" style={{ background: "#EDE8DD", border: "1px solid #E0D8C8", borderRadius: 6, overflow: "hidden" }}>
             <button
               type="button"
               onClick={() => setView("list")}
@@ -403,7 +403,7 @@ export function TeamDirectory() {
         <Button
           type="button"
           onClick={() => setAddOpen(true)}
-          className="shrink-0 whitespace-nowrap"
+          className="w-full shrink-0 sm:w-auto"
         >
           <Plus size={14} />
           + Add Employee

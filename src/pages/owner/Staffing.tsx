@@ -47,14 +47,14 @@ export function Staffing() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Staffing & Team</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage shifts and team schedules</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Add Shift
@@ -62,7 +62,7 @@ export function Staffing() {
       </div>
 
       {/* Week Navigation */}
-      <div className="flex items-center justify-between rounded-card border border-border bg-card p-4 shadow-card">
+      <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-4 shadow-card">
         <button
           onClick={() => navigateWeek('prev')}
           className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

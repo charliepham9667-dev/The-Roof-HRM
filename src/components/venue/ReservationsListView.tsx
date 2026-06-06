@@ -87,43 +87,60 @@ function ReservationRow({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full text-left px-5 py-3.5"
+        className="w-full text-left px-3 py-3 sm:px-5 sm:py-3.5"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-2.5 sm:items-center sm:gap-4">
           {/* Date badge */}
-          <div className="shrink-0 flex flex-col items-center justify-center rounded-lg bg-muted/60 border border-border px-2.5 py-2 min-w-[54px] text-center">
+          <div className="shrink-0 flex min-w-[46px] flex-col items-center justify-center rounded-lg border border-border bg-muted/60 px-2 py-1.5 text-center sm:min-w-[54px] sm:px-2.5 sm:py-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {r.dateOfReservation ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { month: "short" }) : "—"}
             </span>
-            <span className="text-xl font-bold text-foreground leading-none">
+            <span className="text-lg font-bold leading-none text-foreground sm:text-xl">
               {r.dateOfReservation ? r.dateOfReservation.slice(8) : "—"}
             </span>
           </div>
 
           {/* Details */}
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-sm text-foreground">{r.name || "Unknown"}</span>
-              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", badge.cls)}>{badge.label}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="truncate text-sm font-semibold text-foreground">{r.name || "Unknown"}</span>
+                  <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium", badge.cls)}>{badge.label}</span>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {canEdit && (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); onEdit(r) }}
+                    className="rounded border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    Edit
+                  </button>
+                )}
+                {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
+                <Clock className="h-3 w-3 shrink-0" />
                 {r.time || "—"}
               </span>
               <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
+                <Users className="h-3 w-3 shrink-0" />
                 {r.numberOfGuests} pax
               </span>
               {r.table && (
                 <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
+                  <MapPin className="h-3 w-3 shrink-0" />
                   {r.table}
                 </span>
               )}
               {r.phone && (
                 <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3" />
+                  <Phone className="h-3 w-3 shrink-0" />
                   <a href={`tel:${r.phone}`} className="hover:text-foreground" onClick={(e) => e.stopPropagation()}>
                     {r.phone}
                   </a>
@@ -131,35 +148,20 @@ function ReservationRow({
               )}
             </div>
             {r.specialRequests && !expanded && (
-              <p className="mt-1 text-[10px] text-muted-foreground italic truncate">📝 {r.specialRequests}</p>
+              <p className="mt-1 line-clamp-2 text-[10px] italic text-muted-foreground">📝 {r.specialRequests}</p>
             )}
             {r.notes && r.notes.trim() && !expanded && (
-              <p className="mt-0.5 text-[10px] text-primary/70 italic truncate flex items-center gap-1">
-                <span className="inline-block h-2.5 w-2.5 shrink-0">💬</span>{r.notes}
+              <p className="mt-0.5 line-clamp-2 text-[10px] italic text-primary/70">
+                💬 {r.notes}
               </p>
             )}
-          </div>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-2 shrink-0">
-            {canEdit && (
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); onEdit(r) }}
-                className="opacity-0 group-hover:opacity-100 rounded px-2 py-1 text-xs text-muted-foreground hover:text-foreground border border-border hover:bg-muted transition-colors"
-              >
-                Edit
-              </button>
-            )}
-            {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </div>
         </div>
       </button>
 
       {/* Expanded */}
       {expanded && (
-        <div className="px-5 pb-4 pt-1 bg-muted/20 border-t border-border/40 space-y-2">
+        <div className="space-y-2 border-t border-border/40 bg-muted/20 px-3 pb-4 pt-1 sm:px-5">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5 text-xs text-muted-foreground">
             {r.email && (
               <div className="flex items-center gap-1.5">
@@ -219,7 +221,7 @@ function ReservationRow({
 
 function SectionDivider({ label, count, pax }: { label: string; count: number; pax: number }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-2.5 bg-muted/50 border-b border-border sticky top-0 z-10">
+    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-border bg-muted/50 px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5">
       <span className="text-xs font-bold uppercase tracking-widest text-foreground">{label}</span>
       <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
         {count} {count === 1 ? "booking" : "bookings"}
@@ -238,8 +240,8 @@ function DateGroupHeader({ iso, todayIso }: { iso: string; todayIso: string }) {
   const label = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`
   const formatted = formatDate(iso)
   return (
-    <div className="flex items-center gap-3 px-5 py-2 border-b border-dashed border-border/60 bg-background">
-      <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-dashed border-border/60 bg-background px-3 py-2 sm:gap-3 sm:px-5">
+      <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
       <span className="text-xs font-semibold text-foreground">{formatted}</span>
       <span className="text-[10px] text-muted-foreground">{label}</span>
     </div>
@@ -356,34 +358,36 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 rounded-xl border border-border bg-card overflow-hidden">
-      {/* Toolbar */}
-      <div className="shrink-0 flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-muted/10">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
+      {/* Toolbar — stacked on mobile so Add reservation is never clipped */}
+      <div className="shrink-0 flex flex-col gap-2.5 border-b border-border bg-muted/10 px-3 py-3 sm:px-5 sm:py-3.5">
+        <div className="relative min-w-0 w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search by name, phone, notes…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring sm:py-1.5"
           />
         </div>
-        <div className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
-          <span>{filtered.length} reservations</span>
-          <span>·</span>
-          <span>{todayPax + upcomingPax} total guests</span>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+          <p className="text-xs text-muted-foreground">
+            <span>{filtered.length} reservations</span>
+            <span className="mx-1.5 text-border">·</span>
+            <span>{todayPax + upcomingPax} total guests</span>
+          </p>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => { setEditingReservation(null); setFormOpen(true) }}
+              className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto sm:py-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add reservation
+            </button>
+          )}
         </div>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => { setEditingReservation(null); setFormOpen(true) }}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add reservation
-          </button>
-        )}
       </div>
 
       {/* Scrollable list */}
@@ -413,16 +417,16 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
             {/* ── Upcoming divider ── */}
             {upcomingList.length > 0 && (
               <section>
-                <div className="flex items-center gap-3 px-5 py-3 bg-primary/5 border-y border-primary/20 sticky top-[41px] z-10">
-                  <div className="h-px flex-1 bg-primary/20" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                <div className="sticky top-[41px] z-10 flex flex-col items-center gap-2 border-y border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:gap-3 sm:px-5">
+                  <div className="hidden h-px flex-1 bg-primary/20 sm:block" />
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
                     <Calendar className="h-3.5 w-3.5" />
                     Upcoming
                   </span>
-                  <span className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                     {upcomingList.length} bookings · {upcomingPax} guests
                   </span>
-                  <div className="h-px flex-1 bg-primary/20" />
+                  <div className="hidden h-px flex-1 bg-primary/20 sm:block" />
                 </div>
 
                 {/* Group by date */}

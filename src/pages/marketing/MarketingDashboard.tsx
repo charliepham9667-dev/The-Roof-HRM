@@ -653,15 +653,15 @@ export default function MarketingDashboard() {
     <div className="space-y-6">
 
       {/* ── PAGE HEADER ── */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-[28px] font-bold leading-tight text-foreground">Marketing Dashboard</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold leading-tight text-foreground sm:text-[28px]">Marketing Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             {" · "}Brand Command Center
           </p>
         </div>
-        <div className="flex items-center gap-2 self-start mt-1">
+        <div className="flex flex-wrap items-center gap-2 sm:self-start sm:mt-1">
           <button
             type="button"
             onClick={() => navigate("/marketing/plans")}

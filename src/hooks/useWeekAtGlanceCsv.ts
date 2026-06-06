@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import type { CalendarEvent } from "@/types"
 
 export type WeekAtGlanceItem = {
   dateIso: string // YYYY-MM-DD
@@ -324,6 +325,74 @@ function parseRoofCalendarEvents(csvText: string): RoofCalendarEvent[] {
   return out
 }
 
+function timeStringToMinutes(raw: string | null | undefined) {
+  const val = String(raw || "").trim()
+  const m = val.match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return null
+  return Number(m[1]) * 60 + Number(m[2])
+}
+
+function addDaysIso(iso: string, days: number) {
+  const [y, m, d] = iso.split("-").map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + days))
+  return dt.toISOString().slice(0, 10)
+}
+
+/** Map internal calendar events into the same shape as the HQ CSV feed. */
+export function mapDbEventToRoofRows(
+  event: CalendarEvent,
+  weekStartIso: string,
+  weekEndIso: string,
+): RoofCalendarEvent[] {
+  const startIso = event.startDate
+  const endIso = event.endDate || event.startDate
+  const effectiveStart = startIso < weekStartIso ? weekStartIso : startIso
+  const effectiveEnd = endIso > weekEndIso ? weekEndIso : endIso
+  if (effectiveEnd < effectiveStart) return []
+
+  const out: RoofCalendarEvent[] = []
+  let cursor = effectiveStart
+  while (cursor <= effectiveEnd) {
+    out.push({
+      dateIso: cursor,
+      eventName: event.title || null,
+      startTime: event.startTime || null,
+      endTime: event.endTime || null,
+      startMinutes: timeStringToMinutes(event.startTime),
+      dj1: null,
+      dj2: null,
+      genre: null,
+      promotion: null,
+      status: "db",
+    })
+    cursor = addDaysIso(cursor, 1)
+  }
+  return out
+}
+
+export function mergeRoofCalendarWithDbEvents(
+  csvData: RoofCalendarWeekData | undefined,
+  dbEvents: CalendarEvent[],
+  weekStartIso: string,
+  weekEndIso: string,
+): RoofCalendarWeekData {
+  const csvEvents = csvData?.events ?? []
+  const dbRows = dbEvents.flatMap((event) =>
+    mapDbEventToRoofRows(event, weekStartIso, weekEndIso),
+  )
+  const seen = new Set(
+    csvEvents.map((e) => `${e.dateIso}|${e.eventName ?? ""}|${e.startTime ?? ""}|${e.endTime ?? ""}`),
+  )
+  const merged = [...csvEvents]
+  for (const row of dbRows) {
+    const key = `${row.dateIso}|${row.eventName ?? ""}|${row.startTime ?? ""}|${row.endTime ?? ""}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    merged.push(row)
+  }
+  return { byDate: csvData?.byDate ?? [], events: merged }
+}
+
 function buildFetchUrl(csvUrl: string): string {
   // In development, fetch directly (dev server has no CORS issues with same-origin proxy)
   // In production (Vercel), route through our /api/csv-proxy to avoid CORS
@@ -340,7 +409,7 @@ export function useRoofCalendarWeekData() {
     queryKey: ["roof-calendar-week-data", rawUrl],
     queryFn: async (): Promise<RoofCalendarWeekData> => {
       if (!rawUrl) {
-        throw new Error("Missing VITE_HQ_WEEK_AT_A_GLANCE_CSV_URL configuration.")
+        return { byDate: [], events: [] }
       }
       const url = buildFetchUrl(rawUrl)
       const res = await fetch(url, { cache: "no-store" })
@@ -348,8 +417,12 @@ export function useRoofCalendarWeekData() {
         throw new Error(`Calendar feed request failed (${res.status}).`)
       }
       const text = await res.text()
-      if (text.trim().startsWith("<!")) {
+      const trimmed = text.trim()
+      if (trimmed.startsWith("<!")) {
         throw new Error("Calendar feed returned HTML instead of CSV.")
+      }
+      if (trimmed.startsWith("{") && trimmed.includes('"error"')) {
+        throw new Error("Calendar feed proxy returned an error.")
       }
       return { byDate: parseWeekCsv(text), events: parseRoofCalendarEvents(text) }
     },

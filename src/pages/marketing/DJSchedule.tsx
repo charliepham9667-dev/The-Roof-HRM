@@ -147,9 +147,9 @@ export default function DJSchedule() {
                   {dateBookings.map((booking) => (
                     <div
                       key={booking.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
+                      className="flex flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex min-w-0 items-center gap-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                           <Music className="h-5 w-5 text-primary" />
                         </div>

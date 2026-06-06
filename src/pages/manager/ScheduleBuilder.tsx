@@ -36,7 +36,7 @@ import {
 
 export function ScheduleBuilder() {
   const queryClient = useQueryClient()
-  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const isDesktop = useMediaQuery("(min-width: 1024px)")
   const [selectedWeek, setSelectedWeek] = useState<Date>(() => new Date())
   const weekStart = useMemo(() => startOfWeekSunday(selectedWeek), [selectedWeek])
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
@@ -570,96 +570,92 @@ export function ScheduleBuilder() {
 
   return (
     <div className="space-y-3">
-      {/* ── Schedule header bar ── */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between rounded-xl border border-border bg-card px-4 md:px-5 py-3 min-w-0">
-        {/* Row 1: title + week nav + stats */}
-        <div className="flex flex-wrap items-center gap-3 min-w-0">
-          <h1 className="text-[28px] font-bold leading-tight text-foreground whitespace-nowrap">Schedule</h1>
+      {/* ── Schedule header — contained rows so nothing floats outside the card ── */}
+      <div className="min-w-0 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+        <div className="px-4 py-3 md:px-5">
+          <h1 className="text-xl font-bold leading-tight text-foreground sm:text-2xl lg:text-[28px]">Schedule</h1>
+        </div>
 
-          {/* Week nav */}
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-5">
+          <div className="flex items-center justify-center gap-1.5 sm:justify-start">
             <Button
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="h-8 w-8 shrink-0"
               onClick={() => setSelectedWeek((d) => addDays(d, -7))}
               aria-label="Previous week"
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-semibold whitespace-nowrap text-center">{weekRangeShort}</span>
+            <span className="min-w-[140px] text-center text-sm font-semibold sm:min-w-[160px]">{weekRangeShort}</span>
             <Button
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="h-8 w-8 shrink-0"
               onClick={() => setSelectedWeek((d) => addDays(d, 7))}
               aria-label="Next week"
             >
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
-              className="h-7 px-3 text-xs font-medium"
+              className="h-8 shrink-0 px-3 text-xs font-medium"
               onClick={() => setSelectedWeek(new Date(getTodayIsoIct() + "T12:00:00"))}
             >
               Today
             </Button>
           </div>
 
-          {/* Stats pills — wrap naturally */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
             <div className="flex items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2.5 py-1 text-[11.5px] font-medium text-success">
-              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success animate-pulse" />
               {onShiftNowCount} on shift now
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11.5px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[11.5px] text-muted-foreground">
               {totalWeekHours.toFixed(0)}h scheduled this week
             </div>
           </div>
         </div>
 
-        {/* Row 2 (mobile) / Right side (desktop): actions */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {isDesktop && (
-            <Input
-              value={teamQuery}
-              onChange={(e) => setTeamQuery(e.target.value)}
-              placeholder="Search team…"
-              className="h-8 w-[180px] text-xs"
-            />
-          )}
-          {/* On mobile, hide "Duplicate week" text — show icon only */}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={loading || duplicating}
-            onClick={() => setDuplicateOpen(true)}
-            className="text-xs"
-          >
-            {duplicating ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Duplicating…</> : <><span className="hidden sm:inline">Duplicate week</span><span className="sm:hidden">Duplicate</span></>}
-          </Button>
-          <Button
-            size="sm"
-            className={cn(
-              "text-xs",
-              isWeekPublished
-                ? "bg-emerald-600 text-white hover:bg-emerald-600"
-                : "bg-blue-600 text-white hover:bg-blue-700",
-            )}
-            disabled={publishing || isWeekPublished}
-            onClick={publishWeek}
-          >
-            {publishing ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Publishing…</> : isWeekPublished ? "Published ✓" : "Publish"}
-          </Button>
-          <Button
-            size="sm"
-            className="text-xs gap-1.5"
-            onClick={() => openNewShift({ employeeId: "open", date: toYmd(weekStart) })}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Add Shift</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
+        <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between md:px-5">
+          <Input
+            value={teamQuery}
+            onChange={(e) => setTeamQuery(e.target.value)}
+            placeholder="Search team…"
+            className="h-9 w-full text-xs lg:max-w-[220px]"
+          />
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end lg:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || duplicating}
+              onClick={() => setDuplicateOpen(true)}
+              className="h-9 w-full text-xs sm:w-auto"
+            >
+              {duplicating ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Duplicating…</> : "Duplicate week"}
+            </Button>
+            <Button
+              size="sm"
+              className={cn(
+                "h-9 w-full text-xs sm:w-auto",
+                isWeekPublished
+                  ? "bg-emerald-600 text-white hover:bg-emerald-600"
+                  : "bg-blue-600 text-white hover:bg-blue-700",
+              )}
+              disabled={publishing || isWeekPublished}
+              onClick={publishWeek}
+            >
+              {publishing ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Publishing…</> : isWeekPublished ? "Published ✓" : "Publish"}
+            </Button>
+            <Button
+              size="sm"
+              className="col-span-2 h-9 w-full gap-1.5 text-xs sm:col-span-1 sm:w-auto"
+              onClick={() => openNewShift({ employeeId: "open", date: toYmd(weekStart) })}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Shift
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -670,8 +666,8 @@ export function ScheduleBuilder() {
       )}
 
       {/* ── Department color legend ── */}
-      <div className="flex flex-wrap items-center gap-3 px-1 text-[11px] text-muted-foreground">
-        <span className="uppercase tracking-wider text-[9.5px] font-semibold">Departments:</span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+        <span className="w-full uppercase tracking-wider text-[9.5px] font-semibold sm:w-auto">Departments:</span>
         {(Object.entries(DEPT_THEME) as [string, { accent: string }][])
           .filter(([key]) => key !== "other")
           .map(([key, theme]) => (
@@ -1728,8 +1724,9 @@ function MobileDayList({
         type="button"
         onClick={onAddShift}
         className={cn(
-          "fixed bottom-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full",
+          "fixed right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full",
           "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98]",
+          "bottom-[calc(4.5rem+env(safe-area-inset-bottom))]",
         )}
         aria-label="Add shift"
       >
