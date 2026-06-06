@@ -191,24 +191,33 @@ export function WeeklySalesTrend({
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-              <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-                <TabsList className="h-8 rounded-md border border-border bg-background p-0.5">
-                  <TabsTrigger
-                    value="7d"
-                    className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
-                  >
-                    7d
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="30d"
-                    className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
-                  >
-                    30d
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="flex items-center gap-2">
+                {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
+                  <TabsList className="h-8 rounded-md border border-border bg-background p-0.5">
+                    <TabsTrigger
+                      value="7d"
+                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+                    >
+                      7d
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="30d"
+                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+                    >
+                      30d
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              <WeeklyTotalsLegend
+                actualTotal={thisPeriodTotal}
+                lastYearTotal={lastYearTotal}
+                actualColor={colors.actual}
+                lastYearColor={colors.lastYear}
+                inline
+              />
             </div>
           </div>
 
