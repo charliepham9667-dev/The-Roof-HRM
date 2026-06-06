@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useCreateReservation, useUpdateReservation } from "@/hooks/useReservations"
 import type { Reservation, CreateReservationInput, ReservationSource } from "@/types"
 
@@ -77,6 +78,7 @@ export function ReservationFormSheet({
   defaultSource?: string
 }) {
   const isEdit = !!reservation?.id
+  const isMobile = useIsMobile()
   const createRes = useCreateReservation()
   const updateRes = useUpdateReservation()
 
@@ -121,14 +123,19 @@ export function ReservationFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-[480px] p-0 flex flex-col overflow-hidden">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn("p-0 flex flex-col", isMobile ? "max-h-[92dvh] rounded-t-2xl" : "sm:max-w-[480px] overflow-hidden")}
+      >
+        {isMobile && <div className="mx-auto mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />}
+
+        <SheetHeader className="px-5 pt-4 pb-3 border-b border-border shrink-0">
           <SheetTitle className="text-base font-semibold">
             {isEdit ? "Edit Reservation" : "New Reservation"}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
           {error && (
             <div className="rounded-md border border-red-400 bg-red-50 px-3 py-2.5 text-xs text-red-700 flex items-start gap-2">
@@ -147,6 +154,7 @@ export function ReservationFormSheet({
               type="text"
               className="form-input-base"
               placeholder="Full name"
+              autoComplete="off"
               value={draft.customerName}
               onChange={(e) => setDraft((d) => ({ ...d, customerName: e.target.value }))}
             />
@@ -160,6 +168,7 @@ export function ReservationFormSheet({
                 type="tel"
                 className="form-input-base"
                 placeholder="+84..."
+                autoComplete="off"
                 value={draft.customerPhone}
                 onChange={(e) => setDraft((d) => ({ ...d, customerPhone: e.target.value }))}
               />
@@ -170,6 +179,7 @@ export function ReservationFormSheet({
                 type="email"
                 className="form-input-base"
                 placeholder="email@..."
+                autoComplete="off"
                 value={draft.customerEmail}
                 onChange={(e) => setDraft((d) => ({ ...d, customerEmail: e.target.value }))}
               />
@@ -258,6 +268,7 @@ export function ReservationFormSheet({
               type="text"
               className="form-input-base"
               placeholder="e.g. VIP-1A, T33..."
+              autoComplete="off"
               value={draft.tablePreference}
               onChange={(e) => setDraft((d) => ({ ...d, tablePreference: e.target.value }))}
             />
@@ -289,11 +300,11 @@ export function ReservationFormSheet({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border shrink-0 flex items-center justify-end gap-2">
+        <div className="px-5 py-4 border-t border-border shrink-0 flex gap-2">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-sm border border-border px-4 py-2 text-xs text-muted-foreground hover:bg-secondary transition-colors"
+            className="flex-1 rounded-md border border-border py-2.5 text-sm text-muted-foreground hover:bg-secondary transition-colors"
           >
             Cancel
           </button>
@@ -301,7 +312,7 @@ export function ReservationFormSheet({
             type="button"
             onClick={handleSubmit}
             disabled={isPending}
-            className="rounded-sm bg-primary px-4 py-2 text-xs text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="flex-1 rounded-md bg-primary py-2.5 text-sm text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isPending ? "Saving…" : isEdit ? "Save Changes" : "Create Reservation"}
           </button>
