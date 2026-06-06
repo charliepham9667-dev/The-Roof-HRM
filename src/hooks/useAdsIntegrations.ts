@@ -164,3 +164,19 @@ export function useAdsCampaignPerformance(platform?: AdsPlatform) {
     },
   })
 }
+
+export function useDeleteAdsCampaignData() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (platform: AdsPlatform) => {
+      const { error } = await supabase
+        .from("ads_campaigns_daily")
+        .delete()
+        .eq("platform", platform)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ads-campaigns-daily"] })
+    },
+  })
+}

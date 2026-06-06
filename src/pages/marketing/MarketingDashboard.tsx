@@ -531,6 +531,12 @@ export default function MarketingDashboard() {
   const updateEvent = useUpdateEvent()
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
 
+  // ── Collapsible section toggles ──────────────────────────────────────────
+  const [showPromos, setShowPromos] = useState(false)
+  const [showTargetAudience, setShowTargetAudience] = useState(false)
+  const [showContentPillars, setShowContentPillars] = useState(false)
+  const [showPaidAds, setShowPaidAds] = useState(false)
+
   // ── Partnerships & Influencers (editable local state) ────────────────────
   const [partners, setPartners] = useState<Partner[]>(INITIAL_PARTNERS)
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null)
@@ -759,18 +765,56 @@ export default function MarketingDashboard() {
             </div>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Mobile: compact summary rows */}
+        <div className="sm:hidden rounded-card border border-border bg-card shadow-card overflow-hidden">
+          {socialChannels.map((ch, i) => (
+            <div key={ch.key} className={cn("flex items-center gap-3 px-4 py-3", i < socialChannels.length - 1 && "border-b border-border")}>
+              <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md", ch.health === "Needs Attn" ? "bg-error/10 text-error" : "bg-secondary text-muted-foreground")}>
+                <ch.Icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-foreground uppercase tracking-wide">{ch.name}</span>
+                  <span className={cn("rounded-sm border px-1.5 py-[1px] text-[9px] font-semibold tracking-wide uppercase whitespace-nowrap", healthClass(ch.health))}>{ch.health}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                  {ch.stats.slice(0, 2).map((s) => (
+                    <span key={s.label} className="text-[11px] text-muted-foreground whitespace-nowrap">
+                      <span className="font-semibold text-foreground tabular-nums">{s.value}</span> {s.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-display text-base font-bold tabular-nums text-foreground leading-tight">{ch.primaryValue}</div>
+                <div className="text-[9px] text-muted-foreground whitespace-nowrap">{ch.primaryLabel}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Desktop: full cards */}
+        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {socialChannels.map((ch) => <SocialCard key={ch.key} ch={ch} />)}
         </div>
       </div>
 
       {/* ── 3. USP BAND ── */}
       <div className="rounded-card border border-border overflow-hidden shadow-card" style={{ background: "#f5edd8", borderColor: "#e8d9b0" }}>
-        <div className="px-6 pt-5 pb-1">
-          <div className="text-[10px] font-bold uppercase tracking-[0.1em] mb-4" style={{ color: "#b5620a" }}>Our 5 Unique Selling Points</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-0">
+        <div className="px-4 pt-4 pb-3 sm:px-6 sm:pt-5">
+          <div className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3" style={{ color: "#b5620a" }}>Our 5 Unique Selling Points</div>
+          {/* Mobile: horizontal scroll pill list */}
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 sm:hidden" style={{ scrollbarWidth: "none" }}>
+            {USPS.map((u) => (
+              <div key={u.name} className="flex items-center gap-2 shrink-0 rounded-full border px-3 py-1.5" style={{ borderColor: "#e8d9b0", background: "rgba(255,255,255,0.5)" }}>
+                <span className="text-base">{u.icon}</span>
+                <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: "#b5620a" }}>{u.name}</span>
+              </div>
+            ))}
+          </div>
+          {/* Desktop: column dividers */}
+          <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-0">
             {USPS.map((u, i) => (
-              <div key={u.name} className={cn("pb-5 sm:px-4", i === 0 ? "sm:pl-0" : "", i === USPS.length - 1 ? "sm:pr-0" : "", i < USPS.length - 1 ? "sm:border-r" : "")} style={{ borderColor: "#e8d9b0" }}>
+              <div key={u.name} className={cn("pb-4 sm:px-4", i === 0 ? "sm:pl-0" : "", i === USPS.length - 1 ? "sm:pr-0" : "", i < USPS.length - 1 ? "sm:border-r" : "")} style={{ borderColor: "#e8d9b0" }}>
                 <div className="text-xl mb-2">{u.icon}</div>
                 <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "#b5620a" }}>{u.name}</div>
                 <div className="text-[11px] leading-relaxed" style={{ color: "#6b6560" }}>{u.desc}</div>
@@ -875,7 +919,16 @@ export default function MarketingDashboard() {
       />
 
       {/* ── THIS WEEK'S PROMOTIONS ── */}
-      {(() => {
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowPromos((s) => !s)}
+          className="flex items-center gap-2 w-full rounded-card border border-border bg-card px-4 py-3 shadow-card hover:bg-secondary/50 transition-colors"
+        >
+          <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase flex-1 text-left">This Week's Promotions</span>
+          <span className="text-[11px] text-muted-foreground">{showPromos ? "Hide ▲" : "Show ▼"}</span>
+        </button>
+        {showPromos && (() => {
         const fixedPromos = [
           { dayKey: "MON", name: "Up in Smoke Mondays",        hours: "18:00 – 20:00", deal: "Free signature cocktail with any premium / special shisha purchase" },
           { dayKey: "TUE", name: "Date Night Tuesdays",        hours: "18:00 – 20:00", deal: "Free fruit platter (250K) with date night combo — 1 Pizza & 2 cocktails for 675K" },
@@ -974,6 +1027,7 @@ export default function MarketingDashboard() {
           </div>
         )
       })()}
+      </div>
 
       {/* ── EVENT DETAIL PANEL ── */}
       {selectedEvent && (
@@ -987,8 +1041,8 @@ export default function MarketingDashboard() {
         />
       )}
 
-      {/* ── 4. PARTNERSHIPS & INFLUENCERS ── */}
-      <div className="space-y-3">
+      {/* ── 4. PARTNERSHIPS & INFLUENCERS (hidden per owner request) ── */}
+      {false && <div className="space-y-3">
         <SectionTitle label="Partnerships & Influencers" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
 
@@ -1172,115 +1226,147 @@ export default function MarketingDashboard() {
           </div>
 
         </div>
-      </div>
+      </div>}
 
       {/* ── 5. TARGET AUDIENCE ── */}
-      <div className="space-y-3">
-        <SectionTitle label="Target Audience" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {TARGET_AUDIENCE.map((a) => (
-            <div key={a.type} className="rounded-card border border-border bg-secondary/30 shadow-card px-4 py-3.5">
-              <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#b5620a" }}>{a.type}</div>
-              <div className="text-[11px] font-semibold text-foreground mb-2">{a.desc}</div>
-              <div className="flex flex-wrap gap-1 mb-2">
-                {a.tags.map((tag) => (
-                  <span key={tag} className="rounded-sm border border-border bg-card px-2 py-0.5 text-[9.5px] text-muted-foreground">{tag}</span>
-                ))}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowTargetAudience((s) => !s)}
+          className="flex items-center gap-2 w-full rounded-card border border-border bg-card px-4 py-3 shadow-card hover:bg-secondary/50 transition-colors"
+        >
+          <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase flex-1 text-left">Target Audience</span>
+          <span className="text-[11px] text-muted-foreground">{showTargetAudience ? "Hide ▲" : "Show ▼"}</span>
+        </button>
+        {showTargetAudience && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            {TARGET_AUDIENCE.map((a) => (
+              <div key={a.type} className="rounded-card border border-border bg-secondary/30 shadow-card px-4 py-3.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#b5620a" }}>{a.type}</div>
+                <div className="text-[11px] font-semibold text-foreground mb-2">{a.desc}</div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {a.tags.map((tag) => (
+                    <span key={tag} className="rounded-sm border border-border bg-card px-2 py-0.5 text-[9.5px] text-muted-foreground">{tag}</span>
+                  ))}
+                </div>
+                <div className="text-[11px] text-muted-foreground italic leading-snug">{a.insight}</div>
               </div>
-              <div className="text-[11px] text-muted-foreground italic leading-snug">{a.insight}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── 5. CONTENT PILLARS + BRAND VOICE ── */}
-      <div className="space-y-3">
-        <SectionTitle label="Content Pillars & Brand Voice" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Content Pillars */}
-          <div className="rounded-card border border-border bg-card shadow-card p-5">
-            <div className="text-xs font-semibold tracking-widest text-foreground uppercase flex items-center gap-2 mb-4">
-              <span>🏛</span> Content Pillars
-            </div>
-            <div className="space-y-2">
-              {CONTENT_PILLARS.map((p) => (
-                <div key={p.name} className="flex gap-3 rounded-md border border-border bg-secondary/30 px-3 py-2.5">
-                  <span className="text-base shrink-0 mt-0.5">{p.icon}</span>
-                  <div>
-                    <div className="text-[12px] font-semibold text-foreground mb-0.5">{p.name}</div>
-                    <div className="text-[11px] text-muted-foreground leading-snug">{p.desc}</div>
-                    <div className="mt-1.5 inline-flex px-2 py-0.5 rounded-sm text-[9px] font-semibold border" style={{ background: "#fdf3e7", color: "#b5620a", borderColor: "#f5d4ba" }}>
-                      {p.tone}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowContentPillars((s) => !s)}
+          className="flex items-center gap-2 w-full rounded-card border border-border bg-card px-4 py-3 shadow-card hover:bg-secondary/50 transition-colors"
+        >
+          <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase flex-1 text-left">Content Pillars &amp; Brand Voice</span>
+          <span className="text-[11px] text-muted-foreground">{showContentPillars ? "Hide ▲" : "Show ▼"}</span>
+        </button>
+        {showContentPillars && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-3">
+            {/* Content Pillars */}
+            <div className="rounded-card border border-border bg-card shadow-card p-5">
+              <div className="text-xs font-semibold tracking-widest text-foreground uppercase flex items-center gap-2 mb-4">
+                <span>🏛</span> Content Pillars
+              </div>
+              <div className="space-y-2">
+                {CONTENT_PILLARS.map((p) => (
+                  <div key={p.name} className="flex gap-3 rounded-md border border-border bg-secondary/30 px-3 py-2.5">
+                    <span className="text-base shrink-0 mt-0.5">{p.icon}</span>
+                    <div>
+                      <div className="text-[12px] font-semibold text-foreground mb-0.5">{p.name}</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">{p.desc}</div>
+                      <div className="mt-1.5 inline-flex px-2 py-0.5 rounded-sm text-[9px] font-semibold border" style={{ background: "#fdf3e7", color: "#b5620a", borderColor: "#f5d4ba" }}>
+                        {p.tone}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right column: Brand Voice + Posting Rhythm */}
-          <div className="flex flex-col gap-4">
-            {/* Brand Voice & Tone */}
-            <div className="rounded-card border border-border bg-card shadow-card p-5">
-              <div className="text-xs font-semibold tracking-widest text-foreground uppercase flex items-center gap-2 mb-3">
-                <span>🎙</span> Brand Voice &amp; Tone
+                ))}
               </div>
-              <div className="mb-3">
-                <div className="text-[11px] font-semibold text-foreground mb-2">Brand Personalities</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            </div>
+
+            {/* Right column: Brand Voice + Posting Rhythm */}
+            <div className="flex flex-col gap-4">
+              {/* Brand Voice & Tone */}
+              <div className="rounded-card border border-border bg-card shadow-card p-5">
+                <div className="text-xs font-semibold tracking-widest text-foreground uppercase flex items-center gap-2 mb-3">
+                  <span>🎙</span> Brand Voice &amp; Tone
+                </div>
+                <div className="mb-3">
+                  <div className="text-[11px] font-semibold text-foreground mb-2">Brand Personalities</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { name: "The Soulful Friend", desc: "Friendly, warm, emotional, calm, rich imagery" },
+                      { name: "The Sophisticated Minimalist", desc: "Free, professional, quality-focused, no hard sell" },
+                    ].map((bp) => (
+                      <div key={bp.name} className="rounded-md border border-border bg-secondary/30 px-3 py-2">
+                        <div className="text-[11px] font-semibold text-foreground">{bp.name}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">{bp.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
                   {[
-                    { name: "The Soulful Friend", desc: "Friendly, warm, emotional, calm, rich imagery" },
-                    { name: "The Sophisticated Minimalist", desc: "Free, professional, quality-focused, no hard sell" },
-                  ].map((bp) => (
-                    <div key={bp.name} className="rounded-md border border-border bg-secondary/30 px-3 py-2">
-                      <div className="text-[11px] font-semibold text-foreground">{bp.name}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{bp.desc}</div>
+                    { ctx: "Daily Content", tone: "Light, evocative, emotional. Touch feelings, don't sell." },
+                    { ctx: "Events / DJs", tone: "Confident, energetic. Music is the centrepiece." },
+                    { ctx: "Vietnamese Holidays", tone: "Respectful, warm, not performative. Culturally real." },
+                    { ctx: "Language", tone: "Primary: English. Short, story-driven, soft CTA. Max 3 posts/week feed." },
+                  ].map((row, i, arr) => (
+                    <div key={row.ctx} className={cn("grid grid-cols-[auto_1fr] gap-3 py-2", i < arr.length - 1 ? "border-b border-border" : "")}>
+                      <div className="text-[11px] font-semibold text-foreground">{row.ctx}</div>
+                      <div className="text-[11px] text-muted-foreground">{row.tone}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 rounded-md bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground">
+                  <strong className="text-foreground">Hashtags:</strong> #TheRoofdanang #bardanang #cocktaildanang #listeningbar
+                </div>
+              </div>
+
+              {/* Posting Rhythm */}
+              <div className="rounded-card border border-border bg-card shadow-card p-5">
+                <div className="text-xs font-semibold tracking-widest text-foreground uppercase flex items-center gap-2 mb-3">
+                  <span>📅</span> Posting Rhythm Target
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { val: "3", label: "Feed posts / week" },
+                    { val: "3", label: "Reels / week" },
+                    { val: "90", label: "Stories / month" },
+                  ].map((r) => (
+                    <div key={r.label} className="rounded-md border border-border bg-secondary/30 px-3 py-2.5 text-center">
+                      <div className="font-display text-[22px] leading-none tracking-[2px] text-foreground">{r.val}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1">{r.label}</div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div>
-                {[
-                  { ctx: "Daily Content", tone: "Light, evocative, emotional. Touch feelings, don't sell." },
-                  { ctx: "Events / DJs", tone: "Confident, energetic. Music is the centrepiece." },
-                  { ctx: "Vietnamese Holidays", tone: "Respectful, warm, not performative. Culturally real." },
-                  { ctx: "Language", tone: "Primary: English. Short, story-driven, soft CTA. Max 3 posts/week feed." },
-                ].map((row, i, arr) => (
-                  <div key={row.ctx} className={cn("grid grid-cols-[auto_1fr] gap-3 py-2", i < arr.length - 1 ? "border-b border-border" : "")}>
-                    <div className="text-[11px] font-semibold text-foreground">{row.ctx}</div>
-                    <div className="text-[11px] text-muted-foreground">{row.tone}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 rounded-md bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground">
-                <strong className="text-foreground">Hashtags:</strong> #TheRoofdanang #bardanang #cocktaildanang #listeningbar
-              </div>
-            </div>
-
-            {/* Posting Rhythm */}
-            <div className="rounded-card border border-border bg-card shadow-card p-5">
-              <div className="text-xs font-semibold tracking-widest text-foreground uppercase flex items-center gap-2 mb-3">
-                <span>📅</span> Posting Rhythm Target
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { val: "3", label: "Feed posts / week" },
-                  { val: "3", label: "Reels / week" },
-                  { val: "90", label: "Stories / month" },
-                ].map((r) => (
-                  <div key={r.label} className="rounded-md border border-border bg-secondary/30 px-3 py-2.5 text-center">
-                    <div className="font-display text-[22px] leading-none tracking-[2px] text-foreground">{r.val}</div>
-                    <div className="text-[10px] text-muted-foreground mt-1">{r.label}</div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── 9. PAID ADS (LIVE) ── */}
-      <LivePaidAdsPanel onNavigate={navigate} />
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowPaidAds((s) => !s)}
+          className="flex items-center gap-2 w-full rounded-card border border-border bg-card px-4 py-3 shadow-card hover:bg-secondary/50 transition-colors"
+        >
+          <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase flex-1 text-left">Paid Ads</span>
+          <span className="text-[11px] text-muted-foreground">{showPaidAds ? "Hide ▲" : "Show ▼"}</span>
+        </button>
+        {showPaidAds && (
+          <div className="mt-3">
+            <LivePaidAdsPanel onNavigate={navigate} />
+          </div>
+        )}
+      </div>
 
     </div>
   )

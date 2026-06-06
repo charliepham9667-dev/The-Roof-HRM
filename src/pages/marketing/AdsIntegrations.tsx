@@ -6,6 +6,7 @@ import {
   useMarketingIntegrations,
   useRunAdsSync,
   useUpsertMarketingIntegration,
+  useDeleteAdsCampaignData,
   type AdsManualMetricInput,
   type AdsPlatform,
 } from "@/hooks/useAdsIntegrations"
@@ -90,6 +91,7 @@ export default function AdsIntegrations() {
   const { data: latestSocialReport } = useLatestMarketingSocialMonthlyReport()
   const upsert = useUpsertMarketingIntegration()
   const runSync = useRunAdsSync()
+  const deleteAdsData = useDeleteAdsCampaignData()
   const saveSocialReport = useUpsertMarketingSocialMonthlyReport()
   const uploadSocialSource = useUploadMarketingSocialReportSource()
 
@@ -579,6 +581,27 @@ export default function AdsIntegrations() {
           </div>
         )}
         {csvMessage && <div className="text-xs text-success">{csvMessage}</div>}
+        <div className="flex items-center gap-2 pt-1 border-t border-border mt-2">
+          <span className="text-[11px] text-muted-foreground flex-1">Uploaded wrong data? Clear all rows for a platform and re-upload the correct CSV.</span>
+          <select
+            id="clear-platform-select"
+            defaultValue="google_ads"
+            className="rounded border border-border bg-background px-2 py-1.5 text-xs"
+          >
+            {PLATFORM_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+          <button
+            className="rounded border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-40"
+            disabled={deleteAdsData.isPending}
+            onClick={async () => {
+              const sel = (document.getElementById("clear-platform-select") as HTMLSelectElement).value as AdsPlatform
+              if (!window.confirm(`Delete ALL ${PLATFORM_OPTIONS.find(p => p.value === sel)?.label} campaign data? This cannot be undone.`)) return
+              await deleteAdsData.mutateAsync(sel)
+            }}
+          >
+            {deleteAdsData.isPending ? "Clearing…" : "Clear data"}
+          </button>
+        </div>
       </div>
 
       <div className="rounded-card border border-border bg-card p-4 shadow-card space-y-3">
