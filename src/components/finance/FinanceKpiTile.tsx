@@ -44,17 +44,19 @@ export function FinanceKpiTile({
   return (
     <div
       className={cn(
-        "rounded-card border p-3.5 shadow-card sm:p-4",
+        "rounded-card border shadow-card",
+        "flex items-center gap-3 px-3 py-2.5 sm:block sm:p-4",
         isWarning
           ? "border-warning/25 bg-warning/[0.05]"
           : "border-border bg-card",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* Mobile: left label column */}
+      <div className="shrink-0 sm:hidden">
         <span
           className={cn(
-            "min-w-0 text-[10.5px] font-semibold uppercase tracking-wide",
+            "block text-[9px] font-semibold uppercase tracking-wide",
             isWarning ? "text-warning" : "text-muted-foreground",
           )}
         >
@@ -63,7 +65,7 @@ export function FinanceKpiTile({
         {trendPercent !== undefined && (
           <span
             className={cn(
-              "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-wide",
+              "mt-0.5 inline-flex items-center whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-bold tracking-wide",
               pillStyles[pillTone],
             )}
           >
@@ -71,24 +73,58 @@ export function FinanceKpiTile({
           </span>
         )}
       </div>
+
+      {/* Mobile: right value */}
       <p
         className={cn(
-          "mt-1.5 whitespace-nowrap font-serif text-xl font-semibold tabular-nums tracking-tight sm:text-[30px]",
+          "flex-1 whitespace-nowrap font-serif text-lg font-semibold tabular-nums tracking-tight sm:hidden",
           isWarning ? "text-warning" : "text-foreground",
         )}
       >
         {value}
       </p>
-      {comparisonLine && (
+
+      {/* Desktop layout (sm+) */}
+      <div className="hidden sm:block">
+        <div className="flex items-start justify-between gap-2">
+          <span
+            className={cn(
+              "min-w-0 text-[10.5px] font-semibold uppercase tracking-wide",
+              isWarning ? "text-warning" : "text-muted-foreground",
+            )}
+          >
+            {label}
+          </span>
+          {trendPercent !== undefined && (
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-wide",
+                pillStyles[pillTone],
+              )}
+            >
+              {trendPillLabel(trendPercent)}
+            </span>
+          )}
+        </div>
         <p
           className={cn(
-            "mt-1 text-[11.5px] leading-snug",
-            isWarning ? "text-amber-900/80" : "text-muted-foreground",
+            "mt-1.5 whitespace-nowrap font-serif text-[28px] font-semibold tabular-nums tracking-tight",
+            isWarning ? "text-warning" : "text-foreground",
           )}
         >
-          {comparisonLine}
+          {value}
         </p>
-      )}
+        {comparisonLine && (
+          <p
+            className={cn(
+              "mt-1 text-[11.5px] leading-snug",
+              isWarning ? "text-amber-900/80" : "text-muted-foreground",
+            )}
+          >
+            {comparisonLine}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

@@ -226,14 +226,16 @@ export function CashPositionPanel() {
         />
       </div>
 
-      <div className="rounded-card border border-[#6C2B29]/15 bg-[#FAF4EF] p-4">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-sm font-semibold text-foreground">Log this Friday&apos;s snapshot</span>
-          {existingForDate && <FinancePill tone="info">Already saved — update will replace</FinancePill>}
-          <div className="ml-auto flex gap-2">
+      <div className="rounded-card border border-[#6C2B29]/15 bg-[#FAF4EF] p-3 sm:p-4">
+        <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-foreground">Log this Friday&apos;s snapshot</span>
+            {existingForDate && <FinancePill tone="info">Already saved</FinancePill>}
+          </div>
+          <div className="flex flex-wrap gap-1.5 sm:ml-auto sm:gap-2">
             <Button type="button" size="sm" variant="outline" onClick={() => setImportOpen(true)}>
-              <ImageUp className="h-3.5 w-3.5 mr-1.5" />
-              Import from screenshot
+              <ImageUp className="h-3.5 w-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Import from screenshot</span>
             </Button>
             <Button
               type="button"

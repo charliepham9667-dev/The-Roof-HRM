@@ -139,7 +139,9 @@ function formatCell(value: number | undefined, kind: RowKind): string {
 export function MonthlyPLTable({ className }: { className?: string }) {
   const { data: years } = usePLYears()
   const currentYear = new Date().getFullYear()
+  const currentMonthIdx = new Date().getMonth() // 0-based
   const [selectedYear, setSelectedYear] = useState<number>(currentYear)
+  const [showAllMonths, setShowAllMonths] = useState(false)
   const { data, isLoading, isError, error } = usePLData(selectedYear)
   const { data: targetsByMonth } = useMonthlyTargetsForYear("revenue", selectedYear)
   // Source-of-truth gross revenue from daily POS sync (matches the Total
@@ -152,6 +154,16 @@ export function MonthlyPLTable({ className }: { className?: string }) {
     if (!arr.includes(currentYear)) arr.push(currentYear)
     return Array.from(new Set(arr)).sort((a, b) => b - a)
   }, [years, currentYear])
+
+  // On mobile, show the 3 most recent months for the selected year
+  const recentMonthIndices = useMemo(() => {
+    const lastIdx = selectedYear === currentYear ? currentMonthIdx : 11
+    return new Set([
+      (lastIdx - 2 + 12) % 12,
+      (lastIdx - 1 + 12) % 12,
+      lastIdx,
+    ])
+  }, [selectedYear, currentYear, currentMonthIdx])
 
   const monthsByIndex = useMemo(() => {
     const arr: (PnlMonthly | undefined)[] = new Array(12).fill(undefined)
@@ -167,24 +179,33 @@ export function MonthlyPLTable({ className }: { className?: string }) {
   return (
     <div className={`rounded-card border border-border bg-card shadow-card ${className ?? ""}`}>
       <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold text-foreground">Monthly P&amp;L · {selectedYear}</h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="hidden text-xs text-muted-foreground sm:block">
             Full-year view · Gross Sales from daily POS (<code className="rounded bg-muted px-1">daily_metrics</code>); other lines from <code className="rounded bg-muted px-1">pnl_monthly</code>. Empty months show "—".
           </p>
         </div>
-        <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {yearsList.map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowAllMonths((v) => !v)}
+            className="rounded-sm border border-border px-2 py-1 text-[10px] tracking-wide text-muted-foreground hover:bg-muted transition-colors sm:hidden"
+          >
+            {showAllMonths ? "Recent 3" : "All months"}
+          </button>
+          <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+            <SelectTrigger className="w-24 sm:w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {yearsList.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {isLoading ? (
@@ -204,14 +225,17 @@ export function MonthlyPLTable({ className }: { className?: string }) {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-xs">
+          <table className="w-full min-w-[320px] border-collapse text-xs sm:min-w-[820px]">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-muted-foreground">
-                <th className="sticky left-0 z-10 min-w-[140px] bg-muted/40 px-3 py-2 text-left font-medium">
+                <th className="sticky left-0 z-10 min-w-[100px] bg-muted/40 px-3 py-2 text-left font-medium sm:min-w-[140px]">
                   Line
                 </th>
-                {MONTH_LABELS.map((label) => (
-                  <th key={label} className="px-2 py-2 text-right font-medium">
+                {MONTH_LABELS.map((label, idx) => (
+                  <th
+                    key={label}
+                    className={`px-2 py-2 text-right font-medium${!showAllMonths && !recentMonthIndices.has(idx) ? " hidden sm:table-cell" : ""}`}
+                  >
                     {label}
                   </th>
                 ))}
@@ -226,7 +250,10 @@ export function MonthlyPLTable({ className }: { className?: string }) {
                 {Array.from({ length: 12 }).map((_, idx) => {
                   const t = targetsByMonth?.[idx + 1] ?? null
                   return (
-                    <td key={idx} className="px-2 py-1.5 text-right tabular-nums">
+                    <td
+                      key={idx}
+                      className={`px-2 py-1.5 text-right tabular-nums${!showAllMonths && !recentMonthIndices.has(idx) ? " hidden sm:table-cell" : ""}`}
+                    >
                       {t == null ? "—" : formatVND(t)}
                     </td>
                   )
@@ -253,9 +280,10 @@ export function MonthlyPLTable({ className }: { className?: string }) {
                   const fromPnl = m?.grossSales
                   const actual =
                     fromDaily != null && fromDaily > 0 ? fromDaily : fromPnl
+                  const hideCls2 = !showAllMonths && !recentMonthIndices.has(idx) ? " hidden sm:table-cell" : ""
                   if (!t || !actual) {
                     return (
-                      <td key={idx} className="px-2 py-1.5 text-right tabular-nums">
+                      <td key={idx} className={`px-2 py-1.5 text-right tabular-nums${hideCls2}`}>
                         —
                       </td>
                     )
@@ -268,7 +296,7 @@ export function MonthlyPLTable({ className }: { className?: string }) {
                         ? "text-amber-600"
                         : "text-red-600"
                   return (
-                    <td key={idx} className={`px-2 py-1.5 text-right tabular-nums font-medium ${tone}`}>
+                    <td key={idx} className={`px-2 py-1.5 text-right tabular-nums font-medium ${tone}${!showAllMonths && !recentMonthIndices.has(idx) ? " hidden sm:table-cell" : ""}`}>
                       {pct.toFixed(0)}%
                     </td>
                   )
@@ -314,7 +342,7 @@ export function MonthlyPLTable({ className }: { className?: string }) {
                       {row.label}
                     </td>
                     {monthsByIndex.map((m, idx) => (
-                      <td key={idx} className="px-2 py-1.5 text-right tabular-nums">
+                      <td key={idx} className={`px-2 py-1.5 text-right tabular-nums${!showAllMonths && !recentMonthIndices.has(idx) ? " hidden sm:table-cell" : ""}`}>
                         {formatCell(row.getValue(m), row.kind)}
                       </td>
                     ))}
@@ -340,7 +368,7 @@ export function MonthlyPLTable({ className }: { className?: string }) {
                       ? fromDaily
                       : (fromPnl ?? undefined)
                   return (
-                    <td key={idx} className="px-2 py-1.5 text-right tabular-nums">
+                    <td key={idx} className={`px-2 py-1.5 text-right tabular-nums${!showAllMonths && !recentMonthIndices.has(idx) ? " hidden sm:table-cell" : ""}`}>
                       {formatCell(value, "currency")}
                     </td>
                   )
@@ -379,7 +407,7 @@ export function MonthlyPLTable({ className }: { className?: string }) {
                       {row.label}
                     </td>
                     {monthsByIndex.map((m, idx) => (
-                      <td key={idx} className="px-2 py-1.5 text-right tabular-nums">
+                      <td key={idx} className={`px-2 py-1.5 text-right tabular-nums${!showAllMonths && !recentMonthIndices.has(idx) ? " hidden sm:table-cell" : ""}`}>
                         {formatCell(row.getValue(m), row.kind)}
                       </td>
                     ))}
