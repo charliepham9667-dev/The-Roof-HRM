@@ -735,11 +735,21 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
 
 // ─── Maintenance tab ───────────────────────────────────────────────────────────
 
+const MAINT_STATUS_ORDER: MaintenanceStatus[] = ["open", "in_progress", "done"]
+
+const MAINT_STATUS_ACCENT: Record<MaintenanceStatus, string> = {
+  open:        "#6b7280",
+  in_progress: "#f59e0b",
+  done:        "#10b981",
+}
+
 function MaintenanceTab({ canManage }: { canManage: boolean }) {
   const [priorityFilter, setPriorityFilter] = useState<MaintenancePriority | "all">("all")
   const [categoryFilter, setCategoryFilter] = useState<MaintenanceCategory | "all">("all")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<MaintenanceTask | null>(null)
+  // Collapse "done" by default — it tends to accumulate
+  const [collapsedSections, setCollapsedSections] = useState<Set<MaintenanceStatus>>(new Set(["done"]))
 
   const { data: tasks = [], isLoading } = useMaintenanceTasks()
   const deleteTask = useDeleteMaintenanceTask()
@@ -751,7 +761,13 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
     return true
   }), [tasks, priorityFilter, categoryFilter])
 
-  const columns: MaintenanceStatus[] = ["open", "in_progress", "done"]
+  const grouped = useMemo(() =>
+    MAINT_STATUS_ORDER.reduce<Record<MaintenanceStatus, MaintenanceTask[]>>((acc, s) => {
+      acc[s] = filtered.filter((t) => t.status === s)
+      return acc
+    }, {} as Record<MaintenanceStatus, MaintenanceTask[]>),
+    [filtered]
+  )
 
   function openAdd() { setEditingTask(null); setSheetOpen(true) }
   function openEdit(task: MaintenanceTask) { setEditingTask(task); setSheetOpen(true) }
@@ -763,13 +779,21 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
     const next: Record<MaintenanceStatus, MaintenanceStatus> = { open: "in_progress", in_progress: "done", done: "open" }
     await updateTask.mutateAsync({ id: task.id, status: next[task.status] })
   }
+  function toggleSection(s: MaintenanceStatus) {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      next.has(s) ? next.delete(s) : next.add(s)
+      return next
+    })
+  }
 
   const openCount = filtered.filter((t) => t.status === "open").length
   const inProgressCount = filtered.filter((t) => t.status === "in_progress").length
+  const doneCount = filtered.filter((t) => t.status === "done").length
 
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0">
-      {/* Controls — horizontal scroll on mobile */}
+      {/* Controls bar */}
       <div className="shrink-0 flex items-center gap-2 overflow-x-auto scrollbar-none">
         <select
           value={priorityFilter}
@@ -785,11 +809,6 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
         >
           {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
-        {(openCount > 0 || inProgressCount > 0) && (
-          <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
-            {openCount} open · {inProgressCount} in progress
-          </span>
-        )}
         {canManage && (
           <Button type="button" size="sm" onClick={openAdd} className="ml-auto h-8 px-3 text-xs gap-1 shrink-0">
             <Plus className="h-3.5 w-3.5" />
@@ -798,92 +817,209 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
         )}
       </div>
 
-      {/* Kanban board */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">Loading…</div>
       ) : (
-        <div className="flex flex-col gap-2 md:flex-row md:flex-1 md:min-h-0">
-          {columns.map((col) => {
-            const colTasks = filtered.filter((t) => t.status === col)
-            const cfg = MAINT_STATUS_CONFIG[col]
-            return (
-              <div key={col} className="flex flex-col w-full md:flex-1 md:min-h-0 rounded-card border border-border overflow-hidden shadow-card">
-                {/* Column header */}
-                <div className={cn("border-b border-border bg-card px-3 py-2 border-t-2 shrink-0", cfg.col)}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] tracking-widest font-semibold text-muted-foreground uppercase">{cfg.label}</span>
-                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">{colTasks.length}</span>
-                  </div>
-                </div>
+        <>
+          {/* Summary strip — mobile only */}
+          {filtered.length > 0 && (
+            <div className="shrink-0 rounded-card border border-border bg-card shadow-card overflow-hidden md:hidden">
+              <div className="grid grid-cols-3 divide-x divide-border/50">
+                {([
+                  { status: "open" as MaintenanceStatus, count: openCount, label: "Open" },
+                  { status: "in_progress" as MaintenanceStatus, count: inProgressCount, label: "In Progress" },
+                  { status: "done" as MaintenanceStatus, count: doneCount, label: "Done" },
+                ]).map(({ status, count, label }) => {
+                  const accent = MAINT_STATUS_ACCENT[status]
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => toggleSection(status)}
+                      className="flex flex-col items-center px-2 py-2 gap-0.5 transition-colors hover:bg-secondary/30"
+                    >
+                      <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: accent }}>{label}</span>
+                      <span className="text-base font-bold tabular-nums" style={{ color: accent }}>{count}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
-                {/* Cards */}
-                <div className="flex flex-col divide-y divide-border/40 overflow-y-auto flex-1 bg-card">
-                  {colTasks.length === 0 ? (
-                    <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">
-                      No tasks
-                    </div>
-                  ) : (
-                    colTasks.map((task) => {
-                      const pri = MAINT_PRIORITY_BADGE[task.priority]
-                      return (
-                        <div
-                          key={task.id}
-                          className="px-3 py-2 hover:bg-secondary/20 transition-colors group"
+          {/* Mobile: grouped list */}
+          <div className="md:hidden flex-1 overflow-auto space-y-2">
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-2">
+                <div className="text-sm text-muted-foreground">No tasks found.</div>
+                {canManage && (
+                  <button type="button" onClick={openAdd} className="text-xs text-primary hover:underline">+ Log first task</button>
+                )}
+              </div>
+            ) : (
+              MAINT_STATUS_ORDER.map((status) => {
+                const accent = MAINT_STATUS_ACCENT[status]
+                const cfg = MAINT_STATUS_CONFIG[status]
+                const sectionTasks = grouped[status]
+                const isCollapsed = collapsedSections.has(status)
+
+                return (
+                  <div key={status} className="rounded-card border border-border overflow-hidden shadow-card">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(status)}
+                      className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border bg-card transition-colors hover:bg-secondary/30"
+                      style={{ borderTop: `2px solid ${accent}` }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ background: accent }} />
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>
+                          {cfg.label}
+                        </span>
+                        <span
+                          className="rounded-full px-1.5 py-px text-[10px] font-semibold"
+                          style={{ background: `${accent}22`, color: accent }}
                         >
-                          {/* Row 1: title + actions */}
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              onClick={() => canManage && openEdit(task)}
-                              className={cn("text-[13px] font-medium text-foreground leading-snug flex-1 min-w-0 truncate", canManage && "cursor-pointer hover:text-primary transition-colors")}
-                            >
-                              {task.title}
-                            </span>
-                            {canManage && (
-                              <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                                  <Pencil className="h-3 w-3" />
-                                </button>
-                                <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
+                          {sectionTasks.length}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground">
+                        {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                      </span>
+                    </button>
+
+                    {!isCollapsed && (
+                      sectionTasks.length === 0 ? (
+                        <div className="px-4 py-3 text-center text-[11px] text-muted-foreground">No tasks</div>
+                      ) : (
+                        <div className="divide-y divide-border/40">
+                          {sectionTasks.map((task) => {
+                            const pri = MAINT_PRIORITY_BADGE[task.priority]
+                            return (
+                              <div
+                                key={task.id}
+                                className="flex items-center gap-2 px-3 py-2"
+                                style={{ borderLeft: `3px solid ${accent}55` }}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span
+                                      onClick={() => canManage && openEdit(task)}
+                                      className={cn("text-[13px] font-medium text-foreground leading-snug truncate", canManage && "cursor-pointer")}
+                                    >
+                                      {task.title}
+                                    </span>
+                                    <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
+                                    {task.location && (
+                                      <span className="text-[10px] text-muted-foreground">📍 {task.location}</span>
+                                    )}
+                                    {task.estimatedCost != null && (
+                                      <span className="text-[10px] tabular-nums text-muted-foreground">{formatVnd(task.estimatedCost)}</span>
+                                    )}
+                                    {canManage && (
+                                      <button
+                                        type="button"
+                                        onClick={() => cycleStatus(task)}
+                                        className="text-[9px] font-medium text-primary hover:underline transition-colors"
+                                      >
+                                        {status === "open" ? "→ In Progress" : status === "in_progress" ? "→ Done" : "↺ Reopen"}
+                                      </button>
+                                    )}
+                                  </div>
+                                  {task.description && (
+                                    <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
+                                  )}
+                                </div>
+                                {canManage && (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-
-                          {/* Row 2: badges + cycle button */}
-                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                            <Badge variant={pri.variant} className="text-[9px] px-1.5 py-px">{pri.label}</Badge>
-                            <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
-                            {task.location && (
-                              <span className="text-[10px] text-muted-foreground truncate">📍 {task.location}</span>
-                            )}
-                            {task.estimatedCost != null && (
-                              <span className="text-[10px] tabular-nums text-muted-foreground ml-auto shrink-0">{formatVnd(task.estimatedCost)}</span>
-                            )}
-                          </div>
-
-                          {task.description && (
-                            <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
-                          )}
-
-                          {canManage && (
-                            <button
-                              type="button"
-                              onClick={() => cycleStatus(task)}
-                              className="mt-1.5 text-[9px] font-medium text-primary hover:underline transition-colors"
-                            >
-                              {col === "open" ? "→ In Progress" : col === "in_progress" ? "→ Done" : "↺ Reopen"}
-                            </button>
-                          )}
+                            )
+                          })}
                         </div>
                       )
-                    })
-                  )}
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* Desktop: kanban */}
+          <div className="hidden md:flex md:flex-row md:flex-1 md:min-h-0 gap-2">
+            {MAINT_STATUS_ORDER.map((col) => {
+              const colTasks = filtered.filter((t) => t.status === col)
+              const cfg = MAINT_STATUS_CONFIG[col]
+              return (
+                <div key={col} className="flex flex-col w-full md:flex-1 md:min-h-0 rounded-card border border-border overflow-hidden shadow-card">
+                  <div className={cn("border-b border-border bg-card px-3 py-2 border-t-2 shrink-0", cfg.col)}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] tracking-widest font-semibold text-muted-foreground uppercase">{cfg.label}</span>
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">{colTasks.length}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col divide-y divide-border/40 overflow-y-auto flex-1 bg-card">
+                    {colTasks.length === 0 ? (
+                      <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">No tasks</div>
+                    ) : (
+                      colTasks.map((task) => {
+                        const pri = MAINT_PRIORITY_BADGE[task.priority]
+                        return (
+                          <div key={task.id} className="px-3 py-2 hover:bg-secondary/20 transition-colors group">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                onClick={() => canManage && openEdit(task)}
+                                className={cn("text-[13px] font-medium text-foreground leading-snug flex-1 min-w-0 truncate", canManage && "cursor-pointer hover:text-primary transition-colors")}
+                              >
+                                {task.title}
+                              </span>
+                              {canManage && (
+                                <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                  <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                              <Badge variant={pri.variant} className="text-[9px] px-1.5 py-px">{pri.label}</Badge>
+                              <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
+                              {task.location && <span className="text-[10px] text-muted-foreground truncate">📍 {task.location}</span>}
+                              {task.estimatedCost != null && (
+                                <span className="text-[10px] tabular-nums text-muted-foreground ml-auto shrink-0">{formatVnd(task.estimatedCost)}</span>
+                              )}
+                            </div>
+                            {task.description && (
+                              <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
+                            )}
+                            {canManage && (
+                              <button type="button" onClick={() => cycleStatus(task)} className="mt-1.5 text-[9px] font-medium text-primary hover:underline transition-colors">
+                                {col === "open" ? "→ In Progress" : col === "in_progress" ? "→ Done" : "↺ Reopen"}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       <MaintenanceTaskSheet
