@@ -48,6 +48,7 @@ import { StaffCalendar } from './pages/staff/Calendar';
 // Venue & Wishlist pages
 const VenueManager = lazy(() => import('./pages/owner/VenueManager').then((m) => ({ default: m.VenueManager })));
 const Wishlist = lazy(() => import('./pages/owner/Wishlist').then((m) => ({ default: m.Wishlist })));
+const ConciergeInbox = lazy(() => import('./pages/concierge/Inbox'));
 
 // Admin pages
 const SyncData = lazy(() => import('./pages/admin/SyncData').then((m) => ({ default: m.SyncData })));
@@ -214,6 +215,11 @@ export default function App() {
             </RoleGuard>
           } />
           <Route path="owner/venue" element={<Navigate to="/venue" replace />} />
+          <Route path="concierge/inbox" element={
+            <RoleGuard allowedRoles={['owner', 'manager']}>
+              <ConciergeInbox />
+            </RoleGuard>
+          } />
           <Route path="operations" element={
             <RoleGuard allowedRoles={['owner', 'manager']}>
               <Wishlist />

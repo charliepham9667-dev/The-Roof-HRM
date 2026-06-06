@@ -45,6 +45,7 @@ import {
   LogOut,
   Building2,
   AlertTriangle,
+  MessageSquare,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 
@@ -105,6 +106,12 @@ const navigationGroups: NavGroup[] = [
         title: 'Venue Manager',
         url: '/venue',
         icon: MapPin,
+        roles: ['owner'],
+      },
+      {
+        title: 'AI Inbox',
+        url: '/concierge/inbox',
+        icon: MessageSquare,
         roles: ['owner'],
       },
       {
@@ -223,6 +230,12 @@ const navigationGroups: NavGroup[] = [
         title: 'Venue Manager',
         url: '/venue',
         icon: MapPin,
+        roles: ['floor_manager'],
+      },
+      {
+        title: 'AI Inbox',
+        url: '/concierge/inbox',
+        icon: MessageSquare,
         roles: ['floor_manager'],
       },
       {

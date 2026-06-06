@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
-import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
+import { type CsvReservation } from "@/hooks/useReservationsCsv"
+import { useWebFormReservations, useAcceptReservation, useDeclineReservation } from "@/hooks/useWebFormReservations"
 import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { InlineComment } from "@/components/venue/ReservationPanel"
@@ -71,8 +72,12 @@ function ReservationRow({
   const [expanded, setExpanded] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteRes = useDeleteReservation()
+  const acceptRes = useAcceptReservation()
+  const declineRes = useDeclineReservation()
   const badge = sourceBadge(r)
   const dbId = r.mustHaves ?? null
+  const isPending = r.bookingStatus === 'pending'
+  const isWebForm = !!r.reservationSystemId
 
   async function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
@@ -112,13 +117,28 @@ function ReservationRow({
           {/* Details */}
           <div className="min-w-0 flex-1">
             {/* Name + badge on same line */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="truncate text-sm font-semibold text-foreground leading-snug">
                 {r.name || "Unknown"}
               </span>
               <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none", badge.cls)}>
                 {badge.label}
               </span>
+              {isWebForm && r.bookingStatus === 'pending' && (
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-amber-50 text-amber-700 border border-amber-200">
+                  Pending
+                </span>
+              )}
+              {isWebForm && r.bookingStatus === 'accepted' && (
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Confirmed
+                </span>
+              )}
+              {isWebForm && r.bookingStatus === 'declined' && (
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-red-50 text-red-600 border border-red-200">
+                  Declined
+                </span>
+              )}
             </div>
             {/* Meta: time · pax · table · phone */}
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[11px] text-muted-foreground">
@@ -208,6 +228,30 @@ function ReservationRow({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Staff comment</p>
             <InlineComment dbId={dbId} currentNote={r.notes} canEdit={canEdit} />
           </div>
+          {/* Accept / Decline — web form reservations that are still pending */}
+          {isPending && isWebForm && (
+            <div className="flex items-center gap-2 pt-0.5">
+              <button
+                type="button"
+                disabled={acceptRes.isPending || declineRes.isPending}
+                onClick={() => acceptRes.mutate({ id: r.reservationSystemId!, token: r.reservationSystemToken! })}
+                className="flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {acceptRes.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                Accept
+              </button>
+              <button
+                type="button"
+                disabled={acceptRes.isPending || declineRes.isPending}
+                onClick={() => declineRes.mutate({ id: r.reservationSystemId!, token: r.reservationSystemToken! })}
+                className="flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+              >
+                {declineRes.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                Decline
+              </button>
+            </div>
+          )}
+
           {canEdit && dbId && (
             <div className="flex items-center justify-end gap-2 pt-0.5">
               {confirmDelete ? (
@@ -296,7 +340,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     return d.toISOString().slice(0, 10)
   })()
 
-  const { data: csvAll = [], isLoading: csvLoading } = useReservationsCsv()
+  const { data: csvAll = [], isLoading: csvLoading } = useWebFormReservations()
   const { data: dbAll = [], isLoading: dbLoading } = useReservations(todayIso, nextMonthIso)
 
   const [search, setSearch] = useState("")
