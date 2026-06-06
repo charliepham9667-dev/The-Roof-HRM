@@ -1029,7 +1029,7 @@ function ApproveModal({
         </div>
 
         {/* Form */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="grid gap-1.5">
             <Label className="text-xs uppercase tracking-wide">System Role</Label>
             <select
@@ -1066,7 +1066,7 @@ function ApproveModal({
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="grid gap-1.5">
             <Label className="text-xs uppercase tracking-wide">Department</Label>
             <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Bar, Service…" />

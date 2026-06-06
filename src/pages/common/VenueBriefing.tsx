@@ -368,12 +368,10 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
           {/* Amber gradient line */}
           <div style={{ height: 2, background: 'linear-gradient(90deg, #b5620a 0%, #c9a84c 55%, transparent 100%)' }} />
 
-          {/* Scroll wrapper — horizontal on tablet, vertical stack on phone */}
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(180px, 1fr))' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
 
             {/* Col 1: Tonight's Event */}
-            <div style={{ padding: '16px 20px', borderRight: '1px solid #e2ddd7' }}>
+            <div className="border-b border-[#e2ddd7] p-4 sm:border-b-0 sm:border-r sm:px-5 sm:py-4">
               <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {isEvening && (
                   <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
@@ -402,7 +400,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
             </div>
 
             {/* Col 2: DJs Tonight */}
-            <div style={{ padding: '16px 20px', borderRight: '1px solid #e2ddd7' }}>
+            <div className="border-b border-[#e2ddd7] p-4 sm:border-b-0 sm:border-r sm:px-5 sm:py-4">
               <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10 }}>
                 DJs Tonight
               </div>
@@ -437,7 +435,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
             </div>
 
             {/* Col 3: Active Promos */}
-            <div style={{ padding: '16px 20px', borderRight: '1px solid #e2ddd7' }}>
+            <div className="border-b border-[#e2ddd7] p-4 sm:border-b-0 sm:border-r sm:px-5 sm:py-4 lg:border-b-0">
               <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10 }}>
                 Active Promos
               </div>
@@ -459,7 +457,7 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
             </div>
 
             {/* Col 4: Team on Shift */}
-            <div style={{ padding: '16px 20px' }}>
+            <div className="p-4 sm:px-5 sm:py-4">
               <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10 }}>
                 Team on Shift
               </div>
@@ -494,7 +492,6 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
             </div>
 
           </div>
-          </div>{/* end scroll wrapper */}
         </div>
       </div>
 
@@ -598,15 +595,60 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
               <div style={{ fontSize: 11, color: '#9c9590' }}>{fmtWeekRange(weekDates)} · {eventCount} events</div>
             </div>
 
-            {/* Column headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr 1.6fr', gap: 16, padding: '7px 18px', borderBottom: '1px solid #e2ddd7', background: '#f0ece6' }}>
+            {/* Mobile: card list */}
+            <div className="flex-1 overflow-y-auto md:hidden">
+              {pipelineRows.map((row, idx) => {
+                const isPipelinePast = row.iso < todayIso && isCurrentWeek;
+                const genres = row.genre !== '—' ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : [];
+                const promos = row.promo !== '—' ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : [];
+                return (
+                  <div
+                    key={`mobile-${row.iso}-${idx}`}
+                    className={cn(
+                      "border-b border-[#e2ddd7] px-4 py-3",
+                      row.isToday && "bg-[#fdf3e7]",
+                      isPipelinePast && "opacity-55",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className={cn("text-sm font-semibold", row.isToday ? "text-[#b5620a]" : row.event === 'TBD' ? "italic text-[#9c9590]" : "text-[#1a1714]")}>
+                          {row.event}
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-[#9c9590]">{row.when}</div>
+                      </div>
+                      {row.isToday && row.isFirstForDay && (
+                        <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white" style={{ background: '#b5620a' }}>Today</span>
+                      )}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                      <div><span className="text-[#9c9590]">DJ 1: </span>{row.dj1}</div>
+                      <div><span className="text-[#9c9590]">DJ 2: </span>{row.dj2}</div>
+                    </div>
+                    {(genres.length > 0 || promos.length > 0) && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {genres.map((g) => (
+                          <span key={g} className="rounded border border-[#e2ddd7] bg-[#f0ece6] px-1.5 py-0.5 text-[10px] text-[#6b6560]">{g}</span>
+                        ))}
+                        {promos.map((p) => (
+                          <span key={p} className="rounded border border-[#b8e0c8] bg-[#edf5f0] px-1.5 py-0.5 text-[10px] text-[#2d7a4f]">{p}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop: column headers */}
+            <div className="hidden md:grid" style={{ gridTemplateColumns: '1.6fr 1fr 1fr 1.2fr 1.6fr', gap: 16, padding: '7px 18px', borderBottom: '1px solid #e2ddd7', background: '#f0ece6' }}>
               {['Event', 'DJ 1', 'DJ 2', 'Genre', 'Promotion'].map((h) => (
                 <div key={h} style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#9c9590' }}>{h}</div>
               ))}
             </div>
 
-            {/* Rows — flex:1 fills remaining space; overflow scrolls if many events */}
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            {/* Desktop rows */}
+            <div className="hidden flex-1 overflow-y-auto md:block" style={{ minHeight: 0 }}>
               {pipelineRows.map((row, idx) => {
                 const isPipelinePast = row.iso < todayIso && isCurrentWeek;
                 const genres = row.genre !== '—' ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : [];

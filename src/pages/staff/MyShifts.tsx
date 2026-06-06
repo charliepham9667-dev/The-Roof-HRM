@@ -345,12 +345,12 @@ export function MyShifts() {
       {/* ── WEEK CALENDAR GRID ───────────────────────────────────────── */}
       <div>
         {/* Header: section label + navigation */}
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">This Week</span>
             <div className="h-px w-8 bg-border" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setWeekOffset((p) => p - 1)}
               className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-sm text-muted-foreground transition-colors hover:bg-secondary"
@@ -375,10 +375,56 @@ export function MyShifts() {
           </div>
         </div>
 
-        {/* 7-day grid */}
-        <div className="relative">
+        {/* Mobile: stacked day cards */}
+        <div className="space-y-2 md:hidden">
+          {weekDays.map((day) => {
+            const iso = toISO(day);
+            const isToday = iso === todayIso;
+            const dayShift = myShifts.find((s) => s.shiftDate === iso) ?? null;
+            const hasPendingSwap = dayShift ? pendingSwaps.has(dayShift.id) : false;
+            const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const dayName = DAY_NAMES[weekDays.indexOf(day)];
+
+            return (
+              <div
+                key={iso}
+                className={`rounded-lg border px-4 py-3 ${
+                  isToday ? 'border-amber-500 bg-amber-50/50' : 'border-border bg-card'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className={`text-sm font-semibold ${isToday ? 'text-amber-700' : 'text-foreground'}`}>
+                      {dayName} {day.getDate()}
+                    </div>
+                    {dayShift ? (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {fmtShiftTime(dayShift.startTime)} – {fmtShiftTime(dayShift.endTime)} · {roleLabel(dayShift)}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-xs italic text-muted-foreground">Day off</div>
+                    )}
+                  </div>
+                  {dayShift && (
+                    <div className="text-right">
+                      <div className="font-mono text-xs text-muted-foreground">
+                        {shiftHours(dayShift.startTime, dayShift.endTime)}
+                      </div>
+                      {hasPendingSwap && (
+                        <div className="mt-1 text-[9px] font-semibold uppercase text-blue-600">Swap Pending</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: 7-day grid */}
+        <div className="relative hidden md:block">
           <div className="overflow-x-auto pb-1 scrollbar-none">
-          <div className="grid grid-cols-7 gap-2.5 min-w-[560px]">
+          <div className="grid grid-cols-7 gap-2.5">
           {weekDays.map((day) => {
             const iso = toISO(day);
             const isToday = iso === todayIso;
@@ -460,9 +506,66 @@ export function MyShifts() {
           <div className="h-px flex-1 bg-border" />
         </div>
 
-        <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card">
+        {/* Mobile: card list */}
+        <div className="space-y-3 md:hidden">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : upcomingShifts.length === 0 ? (
+            <div className="rounded-card border border-border bg-card py-12 text-center text-sm text-muted-foreground shadow-card">
+              No upcoming shifts.
+            </div>
+          ) : (
+            upcomingShifts.slice(0, 10).map((shift) => {
+              const isPending = pendingSwaps.has(shift.id);
+              const teammates = getTeammates(shift);
+              const dur = shiftHours(shift.startTime, shift.endTime);
+              const rel = relativeDays(shift.shiftDate, todayIso);
+              const d = new Date(shift.shiftDate + 'T12:00:00');
+              const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+
+              return (
+                <div key={shift.id} className="rounded-card border border-border bg-card p-4 shadow-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground">{dateLabel}</div>
+                      <div className="text-[11px] text-muted-foreground">{rel}</div>
+                    </div>
+                    <div className="font-mono text-xs text-muted-foreground shrink-0">{dur}</div>
+                  </div>
+                  <div className="mt-2 font-mono text-sm text-foreground">
+                    {fmtShiftTime(shift.startTime)} – {fmtShiftTime(shift.endTime)}
+                  </div>
+                  {teammates.length > 0 && (
+                    <div className="mt-2 text-xs text-muted-foreground">{teammates.join(' · ')}</div>
+                  )}
+                  {shift.notes && (
+                    <div className="mt-1 text-[11px] italic text-muted-foreground">{shift.notes}</div>
+                  )}
+                  <div className="mt-3">
+                    {isPending ? (
+                      <div className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700">
+                        🔄 Swap Pending
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => openSwap(shift)}
+                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        ⇄ Request Swap
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto rounded-card border border-border bg-card shadow-card md:block">
           {/* Table header */}
-          <div className="grid grid-cols-[180px_140px_80px_1fr_auto] border-b border-border bg-secondary/60 px-4 py-2.5 min-w-[560px]">
+          <div className="grid grid-cols-[180px_140px_80px_1fr_auto] border-b border-border bg-secondary/60 px-4 py-2.5">
             {['Date', 'Hours', 'Duration', 'Team & Manager', ''].map((h) => (
               <div key={h} className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {h}
@@ -488,7 +591,7 @@ export function MyShifts() {
               return (
                 <div
                   key={shift.id}
-                  className="grid grid-cols-[180px_140px_80px_1fr_auto] items-center border-b border-border px-4 py-3 last:border-b-0 transition-colors hover:bg-secondary/40 min-w-[560px]"
+                  className="grid grid-cols-[180px_140px_80px_1fr_auto] items-center border-b border-border px-4 py-3 last:border-b-0 transition-colors hover:bg-secondary/40"
                 >
                   {/* Date */}
                   <div>

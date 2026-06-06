@@ -386,7 +386,7 @@ function SocialCard({ ch }: { ch: Channel }) {
         </div>
 
         {/* ③ Secondary stats 2-col grid */}
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-1 gap-1.5 xs:grid-cols-2">
           {ch.stats.map((s) => <StatCell key={s.label} stat={s} />)}
         </div>
 

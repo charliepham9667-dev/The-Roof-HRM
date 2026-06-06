@@ -46,19 +46,19 @@ function ViewAsPreviewBanner() {
   };
 
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-300/60 bg-amber-50 px-4 py-2 dark:border-amber-700/40 dark:bg-amber-950/40">
-      <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
-        <Eye className="h-4 w-4 shrink-0" />
-        <span>
+    <div className="flex shrink-0 flex-col gap-2 border-b border-amber-300/60 bg-amber-50 px-4 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 dark:border-amber-700/40 dark:bg-amber-950/40">
+      <div className="flex min-w-0 items-start gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
+        <Eye className="mt-0.5 h-4 w-4 shrink-0" />
+        <span className="min-w-0">
           Previewing as: <span className="font-semibold">{roleLabel}</span>
-          <span className="ml-2 font-normal text-amber-700/80 dark:text-amber-400/80">
+          <span className="mt-0.5 block font-normal text-amber-700/80 sm:ml-2 sm:mt-0 sm:inline dark:text-amber-400/80">
             — This is a read-only preview
           </span>
         </span>
       </div>
       <button
         onClick={handleExit}
-        className="flex shrink-0 items-center gap-1.5 rounded-md border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-300 dark:hover:bg-amber-900"
+        className="flex shrink-0 items-center gap-1.5 self-start rounded-md border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-200 sm:self-auto dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-300 dark:hover:bg-amber-900"
       >
         <X className="h-3 w-3" />
         Exit Preview

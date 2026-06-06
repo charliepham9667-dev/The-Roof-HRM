@@ -96,7 +96,7 @@ export function RevenueMixChart({ data, className = '' }: RevenueMixChartProps) 
       </div>
 
       {/* Legend - compact grid for 8 categories */}
-      <div className="grid grid-cols-4 gap-x-2 gap-y-1 mt-2">
+      <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 sm:grid-cols-4">
         {chartData.map((item) => (
           <div key={item.name} className="flex items-center gap-1">
             <div 

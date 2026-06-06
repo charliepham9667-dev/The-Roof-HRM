@@ -54,9 +54,9 @@ export function BoardView({
   }, [tasks])
 
   return (
-    <div className="flex min-h-[420px] gap-4">
+    <div className="flex min-h-[420px] flex-col gap-4 md:flex-row md:overflow-x-auto">
       {columns.map((column) => (
-        <div key={column.id} className="flex min-w-[250px] flex-1 flex-col">
+        <div key={column.id} className="flex min-w-0 flex-1 flex-col md:min-w-[250px]">
           <div
             className={cn(
               "flex items-center justify-between rounded-t-lg px-3 py-2",

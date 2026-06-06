@@ -1125,7 +1125,7 @@ export default function OwnerDashboardPage() {
 
             {tasksLoading && !tasksError ? (
               <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card divide-y divide-border">
-                <div className="min-w-[420px]">
+                <div className="min-w-0">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="grid grid-cols-[1fr_110px_90px_80px] items-center px-3 py-2.5 gap-2">
                     <Skeleton className="h-4 w-3/4" />
@@ -1148,7 +1148,7 @@ export default function OwnerDashboardPage() {
               </div>
             ) : taskView === "list" ? (
               <div className="overflow-x-auto rounded-card border border-border bg-card shadow-card">
-                <div className="min-w-[420px]">
+                <div className="min-w-0">
                 {/* Status filter pills */}
                 <div className="flex items-center gap-1.5 flex-wrap px-3 py-2.5 border-b border-border bg-secondary/30">
                   {([
@@ -1614,23 +1614,66 @@ export default function OwnerDashboardPage() {
           <div style={{ fontSize: 11, color: "#9c9590" }}>{fmtWeekRange(weekDates)}</div>
         </div>
 
-        {/* Column headers */}
-        <div style={{
-          display: "grid",
+        {/* Mobile: card list */}
+        <div className="flex-1 overflow-y-auto md:hidden">
+          {pipelineRows.map((row, idx) => {
+            const isPipelinePast = row.iso < todayIso && isCurrentWeek
+            const genres = row.genre !== "—" ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : []
+            const promos = row.promo !== "—" ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : []
+            return (
+              <div
+                key={`mobile-${row.iso}-${idx}`}
+                className={cn(
+                  "border-b border-[#e2ddd7] px-4 py-3",
+                  row.isToday && "bg-[#fdf3e7]",
+                  isPipelinePast && "opacity-55",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className={cn("text-sm font-semibold", row.isToday ? "text-[#b5620a]" : row.event === "TBD" ? "italic text-[#9c9590]" : "text-[#1a1714]")}>
+                      {row.event}
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-[#9c9590]">{row.when}</div>
+                  </div>
+                  {row.isToday && row.isFirstForDay && (
+                    <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white" style={{ background: "#b5620a" }}>Today</span>
+                  )}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                  <div><span className="text-[#9c9590]">DJ 1: </span>{row.dj1}</div>
+                  <div><span className="text-[#9c9590]">DJ 2: </span>{row.dj2}</div>
+                </div>
+                {(genres.length > 0 || promos.length > 0) && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {genres.map((g) => (
+                      <span key={g} className="rounded border border-[#e2ddd7] bg-[#f0ece6] px-1.5 py-0.5 text-[10px] text-[#6b6560]">{g}</span>
+                    ))}
+                    {promos.map((p) => (
+                      <span key={p} className="rounded border border-[#b8e0c8] bg-[#edf5f0] px-1.5 py-0.5 text-[10px] text-[#2d7a4f]">{p}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Desktop: column headers */}
+        <div className="hidden md:grid" style={{
           gridTemplateColumns: "1.6fr 1fr 1fr 1.2fr 1.6fr",
           gap: 16,
           padding: "7px 18px",
           borderBottom: "1px solid #e2ddd7",
           background: "#f0ece6",
-          minWidth: 480,
         }}>
           {["Event", "DJ 1", "DJ 2", "Genre", "Promotion"].map((h) => (
             <div key={h} style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#9c9590" }}>{h}</div>
           ))}
         </div>
 
-        {/* Rows — flex:1 fills remaining space; scrolls if many events */}
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        {/* Desktop rows */}
+        <div className="hidden flex-1 overflow-y-auto md:block" style={{ minHeight: 0 }}>
           {pipelineRows.map((row, idx) => {
             const isPipelinePast = row.iso < todayIso && isCurrentWeek
             const genres = row.genre !== "—" ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : []
@@ -1646,7 +1689,6 @@ export default function OwnerDashboardPage() {
                   gap: 16,
                   padding: "10px 18px",
                   minHeight: 48,
-                  minWidth: 480,
                   borderBottom: "1px solid #e2ddd7",
                   borderTop: topBorder,
                   alignItems: "center",
