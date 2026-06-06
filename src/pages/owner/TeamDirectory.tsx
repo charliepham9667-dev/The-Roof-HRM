@@ -332,41 +332,43 @@ export function TeamDirectory() {
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div>
             <h1 className="text-xl font-bold leading-tight text-foreground sm:text-[28px]">Team Overview</h1>
-            <p className="mt-1 text-sm text-muted-foreground">View your organisation and manage employee profiles</p>
+            <p className="hidden sm:block mt-1 text-sm text-muted-foreground">View your organisation and manage employee profiles</p>
           </div>
-          {/* View toggle */}
-          <div className="flex flex-wrap" style={{ background: "#EDE8DD", border: "1px solid #E0D8C8", borderRadius: 6, overflow: "hidden" }}>
+          {/* View toggle — mobile: List only; desktop: all tabs */}
+          <div className="flex overflow-x-auto scrollbar-none" style={{ background: "#EDE8DD", border: "1px solid #E0D8C8", borderRadius: 6, overflow: "hidden" }}>
             <button
               type="button"
               onClick={() => setView("list")}
               style={{
-                padding: "5px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif",
+                padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
                 background: view === "list" ? "#FDFAF5" : "transparent",
                 color: view === "list" ? "#1A1814" : "#7A7260",
                 boxShadow: view === "list" ? "0 1px 3px rgba(0,0,0,.07)" : "none",
               }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              List view
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              List
             </button>
             <button
               type="button"
               onClick={() => setView("org")}
+              className="hidden sm:flex"
               style={{
-                padding: "5px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif",
+                padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
                 background: view === "org" ? "#FDFAF5" : "transparent",
                 color: view === "org" ? "#1A1814" : "#7A7260",
                 boxShadow: view === "org" ? "0 1px 3px rgba(0,0,0,.07)" : "none",
               }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="14" width="6" height="4" rx="1"/><rect x="16" y="14" width="6" height="4" rx="1"/><line x1="12" y1="6" x2="12" y2="10"/><line x1="5" y1="14" x2="5" y2="10"/><line x1="19" y1="14" x2="19" y2="10"/><line x1="5" y1="10" x2="19" y2="10"/></svg>
-              Organisation chart
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="14" width="6" height="4" rx="1"/><rect x="16" y="14" width="6" height="4" rx="1"/><line x1="12" y1="6" x2="12" y2="10"/><line x1="5" y1="14" x2="5" y2="10"/><line x1="19" y1="14" x2="19" y2="10"/><line x1="5" y1="10" x2="19" y2="10"/></svg>
+              Org Chart
             </button>
             <button
               type="button"
               onClick={() => setView("pending")}
+              className="hidden sm:flex"
               style={{
-                padding: "5px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif",
+                padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
                 background: view === "pending" ? "#FBF5E6" : "transparent",
                 color: view === "pending" ? "#B8922A" : "#7A7260",
                 boxShadow: view === "pending" ? "0 1px 3px rgba(0,0,0,.07)" : "none",
@@ -383,8 +385,9 @@ export function TeamDirectory() {
             <button
               type="button"
               onClick={() => setView("contracts")}
+              className="hidden sm:flex"
               style={{
-                padding: "5px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif",
+                padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
                 background: view === "contracts" ? "#FDFAF5" : "transparent",
                 color: view === "contracts" ? "#1A1814" : "#7A7260",
                 boxShadow: view === "contracts" ? "0 1px 3px rgba(0,0,0,.07)" : "none",
@@ -429,7 +432,7 @@ export function TeamDirectory() {
       ) : null}
 
       {/* ── Stats strip ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5" style={{ padding: "7px 13px" }}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" style={{ padding: "4px 0", gap: 0 }}>
         <StatCard
           label="Total"
           value={stats.total}
@@ -457,7 +460,6 @@ export function TeamDirectory() {
           sub="GM · Floor · Supervisor · Mkt"
           icon={<Briefcase size={13} color="#7A7260" />}
           noRightBorder
-          padding="13px 16px"
         />
         <StatCard
           label="Contracts Signed"
@@ -1157,22 +1159,22 @@ function ApproveModal({
 // ── Stat card ──────────────────────────────────────────────────────────────────
 
 function StatCard({
-  label, value, sub, icon, live, noRightBorder, padding,
+  label, value, sub, icon, live, noRightBorder,
 }: {
   label: string; value: number; sub?: string; icon?: React.ReactNode; live?: boolean; noRightBorder?: boolean; padding?: string
 }) {
   return (
-    <div style={{ padding: padding ?? "14px 20px", border: "1px solid #E0D8C8", borderRight: noRightBorder ? "none" : "1px solid #E0D8C8" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+    <div style={{ padding: "10px 14px", border: "1px solid #E0D8C8", borderRight: noRightBorder ? "none" : "1px solid #E0D8C8" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
         <span>{icon}</span>
-        <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".09em", color: live ? "#3D6B4A" : "#7A7260", fontWeight: 600 }}>
+        <span style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: ".09em", color: live ? "#3D6B4A" : "#7A7260", fontWeight: 600 }}>
           {label}
         </span>
       </div>
-      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 600, lineHeight: 1, color: live ? "#3D6B4A" : "#1A1814" }}>
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, lineHeight: 1, color: live ? "#3D6B4A" : "#1A1814" }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 11, color: "#A89E8C", marginTop: 3 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: "#A89E8C", marginTop: 2, lineHeight: 1.3 }}>{sub}</div>}
     </div>
   )
 }
