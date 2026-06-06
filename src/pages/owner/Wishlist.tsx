@@ -578,16 +578,17 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
           )}
         </div>
       ) : (
-        <div className="rounded-card border border-border bg-card shadow-card" style={{ overflow: 'clip' }}>
+        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+          <div className="overflow-y-auto" style={{ maxHeight: '70dvh' }}>
           {STATUS_ORDER.map((status) => {
             const sectionItems = filtered.filter((i) => i.status === status)
             if (sectionItems.length === 0) return null
             const cfg = STATUS_SECTION[status]
             return (
               <div key={status}>
-                {/* Status divider header — sticky within the single card */}
+                {/* Status divider header — sticky within scroll container */}
                 <div
-                  className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 border-b border-border shadow-sm backdrop-blur-0"
+                  className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 border-b border-border shadow-sm"
                   style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
                 >
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
@@ -637,6 +638,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
               </div>
             )
           })}
+          </div>{/* end inner scroll */}
         </div>
       )}
 
@@ -784,7 +786,8 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                 )}
               </div>
             ) : (
-              <div className="rounded-card border border-border shadow-card bg-card" style={{ overflow: 'clip' }}>
+              <div className="rounded-card border border-border shadow-card bg-card overflow-hidden">
+                <div className="overflow-y-auto" style={{ maxHeight: '70dvh' }}>
                 {MAINT_STATUS_ORDER.map((status) => {
                   const accent = MAINT_STATUS_ACCENT[status]
                   const cfg = MAINT_STATUS_CONFIG[status]
@@ -795,11 +798,11 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
 
                   return (
                     <div key={status}>
-                      {/* Sticky section header — floats within the single card */}
+                      {/* Sticky section header */}
                       <button
                         type="button"
                         onClick={() => toggleSection(status)}
-                        className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border shadow-sm transition-colors hover:bg-secondary/20"
+                        className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border shadow-sm transition-colors"
                         style={{ borderTop: `2px solid ${accent}`, background: 'var(--card, #ffffff)' }}
                       >
                         <div className="flex items-center gap-2">
@@ -879,6 +882,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                     </div>
                   )
                 })}
+                </div>{/* end inner scroll */}
               </div>
             )}
           </div>
