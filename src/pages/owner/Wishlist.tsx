@@ -768,37 +768,30 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   const inProgressCount = filtered.filter((t) => t.status === "in_progress").length
 
   return (
-    <div className="flex flex-col gap-4 flex-1 min-h-0">
-      {/* Controls */}
-      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value as any)}
-            className="rounded-sm border border-border bg-card px-2 py-1.5 text-xs text-foreground outline-none cursor-pointer hover:bg-secondary transition-colors"
-          >
-            {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as any)}
-            className="rounded-sm border border-border bg-card px-2 py-1.5 text-xs text-foreground outline-none cursor-pointer hover:bg-secondary transition-colors"
-          >
-            {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-          {(openCount > 0 || inProgressCount > 0) && (
-            <span className="text-[10px] text-muted-foreground">
-              {openCount} open · {inProgressCount} in progress
-            </span>
-          )}
-        </div>
+    <div className="flex flex-col gap-3 flex-1 min-h-0">
+      {/* Controls — horizontal scroll on mobile */}
+      <div className="shrink-0 flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value as any)}
+          className="shrink-0 rounded border border-border bg-card px-2 py-1 text-[11px] text-foreground outline-none cursor-pointer"
+        >
+          {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+        </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value as any)}
+          className="shrink-0 rounded border border-border bg-card px-2 py-1 text-[11px] text-foreground outline-none cursor-pointer"
+        >
+          {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
+        {(openCount > 0 || inProgressCount > 0) && (
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+            {openCount} open · {inProgressCount} in progress
+          </span>
+        )}
         {canManage && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openAdd}
-            className="h-auto w-full px-3 py-1.5 text-xs font-medium sm:w-auto"
-          >
+          <Button type="button" size="sm" onClick={openAdd} className="ml-auto h-8 px-3 text-xs gap-1 shrink-0">
             <Plus className="h-3.5 w-3.5" />
             Log Task
           </Button>
@@ -809,14 +802,14 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
       {isLoading ? (
         <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">Loading…</div>
       ) : (
-        <div className="flex flex-col gap-3 md:flex-row md:flex-1 md:min-h-0">
+        <div className="flex flex-col gap-2 md:flex-row md:flex-1 md:min-h-0">
           {columns.map((col) => {
             const colTasks = filtered.filter((t) => t.status === col)
             const cfg = MAINT_STATUS_CONFIG[col]
             return (
-              <div key={col} className="flex flex-col gap-2 w-full md:flex-1 md:min-h-0 rounded-card border border-border overflow-hidden shadow-card">
+              <div key={col} className="flex flex-col w-full md:flex-1 md:min-h-0 rounded-card border border-border overflow-hidden shadow-card">
                 {/* Column header */}
-                <div className={cn("border-b border-border bg-card px-3 py-2.5 border-t-2", cfg.col)}>
+                <div className={cn("border-b border-border bg-card px-3 py-2 border-t-2 shrink-0", cfg.col)}>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] tracking-widest font-semibold text-muted-foreground uppercase">{cfg.label}</span>
                     <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground">{colTasks.length}</span>
@@ -824,9 +817,9 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                 </div>
 
                 {/* Cards */}
-                <div className="flex flex-col divide-y divide-border/50 overflow-y-auto flex-1 bg-card">
+                <div className="flex flex-col divide-y divide-border/40 overflow-y-auto flex-1 bg-card">
                   {colTasks.length === 0 ? (
-                    <div className="px-3 py-4 text-center text-[11px] text-muted-foreground">
+                    <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">
                       No tasks
                     </div>
                   ) : (
@@ -835,54 +828,53 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                       return (
                         <div
                           key={task.id}
-                          className="px-3 py-2.5 hover:bg-secondary/30 transition-colors group"
+                          className="px-3 py-2 hover:bg-secondary/20 transition-colors group"
                         >
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <button
-                              type="button"
+                          {/* Row 1: title + actions */}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
                               onClick={() => canManage && openEdit(task)}
-                              className={cn("text-sm font-medium text-foreground text-left leading-snug flex-1 min-w-0", canManage && "hover:text-primary transition-colors")}
+                              className={cn("text-[13px] font-medium text-foreground leading-snug flex-1 min-w-0 truncate", canManage && "cursor-pointer hover:text-primary transition-colors")}
                             >
                               {task.title}
-                            </button>
+                            </span>
                             {canManage && (
                               <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                <button type="button" onClick={() => openEdit(task)} className="rounded-sm p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                                   <Pencil className="h-3 w-3" />
                                 </button>
-                                <button type="button" onClick={() => handleDelete(task.id)} className="rounded-sm p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
+                                <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
                                   <Trash2 className="h-3 w-3" />
                                 </button>
                               </div>
                             )}
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                            <Badge variant={pri.variant}>{pri.label}</Badge>
-                            <Badge variant="neutral">{CATEGORY_LABELS[task.category]}</Badge>
-                          </div>
-
-                          {task.location && (
-                            <div className="text-[11px] text-muted-foreground mb-1">📍 {task.location}</div>
-                          )}
-                          {task.description && (
-                            <div className="text-[11px] text-muted-foreground line-clamp-2 mb-1.5">{task.description}</div>
-                          )}
-
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                            <span className="text-[10px] text-muted-foreground tabular-nums">
-                              {task.estimatedCost != null ? formatVnd(task.estimatedCost) : "No estimate"}
-                            </span>
-                            {canManage && (
-                              <button
-                                type="button"
-                                onClick={() => cycleStatus(task)}
-                                className="text-[9px] tracking-wide text-primary hover:underline transition-colors"
-                              >
-                                {col === "open" ? "→ In Progress" : col === "in_progress" ? "→ Done" : "↺ Reopen"}
-                              </button>
+                          {/* Row 2: badges + cycle button */}
+                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                            <Badge variant={pri.variant} className="text-[9px] px-1.5 py-px">{pri.label}</Badge>
+                            <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
+                            {task.location && (
+                              <span className="text-[10px] text-muted-foreground truncate">📍 {task.location}</span>
+                            )}
+                            {task.estimatedCost != null && (
+                              <span className="text-[10px] tabular-nums text-muted-foreground ml-auto shrink-0">{formatVnd(task.estimatedCost)}</span>
                             )}
                           </div>
+
+                          {task.description && (
+                            <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
+                          )}
+
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => cycleStatus(task)}
+                              className="mt-1.5 text-[9px] font-medium text-primary hover:underline transition-colors"
+                            >
+                              {col === "open" ? "→ In Progress" : col === "in_progress" ? "→ Done" : "↺ Reopen"}
+                            </button>
+                          )}
                         </div>
                       )
                     })
