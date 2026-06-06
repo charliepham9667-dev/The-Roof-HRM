@@ -82,94 +82,112 @@ function ReservationRow({
     setConfirmDelete(false)
   }
 
+  const monthLabel = r.dateOfReservation
+    ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { month: "short" })
+    : "—"
+  const dayLabel = r.dateOfReservation ? r.dateOfReservation.slice(8) : "—"
+
   return (
-    <div className="group border-b border-border last:border-0 transition-colors hover:bg-muted/30">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setExpanded((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault()
-            setExpanded((v) => !v)
-          }
-        }}
-        className="w-full cursor-pointer text-left px-3 py-3 sm:px-5 sm:py-3.5"
-      >
-        <div className="flex items-start gap-2.5 sm:items-center sm:gap-4">
-          {/* Date badge */}
-          <div className="shrink-0 flex min-w-[46px] flex-col items-center justify-center rounded-lg border border-border bg-muted/60 px-2 py-1.5 text-center sm:min-w-[54px] sm:px-2.5 sm:py-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {r.dateOfReservation ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { month: "short" }) : "—"}
+    <div className="border-b border-border last:border-0">
+      {/* Main row: left content (expand trigger) + right actions (always tappable) */}
+      <div className="flex items-stretch">
+        {/* Left: date badge + details — tapping this area expands/collapses */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setExpanded((v) => !v)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded((v) => !v) } }}
+          className="flex flex-1 min-w-0 cursor-pointer items-start gap-2.5 px-3 py-2.5"
+        >
+          {/* Date badge — compact */}
+          <div className="shrink-0 flex w-8 flex-col items-center rounded bg-muted/70 px-0 py-1 text-center">
+            <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground leading-none">
+              {monthLabel}
             </span>
-            <span className="text-lg font-bold leading-none text-foreground sm:text-xl">
-              {r.dateOfReservation ? r.dateOfReservation.slice(8) : "—"}
+            <span className="text-[15px] font-bold leading-tight text-foreground">
+              {dayLabel}
             </span>
           </div>
 
           {/* Details */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="truncate text-sm font-semibold text-foreground">{r.name || "Unknown"}</span>
-                  <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium", badge.cls)}>{badge.label}</span>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {canEdit && (
-                  <button
-                    type="button"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => { e.stopPropagation(); onEdit(r) }}
-                    className="rounded border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:py-1 sm:opacity-0 sm:group-hover:opacity-100"
-                  >
-                    Edit
-                  </button>
-                )}
-                {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </div>
+            {/* Name + badge on same line */}
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-sm font-semibold text-foreground leading-snug">
+                {r.name || "Unknown"}
+              </span>
+              <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none", badge.cls)}>
+                {badge.label}
+              </span>
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3 shrink-0" />
+            {/* Meta: time · pax · table · phone */}
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-0.5">
+                <Clock className="h-2.5 w-2.5 shrink-0" />
                 {r.time || "—"}
               </span>
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3 shrink-0" />
+              <span className="text-border">·</span>
+              <span className="flex items-center gap-0.5">
+                <Users className="h-2.5 w-2.5 shrink-0" />
                 {r.numberOfGuests} pax
               </span>
               {r.table && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  {r.table}
-                </span>
+                <>
+                  <span className="text-border">·</span>
+                  <span className="flex items-center gap-0.5">
+                    <MapPin className="h-2.5 w-2.5 shrink-0" />
+                    {r.table}
+                  </span>
+                </>
               )}
               {r.phone && (
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3 shrink-0" />
-                  <a href={`tel:${r.phone}`} className="hover:text-foreground" onClick={(e) => e.stopPropagation()}>
+                <>
+                  <span className="text-border">·</span>
+                  <a
+                    href={`tel:${r.phone}`}
+                    className="flex items-center gap-0.5 hover:text-foreground"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Phone className="h-2.5 w-2.5 shrink-0" />
                     {r.phone}
                   </a>
-                </span>
+                </>
               )}
             </div>
-            {r.specialRequests && !expanded && (
-              <p className="mt-1 line-clamp-2 text-[10px] italic text-muted-foreground">📝 {r.specialRequests}</p>
-            )}
-            {r.notes && r.notes.trim() && !expanded && (
-              <p className="mt-0.5 line-clamp-2 text-[10px] italic text-primary/70">
-                💬 {r.notes}
+            {/* Notes preview */}
+            {!expanded && (r.specialRequests || r.notes?.trim()) && (
+              <p className="mt-0.5 line-clamp-1 text-[10px] italic text-muted-foreground">
+                {r.specialRequests ? `📝 ${r.specialRequests}` : `💬 ${r.notes}`}
               </p>
             )}
           </div>
+        </div>
+
+        {/* Right: Edit + chevron — completely separate from the expand area */}
+        <div className="flex shrink-0 items-center gap-1 pr-2">
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(r)}
+              className="rounded border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors active:bg-muted hover:bg-muted hover:text-foreground"
+            >
+              Edit
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground active:bg-muted hover:bg-muted"
+          >
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
 
       {/* Expanded */}
       {expanded && (
-        <div className="space-y-2 border-t border-border/40 bg-muted/20 px-3 pb-4 pt-1 sm:px-5">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5 text-xs text-muted-foreground">
+        <div className="space-y-2 border-t border-border/40 bg-muted/20 px-3 pb-3 pt-2">
+          <div className="grid grid-cols-1 gap-y-1 text-xs text-muted-foreground">
             {r.email && (
               <div className="flex items-center gap-1.5">
                 <Mail className="h-3 w-3 shrink-0" />
@@ -180,18 +198,18 @@ function ReservationRow({
               <div><span className="font-medium text-foreground/70">Occasion: </span>{r.occasion}</div>
             )}
             {r.specialRequests && (
-              <div className="col-span-full"><span className="font-medium text-foreground/70">Special requests: </span>{r.specialRequests}</div>
+              <div><span className="font-medium text-foreground/70">Special requests: </span>{r.specialRequests}</div>
             )}
             {r.specialPackages && (
-              <div className="col-span-full"><span className="font-medium text-foreground/70">Package: </span>{r.specialPackages}</div>
+              <div><span className="font-medium text-foreground/70">Package: </span>{r.specialPackages}</div>
             )}
           </div>
-          <div className="pt-1">
+          <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Staff comment</p>
             <InlineComment dbId={dbId} currentNote={r.notes} canEdit={canEdit} />
           </div>
           {canEdit && dbId && (
-            <div className="flex items-center justify-end pt-1 gap-2">
+            <div className="flex items-center justify-end gap-2 pt-0.5">
               {confirmDelete ? (
                 <>
                   <span className="text-xs text-destructive">Delete this reservation?</span>
@@ -228,28 +246,41 @@ function ReservationRow({
 
 function SectionDivider({ label, count, pax }: { label: string; count: number; pax: number }) {
   return (
-    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-border bg-muted/50 px-3 py-2 sm:gap-3 sm:px-5 sm:py-2.5">
-      <span className="text-xs font-bold uppercase tracking-widest text-foreground">{label}</span>
-      <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-        {count} {count === 1 ? "booking" : "bookings"}
+    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-card px-3 py-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{label}</span>
+      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+        {count} bookings
       </span>
-      <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-        {pax} {pax === 1 ? "guest" : "guests"}
+      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+        {pax} guests
       </span>
     </div>
   )
 }
 
-// ─── Date group header ────────────────────────────────────────────────────────
+// ─── Upcoming section header ───────────────────────────────────────────────────
+
+function UpcomingDivider({ count, pax }: { count: number; pax: number }) {
+  return (
+    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-primary/20 bg-primary/5 px-3 py-1.5">
+      <Calendar className="h-3 w-3 shrink-0 text-primary" />
+      <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Upcoming</span>
+      <span className="rounded-full bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
+        {count} bookings · {pax} guests
+      </span>
+    </div>
+  )
+}
+
+// ─── Date group header ─────────────────────────────────────────────────────────
 
 function DateGroupHeader({ iso, todayIso }: { iso: string; todayIso: string }) {
   const days = daysBetween(todayIso, iso)
-  const label = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`
+  const label = days === 1 ? "Tomorrow" : `In ${days} days`
   const formatted = formatDate(iso)
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-dashed border-border/60 bg-background px-3 py-2 sm:gap-3 sm:px-5">
-      <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
-      <span className="text-xs font-semibold text-foreground">{formatted}</span>
+    <div className="flex items-center gap-2 border-b border-dashed border-border/60 bg-background px-3 py-1.5">
+      <span className="text-[11px] font-semibold text-foreground">{formatted}</span>
       <span className="text-[10px] text-muted-foreground">{label}</span>
     </div>
   )
@@ -272,7 +303,6 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
 
-  // Merge CSV + DB reservations (today + future only), deduplicate
   const allReservations = useMemo<CsvReservation[]>(() => {
     const merged = csvAll.filter((r) => r.status === "today" || r.status === "upcoming")
     const csvKeys = new Set(merged.map((r) => `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${r.time ?? ""}`))
@@ -300,7 +330,6 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
       }
     }
 
-    // Sort by date then time
     merged.sort((a, b) => {
       const dc = (a.dateOfReservation ?? "").localeCompare(b.dateOfReservation ?? "")
       if (dc !== 0) return dc
@@ -310,7 +339,6 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     return merged
   }, [csvAll, dbAll, todayIso])
 
-  // Filter by search
   const filtered = useMemo(() => {
     if (!search.trim()) return allReservations
     const q = search.toLowerCase()
@@ -325,7 +353,6 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const todayList = filtered.filter((r) => r.dateOfReservation === todayIso)
   const upcomingList = filtered.filter((r) => r.dateOfReservation !== todayIso)
 
-  // Group upcoming by date
   const upcomingByDate = useMemo(() => {
     const map = new Map<string, CsvReservation[]>()
     for (const r of upcomingList) {
@@ -338,12 +365,10 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
 
   const todayPax = todayList.reduce((s, r) => s + r.numberOfGuests, 0)
   const upcomingPax = upcomingList.reduce((s, r) => s + r.numberOfGuests, 0)
-
   const isLoading = csvLoading || dbLoading
 
   function handleEdit(r: CsvReservation) {
     if (!r.mustHaves) return
-    // Build a minimal Reservation-shaped object for the form
     setEditingReservation({
       id: r.mustHaves,
       customerName: r.name ?? "",
@@ -366,52 +391,53 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
-      {/* Toolbar — stacked on mobile so Add reservation is never clipped */}
-      <div className="shrink-0 flex flex-col gap-2.5 border-b border-border bg-muted/10 px-3 py-3 sm:px-5 sm:py-3.5">
-        <div className="relative min-w-0 w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+      {/* Toolbar — compact single row */}
+      <div className="shrink-0 flex items-center gap-2 border-b border-border bg-muted/10 px-3 py-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by name, phone, notes…"
+            placeholder="Search name, phone…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring sm:py-1.5"
+            className="w-full rounded border border-input bg-background py-1.5 pl-6 pr-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-          <p className="text-xs text-muted-foreground">
-            <span>{filtered.length} reservations</span>
-            <span className="mx-1.5 text-border">·</span>
-            <span>{todayPax + upcomingPax} total guests</span>
-          </p>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => { setEditingReservation(null); setFormOpen(true) }}
-              className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto sm:py-1.5"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add reservation
-            </button>
-          )}
-        </div>
+        <p className="hidden shrink-0 text-[11px] text-muted-foreground sm:block">
+          {filtered.length} · {todayPax + upcomingPax} guests
+        </p>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => { setEditingReservation(null); setFormOpen(true) }}
+            className="flex shrink-0 items-center gap-1 rounded bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Plus className="h-3 w-3" />
+            Add
+          </button>
+        )}
+      </div>
+      {/* Count row — visible on mobile only */}
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 bg-muted/5 px-3 py-1 sm:hidden">
+        <span className="text-[11px] text-muted-foreground">{filtered.length} reservations</span>
+        <span className="text-border">·</span>
+        <span className="text-[11px] text-muted-foreground">{todayPax + upcomingPax} total guests</span>
       </div>
 
       {/* Scrollable list */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Loading reservations…</span>
+          <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Loading…</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
-            <Calendar className="h-8 w-8 opacity-30" />
-            <p className="text-sm">{search ? "No reservations match your search" : "No upcoming reservations"}</p>
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+            <Calendar className="h-7 w-7 opacity-30" />
+            <p className="text-sm">{search ? "No matches" : "No upcoming reservations"}</p>
           </div>
         ) : (
           <>
-            {/* ── Today ── */}
             {todayList.length > 0 && (
               <section>
                 <SectionDivider label="Today" count={todayList.length} pax={todayPax} />
@@ -421,22 +447,9 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
               </section>
             )}
 
-            {/* ── Upcoming divider ── */}
             {upcomingList.length > 0 && (
               <section>
-                <div className="sticky top-[41px] z-10 flex flex-col items-center gap-2 border-y border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:gap-3 sm:px-5">
-                  <div className="hidden h-px flex-1 bg-primary/20 sm:block" />
-                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Upcoming
-                  </span>
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                    {upcomingList.length} bookings · {upcomingPax} guests
-                  </span>
-                  <div className="hidden h-px flex-1 bg-primary/20 sm:block" />
-                </div>
-
-                {/* Group by date */}
+                <UpcomingDivider count={upcomingList.length} pax={upcomingPax} />
                 {Array.from(upcomingByDate.entries()).map(([date, rows]) => (
                   <div key={date}>
                     <DateGroupHeader iso={date} todayIso={todayIso} />
@@ -451,7 +464,6 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
         )}
       </div>
 
-      {/* Edit / add form */}
       {canEdit && (
         <ReservationFormSheet
           open={formOpen}
