@@ -177,6 +177,7 @@ function WishlistItemSheet({
               type="text"
               className="form-input-base"
               placeholder="e.g. Cocktail Shakers (set of 6)"
+              autoComplete="off"
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
             />
@@ -350,9 +351,9 @@ function MaintenanceTaskSheet({
               type="text"
               className="form-input-base"
               placeholder="e.g. Fix AC unit on 3rd floor"
+              autoComplete="off"
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              autoFocus
             />
           </div>
 
@@ -375,6 +376,7 @@ function MaintenanceTaskSheet({
                 type="text"
                 className="form-input-base"
                 placeholder="e.g. Bar area, Rooftop"
+                autoComplete="off"
                 value={draft.location ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
               />
@@ -1092,13 +1094,13 @@ function DJPaymentSheet({
 
           <div>
             <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Event Name *</label>
-            <input type="text" className={inputCls} placeholder="e.g. SaturPlay" value={draft.event_name} onChange={(e) => set("event_name", e.target.value)} />
+            <input type="text" className={inputCls} placeholder="e.g. SaturPlay" autoComplete="off" value={draft.event_name} onChange={(e) => set("event_name", e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">DJ Name *</label>
-              <input type="text" className={inputCls} placeholder="e.g. CharleS" value={draft.dj_name} onChange={(e) => set("dj_name", e.target.value)} />
+              <input type="text" className={inputCls} placeholder="e.g. CharleS" autoComplete="off" value={draft.dj_name} onChange={(e) => set("dj_name", e.target.value)} />
             </div>
             <div>
               <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">DJ Type</label>
