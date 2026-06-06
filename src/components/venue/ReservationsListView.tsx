@@ -368,9 +368,8 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const isLoading = csvLoading || dbLoading
 
   function handleEdit(r: CsvReservation) {
-    if (!r.mustHaves) return
     setEditingReservation({
-      id: r.mustHaves,
+      id: r.mustHaves ?? "",
       customerName: r.name ?? "",
       customerPhone: r.phone ?? undefined,
       customerEmail: r.email ?? undefined,

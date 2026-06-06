@@ -58,7 +58,7 @@ export function ReservationFormSheet({
   defaultTime?: string
   defaultSource?: string
 }) {
-  const isEdit = !!reservation
+  const isEdit = !!reservation?.id
   const createRes = useCreateReservation()
   const updateRes = useUpdateReservation()
 
