@@ -566,24 +566,52 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
 
       {/* Summary strip */}
       {!isLoading && filtered.length > 0 && (
-        <div className="flex items-center gap-4 shrink-0 flex-wrap">
-          {STATUS_ORDER.map((s) => {
-            const cfg = STATUS_SECTION[s]
-            const count = grouped[s].length
-            const sectionSpend = grouped[s].reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
-            return (
-              <div key={s} className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full" style={{ background: cfg.accent }} />
-                <span className="text-[10px] font-semibold" style={{ color: cfg.accent }}>{cfg.label}</span>
-                <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: cfg.badgeBg, color: cfg.accent }}>{count}</span>
-                {sectionSpend > 0 && (
-                  <span className="text-[10px] text-muted-foreground tabular-nums">{formatVnd(sectionSpend)}</span>
-                )}
-              </div>
-            )
-          })}
-          <div className="ml-auto text-[10px] text-muted-foreground tabular-nums">
-            Pending spend: <span className="font-semibold text-foreground">{formatVnd(totalPendingSpend)}</span>
+        <div className="shrink-0 rounded-card border border-border bg-card px-3 py-2.5 shadow-card">
+          {/* Mobile: vertical list */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:hidden">
+            {STATUS_ORDER.map((s) => {
+              const cfg = STATUS_SECTION[s]
+              const count = grouped[s].length
+              const sectionSpend = grouped[s].reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
+              return (
+                <div key={s} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cfg.accent }} />
+                    <span className="text-[11px] font-semibold" style={{ color: cfg.accent }}>{cfg.label}</span>
+                    <span className="rounded-full px-1.5 py-px text-[10px] font-semibold" style={{ background: cfg.badgeBg, color: cfg.accent }}>{count}</span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                    {sectionSpend > 0 ? formatVnd(sectionSpend) : "—"}
+                  </span>
+                </div>
+              )
+            })}
+            <div className="col-span-2 border-t border-border/50 pt-2 mt-0.5 text-[11px] text-muted-foreground tabular-nums flex justify-between items-center">
+              <span>Pending spend</span>
+              <span className="font-semibold text-foreground">{formatVnd(totalPendingSpend)}</span>
+            </div>
+          </div>
+
+          {/* Desktop: horizontal strip */}
+          <div className="hidden sm:flex items-center gap-4 flex-wrap">
+            {STATUS_ORDER.map((s) => {
+              const cfg = STATUS_SECTION[s]
+              const count = grouped[s].length
+              const sectionSpend = grouped[s].reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
+              return (
+                <div key={s} className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full" style={{ background: cfg.accent }} />
+                  <span className="text-[10px] font-semibold" style={{ color: cfg.accent }}>{cfg.label}</span>
+                  <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: cfg.badgeBg, color: cfg.accent }}>{count}</span>
+                  {sectionSpend > 0 && (
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{formatVnd(sectionSpend)}</span>
+                  )}
+                </div>
+              )
+            })}
+            <div className="ml-auto text-[10px] text-muted-foreground tabular-nums">
+              Pending spend: <span className="font-semibold text-foreground">{formatVnd(totalPendingSpend)}</span>
+            </div>
           </div>
         </div>
       )}
@@ -612,20 +640,20 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                 <button
                   type="button"
                   onClick={() => toggleSection(status)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 border-b border-border transition-colors hover:bg-secondary/30"
+                  className="w-full flex items-center justify-between px-3 py-2 border-b border-border transition-colors hover:bg-secondary/30"
                   style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
                 >
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">{cfg.label}</span>
-                    <span className="rounded-full px-1.5 py-0.5 text-[11px] font-semibold bg-[#F3F4F6] text-[#6B7280]">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: cfg.accent }}>{cfg.label}</span>
+                    <span className="rounded-full px-1.5 py-px text-[10px] font-semibold" style={{ background: cfg.badgeBg, color: cfg.accent }}>
                       {sectionItems.length}
                     </span>
                     {sectionSpend > 0 && (
-                      <span className="text-[10px] text-muted-foreground tabular-nums ml-1">{formatVnd(sectionSpend)}</span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">{formatVnd(sectionSpend)}</span>
                     )}
                   </div>
-                  <span className="text-muted-foreground text-xs">{isCollapsed ? "▸" : "▾"}</span>
+                  <span className="text-muted-foreground text-xs">{isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}</span>
                 </button>
 
                 {/* Section rows */}
@@ -689,35 +717,39 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                           return (
                             <div
                               key={item.id}
-                              className="px-4 py-3"
-                              style={{ borderLeft: `3px solid ${cfg.accent}33` }}
+                              className="flex items-start gap-2 px-3 py-2.5"
+                              style={{ borderLeft: `3px solid ${cfg.accent}55` }}
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => canManage && openEdit(item)}
-                                  className={cn("text-sm text-left font-medium text-foreground", canManage && "hover:text-primary transition-colors")}
-                                >
-                                  {item.title}
-                                </button>
-                                {canManage && (
-                                  <div className="flex items-center gap-0.5 shrink-0">
-                                    <button type="button" onClick={() => openEdit(item)} className="rounded-sm p-1 text-muted-foreground hover:text-foreground transition-colors">
-                                      <Pencil className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button type="button" onClick={() => handleDelete(item.id)} className="rounded-sm p-1 text-muted-foreground hover:text-error transition-colors">
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                  </div>
+                              {/* Main content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-sm font-medium text-foreground leading-snug">
+                                    {item.title}
+                                  </span>
+                                  <Badge variant={pri.variant} className="shrink-0">{pri.label}</Badge>
+                                </div>
+                                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                                  <span>Qty <span className="font-medium text-foreground">{item.quantity}</span></span>
+                                  {(totalCost || item.estimatedCost) ? (
+                                    <span className="whitespace-nowrap tabular-nums font-medium text-foreground">
+                                      {formatVnd(totalCost || item.estimatedCost)}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                {item.notes && (
+                                  <div className="mt-0.5 text-[11px] italic text-muted-foreground line-clamp-2">{item.notes}</div>
                                 )}
                               </div>
-                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                <span>Qty: <span className="text-foreground">{item.quantity}</span></span>
-                                <span className="whitespace-nowrap tabular-nums text-foreground">{formatVnd(totalCost || item.estimatedCost)}</span>
-                                <Badge variant={pri.variant}>{pri.label}</Badge>
-                              </div>
-                              {item.notes && (
-                                <div className="mt-1.5 text-xs text-muted-foreground">{item.notes}</div>
+                              {/* Actions always visible */}
+                              {canManage && (
+                                <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                                  <button type="button" onClick={() => openEdit(item)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button type="button" onClick={() => handleDelete(item.id)} className="rounded p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted transition-colors">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
                               )}
                             </div>
                           )
