@@ -20,7 +20,6 @@ import {
   useEventAttachments,
   useUploadEventAttachment,
 } from "@/hooks/useEventAttachments"
-import { BrandKitLibrary } from "@/components/marketing/BrandKitLibrary"
 import type { CalendarEvent, EventChecklistItem, EventMarketingStatus } from "@/types"
 
 /* ────────────────────────────────────────────────────────────
@@ -536,6 +535,7 @@ export default function MarketingDashboard() {
   const [showTargetAudience, setShowTargetAudience] = useState(false)
   const [showContentPillars, setShowContentPillars] = useState(false)
   const [showPaidAds, setShowPaidAds] = useState(false)
+  const [showContentCalendar, setShowContentCalendar] = useState(false)
 
   // ── Partnerships & Influencers (editable local state) ────────────────────
   const [partners, setPartners] = useState<Partner[]>(INITIAL_PARTNERS)
@@ -739,31 +739,22 @@ export default function MarketingDashboard() {
         </div>
       </div>
 
-      {/* ── 1b. BRAND KIT & REFERENCE LIBRARY ── */}
-      <BrandKitLibrary onOpenPlans={() => navigate("/marketing/plans")} />
+      {/* Brand Kit moved to Marketing Plans / Settings */}
 
       {/* ── 2. SOCIAL PERFORMANCE ── */}
       <div className="space-y-3">
-        <SectionTitle label="Social Media Performance — Monthly Update" />
-        <div className="rounded-card border border-border bg-card p-3 shadow-card space-y-2">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <p className="text-[11px] text-muted-foreground">
-              Monthly source uploads now live in <strong>Integrations</strong>.
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/marketing/integrations")}
-              className="w-full shrink-0 rounded-sm border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary sm:w-auto sm:py-1"
-            >
-              Open Integrations
-            </button>
+        <div className="flex items-center gap-3">
+          <div className="text-xs font-medium tracking-widest text-muted-foreground uppercase whitespace-nowrap">
+            Social Media Performance — Monthly Update
           </div>
-          {latestSocialReport?.report_month && (
-            <div className="text-[11px] text-muted-foreground">
-              Last saved month:{" "}
-              <span className="text-foreground">{format(new Date(latestSocialReport.report_month), "MMM yyyy")}</span>
-            </div>
-          )}
+          <div className="h-px flex-1 bg-border" />
+          <button
+            type="button"
+            onClick={() => navigate("/marketing/integrations")}
+            className="shrink-0 rounded-sm border border-border px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-secondary"
+          >
+            Integrations ↗
+          </button>
         </div>
         {/* Mobile: compact summary rows */}
         <div className="sm:hidden rounded-card border border-border bg-card shadow-card overflow-hidden">
@@ -802,12 +793,22 @@ export default function MarketingDashboard() {
       <div className="rounded-card border border-border overflow-hidden shadow-card" style={{ background: "#f5edd8", borderColor: "#e8d9b0" }}>
         <div className="px-4 pt-4 pb-3 sm:px-6 sm:pt-5">
           <div className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3" style={{ color: "#b5620a" }}>Our 5 Unique Selling Points</div>
-          {/* Mobile: horizontal scroll pill list */}
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 sm:hidden" style={{ scrollbarWidth: "none" }}>
-            {USPS.map((u) => (
-              <div key={u.name} className="flex items-center gap-2 shrink-0 rounded-full border px-3 py-1.5" style={{ borderColor: "#e8d9b0", background: "rgba(255,255,255,0.5)" }}>
-                <span className="text-base">{u.icon}</span>
-                <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: "#b5620a" }}>{u.name}</span>
+          {/* Mobile: 2-col wrap grid so all 5 are always visible */}
+          <div className="grid grid-cols-2 gap-2 sm:hidden">
+            {USPS.map((u, i) => (
+              <div
+                key={u.name}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2",
+                  i === 4 ? "col-span-2 justify-center" : ""
+                )}
+                style={{ borderColor: "#e8d9b0", background: "rgba(255,255,255,0.55)" }}
+              >
+                <span className="text-base shrink-0">{u.icon}</span>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold leading-tight" style={{ color: "#b5620a" }}>{u.name}</div>
+                  <div className="text-[10px] leading-snug line-clamp-2" style={{ color: "#6b6560" }}>{u.desc}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -826,8 +827,20 @@ export default function MarketingDashboard() {
 
       {/* ── CONTENT CALENDAR ── */}
       <div className="space-y-3">
-        <SectionTitle label={`Content Calendar — Week of ${format(weekStart, "MMM d")}–${format(addDays(weekStart, 6), "d")}`} />
-        <div className="flex flex-col gap-3.5">
+        <button
+          type="button"
+          onClick={() => setShowContentCalendar((s) => !s)}
+          className="flex w-full items-center gap-3"
+        >
+          <div className="text-xs font-medium tracking-widest text-muted-foreground uppercase whitespace-nowrap">
+            {`Content Calendar — Week of ${format(weekStart, "MMM d")}–${format(addDays(weekStart, 6), "d")}`}
+          </div>
+          <div className="h-px flex-1 bg-border" />
+          <span className="shrink-0 text-[11px] text-muted-foreground whitespace-nowrap">
+            {showContentCalendar ? "Hide ▲" : "Show ▼"}
+          </span>
+        </button>
+        {showContentCalendar && <div className="flex flex-col gap-3.5">
           {/* Calendar */}
           <div className="rounded-card border border-border bg-card p-5 shadow-card">
             {/* toolbar */}
@@ -907,7 +920,7 @@ export default function MarketingDashboard() {
             </div>
           </div>
 
-        </div>
+        </div>}
       </div>
 
       {/* ── UPCOMING EVENTS (TABLE) ── */}
@@ -1421,7 +1434,7 @@ function UpcomingEventsTable({
   }, [pipelineCards, upcomingEvents])
 
   const [showPast, setShowPast] = useState(false)
-  const [windowDays, setWindowDays] = useState<7 | 14 | 30 | 60 | 90>(30)
+  const [windowDays, setWindowDays] = useState<7 | 14 | 30 | 60 | 90>(7)
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), [])
   const horizonIso = useMemo(() => {
     const [y, m, d] = todayIso.split("-").map(Number)
