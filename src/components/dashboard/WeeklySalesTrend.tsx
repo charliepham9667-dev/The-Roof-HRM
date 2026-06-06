@@ -118,15 +118,13 @@ export function WeeklySalesTrend({
 }: WeeklySalesTrendProps) {
   const isFinanceSummary = variant === 'financeSummary';
   const isMobile = useIsMobile();
-  const [timeRange, setTimeRange] = React.useState<TimeRange>('30d');
+  const [timeRange, setTimeRange] = React.useState<TimeRange>('7d');
 
   React.useEffect(() => {
     if (isFinanceSummary) {
       setTimeRange('30d');
-      return;
     }
-    if (isMobile) setTimeRange('7d');
-  }, [isMobile, isFinanceSummary]);
+  }, [isFinanceSummary]);
 
   const { data: weeklyData, isLoading, isFetching } = useWeeklySales(timeRange);
 
@@ -208,16 +206,16 @@ export function WeeklySalesTrend({
                 <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
                   <TabsList className="h-8 rounded-md border border-border bg-background p-0.5">
                     <TabsTrigger
-                      value="30d"
-                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
-                    >
-                      Last 30 days
-                    </TabsTrigger>
-                    <TabsTrigger
                       value="7d"
                       className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
                     >
-                      Last 7 days
+                      7 days
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="30d"
+                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+                    >
+                      30 days
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
