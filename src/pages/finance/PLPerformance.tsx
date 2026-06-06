@@ -188,9 +188,9 @@ export function PLPerformance() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 text-muted-foreground text-sm mr-2">
+          <div className="hidden sm:flex items-center gap-1 text-muted-foreground text-sm mr-2">
             <Filter className="h-4 w-4" />
-            <span className="hidden sm:inline">Filters:</span>
+            <span>Filters:</span>
           </div>
           
           {/* Year selector */}

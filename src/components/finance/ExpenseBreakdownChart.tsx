@@ -60,7 +60,7 @@ export function ExpenseBreakdownChart({ data, className = '' }: ExpenseBreakdown
   };
 
   return (
-    <div className={`rounded-card border border-border bg-card p-4 shadow-card ${className}`}>
+    <div className={`rounded-card border border-border bg-card p-3 shadow-card overflow-hidden ${className}`}>
       <h3 className="text-sm font-medium text-foreground mb-2">Expense Breakdown</h3>
       
       <div className="relative h-[180px]">
@@ -91,14 +91,11 @@ export function ExpenseBreakdownChart({ data, className = '' }: ExpenseBreakdown
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center gap-4 mt-2">
+      <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 mt-2">
         {chartData.map((item) => (
-          <div key={item.name} className="flex items-center gap-1.5">
-            <div 
-              className="w-2.5 h-2.5 rounded-full" 
-              style={{ backgroundColor: item.color }}
-            />
-            <span className="text-xs text-muted-foreground uppercase">{item.name}</span>
+          <div key={item.name} className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+            <span className="text-[10px] text-muted-foreground uppercase">{item.name}</span>
           </div>
         ))}
       </div>

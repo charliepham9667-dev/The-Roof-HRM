@@ -153,7 +153,7 @@ export function PLAlertsPanel({ currentData, previousData, budgetData, className
   const hasCritical = alerts.some(a => a.type === 'critical');
 
   return (
-    <div className={`rounded-card border border-border bg-card p-4 shadow-card ${className}`}>
+    <div className={`rounded-card border border-border bg-card p-3 shadow-card overflow-hidden ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-foreground">Bottom Line Alerts</h3>
         {hasCritical && (
@@ -182,10 +182,10 @@ export function PLAlertsPanel({ currentData, previousData, budgetData, className
                 <div className="flex items-start gap-3">
                   <Icon className={`h-4 w-4 mt-0.5 ${style.iconColor}`} />
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${style.titleColor}`}>
+                    <p className={`text-xs font-medium leading-snug ${style.titleColor}`}>
                       {alert.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-3">
                       {alert.description}
                     </p>
                     {alert.actionLabel && (
@@ -201,7 +201,7 @@ export function PLAlertsPanel({ currentData, previousData, budgetData, className
         </div>
       )}
 
-      <button className="w-full mt-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors">
+      <button className="w-full mt-3 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors">
         View All Notifications
       </button>
     </div>
