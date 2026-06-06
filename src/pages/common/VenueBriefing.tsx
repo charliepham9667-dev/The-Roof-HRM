@@ -303,135 +303,134 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
           <div className="h-px flex-1 bg-border" />
         </div>
 
-        {/* Dark banner — exact same style as the HTML mockup */}
-        <div style={{ background: '#faf8f5', borderRadius: 10, overflow: 'hidden', position: 'relative', color: '#1a1714', border: '1px solid #e2ddd7' }}>
-          {/* Amber gradient line */}
-          <div style={{ height: 2, background: 'linear-gradient(90deg, #b5620a 0%, #c9a84c 55%, transparent 100%)' }} />
+        {/* Vertical card stack */}
+        <div className="flex flex-col gap-2.5">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-
-            {/* Col 1: Tonight's Event */}
-            <div className="border-b border-[#e2ddd7] p-4 sm:border-b-0 sm:border-r sm:px-5 sm:py-4">
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                {isEvening && (
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
-                )}
+          {/* Card 1 — Tonight's Event */}
+          <div style={{ background: '#faf8f5', borderRadius: 10, overflow: 'hidden', border: '1px solid #e2ddd7' }}>
+            <div style={{ height: 2, background: 'linear-gradient(90deg, #b5620a 0%, #c9a84c 60%, transparent 100%)' }} />
+            <div className="px-4 py-3.5 sm:px-5">
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#9c9590', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {isEvening && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />}
                 Tonight's Event
               </div>
               {tonightFirst ? (
-                <>
-                  <div style={{ fontFamily: "'Cormorant Garamond', 'Playfair Display', Georgia, serif", fontSize: 17, fontWeight: 600, color: '#1a1714', lineHeight: 1.2 }}>
-                    {tonightFirst.eventName}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div style={{ fontFamily: "'Cormorant Garamond', 'Playfair Display', Georgia, serif", fontSize: 20, fontWeight: 600, color: '#1a1714', lineHeight: 1.15 }}>
+                      {tonightFirst.eventName}
+                    </div>
+                    {(tonightFirst.startTime || tonightFirst.endTime) && (
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#9c9590', marginTop: 3 }}>
+                        {tonightFirst.startTime}{tonightFirst.startTime && tonightFirst.endTime ? ' – ' : ''}{tonightFirst.endTime}
+                        <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 3, background: '#f0ece6', color: '#6b6560', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Club Night</span>
+                      </div>
+                    )}
+                    {tonightGenres.length > 0 && (
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const, marginTop: 8 }}>
+                        {tonightGenres.map((g) => (
+                          <span key={g} style={{ padding: '2px 8px', borderRadius: 3, fontSize: 10, background: '#f0ece6', color: '#6b6560', border: '1px solid #e2ddd7' }}>{g}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {(tonightFirst.startTime || tonightFirst.endTime) && (
-                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: '#9c9590', marginTop: 4 }}>
-                      {tonightFirst.startTime}{tonightFirst.startTime && tonightFirst.endTime ? ' – ' : ''}{tonightFirst.endTime} · Club Night
-                    </div>
-                  )}
                   {tonightPromo && (
-                    <div style={{ display: 'inline-flex', marginTop: 7, padding: '2px 8px', borderRadius: 4, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, background: 'rgba(181,98,10,0.12)', color: '#b5620a', border: '1px solid rgba(181,98,10,0.25)' }}>
-                      🧧 {tonightPromo}
+                    <div style={{ flexShrink: 0, padding: '3px 10px', borderRadius: 5, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, background: 'rgba(181,98,10,0.10)', color: '#b5620a', border: '1px solid rgba(181,98,10,0.22)', letterSpacing: '0.06em', whiteSpace: 'nowrap' as const }}>
+                      🧧 {tonightPromo.split(/[,;]/)[0].trim()}
                     </div>
                   )}
-                </>
+                </div>
               ) : (
                 <div style={{ fontSize: 13, color: '#9c9590', fontStyle: 'italic' }}>No event tonight</div>
               )}
             </div>
+          </div>
 
-            {/* Col 2: DJs Tonight */}
-            <div className="border-b border-[#e2ddd7] p-4 sm:border-b-0 sm:border-r sm:px-5 sm:py-4">
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10 }}>
-                DJs Tonight
-              </div>
+          {/* Card 2 — DJs Tonight */}
+          <div style={{ background: '#faf8f5', borderRadius: 10, border: '1px solid #e2ddd7' }}>
+            <div className="px-4 py-3.5 sm:px-5">
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#9c9590', marginBottom: 10 }}>DJs Tonight</div>
               {tonightDJs.length > 0 ? (
-                <>
-                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                    {tonightDJs.map((dj, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#e2ddd7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#6b6560', flexShrink: 0 }}>
-                          {getInitials(dj.name)}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1714' }}>{dj.name}</div>
-                          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#9c9590' }}>
-                            {dj.start && dj.end ? `${dj.start} – ${dj.end} · ${dj.role}` : dj.role}
-                          </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                  {tonightDJs.map((dj, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e2ddd7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#6b6560', flexShrink: 0 }}>
+                        {getInitials(dj.name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1714' }}>{dj.name}</div>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#9c9590', marginTop: 1 }}>
+                          {dj.start && dj.end ? `${dj.start} – ${dj.end}` : ''}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  {tonightGenres.length > 0 && (
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const, marginTop: 10 }}>
-                      {tonightGenres.map((g) => (
-                        <span key={g} style={{ padding: '2px 8px', borderRadius: 3, fontSize: 10, background: '#f0ece6', color: '#6b6560', border: '1px solid #e2ddd7' }}>{g}</span>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ fontSize: 13, color: '#9c9590', fontStyle: 'italic' }}>No DJs scheduled</div>
-              )}
-            </div>
-
-            {/* Col 3: Active Promos */}
-            <div className="border-b border-[#e2ddd7] p-4 sm:border-b-0 sm:border-r sm:px-5 sm:py-4 lg:border-b-0">
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10 }}>
-                Active Promos
-              </div>
-              {tonightPromo ? (
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                  {tonightPromo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean).map((p, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <span style={{ fontSize: 14, flexShrink: 0 }}>🧧</span>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1714' }}>{p}</div>
-                        <div style={{ fontSize: 10, color: '#9c9590', marginTop: 1 }}>All night</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em', padding: '2px 7px', borderRadius: 4, background: '#f0ece6', color: '#6b6560', border: '1px solid #e2ddd7', flexShrink: 0 }}>
+                        {dj.role}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ fontSize: 13, color: '#9c9590', fontStyle: 'italic' }}>No active promos</div>
+                <div style={{ fontSize: 13, color: '#9c9590', fontStyle: 'italic' }}>No DJs scheduled</div>
               )}
             </div>
+          </div>
 
-            {/* Col 4: Team on Shift */}
-            <div className="p-4 sm:px-5 sm:py-4">
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#9c9590', marginBottom: 10 }}>
-                Team on Shift
+          {/* Card 3 — Team on Shift */}
+          <div style={{ background: '#faf8f5', borderRadius: 10, border: '1px solid #e2ddd7' }}>
+            <div className="px-4 py-3.5 sm:px-5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#9c9590' }}>Team on Shift</div>
+                {myTodayShift && (
+                  <div style={{ fontSize: 10, color: '#b5620a', fontFamily: "'DM Mono', monospace", background: 'rgba(181,98,10,0.08)', border: '1px solid rgba(181,98,10,0.2)', padding: '2px 8px', borderRadius: 4 }}>
+                    Your shift: {fmtTime(myTodayShift.startTime)} – {fmtTime(myTodayShift.endTime)}
+                  </div>
+                )}
               </div>
               {todayShifts.length > 0 ? (
-                <>
-                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-                    {todayShifts.map((s) => {
-                      const isMe = s.staffId === profile?.id;
-                      const initials = getInitials(s.staffName || '?');
-                      return (
-                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 20, background: isMe ? 'rgba(181,98,10,0.1)' : '#f0ece6', border: isMe ? '1px solid rgba(181,98,10,0.3)' : '1px solid #e2ddd7' }}>
-                          <div style={{ width: 18, height: 18, borderRadius: '50%', background: isMe ? 'rgba(181,98,10,0.2)' : '#e2ddd7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, color: isMe ? '#b5620a' : '#6b6560', flexShrink: 0 }}>
-                            {initials}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {todayShifts.map((s) => {
+                    const isMe = s.staffId === profile?.id;
+                    const initials = getInitials(s.staffName || '?');
+                    return (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: isMe ? 'rgba(181,98,10,0.08)' : '#f0ece6', border: isMe ? '1px solid rgba(181,98,10,0.28)' : '1px solid #e2ddd7' }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: isMe ? 'rgba(181,98,10,0.18)' : '#e2ddd7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: isMe ? '#b5620a' : '#6b6560', flexShrink: 0 }}>
+                          {initials}
+                        </div>
+                        <div className="min-w-0">
+                          <div style={{ fontSize: 12, fontWeight: 600, color: isMe ? '#b5620a' : '#1a1714', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                            {(s.staffName || 'Staff').split(' ')[0]}
                           </div>
-                          <div>
-                            <div style={{ fontSize: 11, color: isMe ? '#b5620a' : '#1a1714', lineHeight: 1 }}>{(s.staffName || 'Staff').split(' ')[0]}</div>
-                            <div style={{ fontSize: 9, color: '#9c9590', lineHeight: 1, marginTop: 1, textTransform: 'capitalize' as const }}>{(s.role || '').replace(/_/g, ' ')}</div>
+                          <div style={{ fontSize: 9, color: '#9c9590', lineHeight: 1.1, marginTop: 1, textTransform: 'capitalize' as const, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                            {(s.role || '').replace(/_/g, ' ')}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                  {myTodayShift && (
-                    <div style={{ marginTop: 10, padding: '6px 10px', borderRadius: 5, background: 'rgba(181,98,10,0.08)', border: '1px solid rgba(181,98,10,0.2)', fontSize: 11, color: '#b5620a', fontFamily: "'DM Mono', monospace" }}>
-                      Your shift: {fmtTime(myTodayShift.startTime)} – {fmtTime(myTodayShift.endTime)}
-                    </div>
-                  )}
-                </>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div style={{ fontSize: 13, color: '#9c9590', fontStyle: 'italic' }}>No shifts scheduled</div>
               )}
             </div>
-
           </div>
+
+          {/* Card 4 — Active Promos (only shown if there are promos) */}
+          {tonightPromo && (
+            <div style={{ background: '#faf8f5', borderRadius: 10, border: '1px solid #e2ddd7' }}>
+              <div className="px-4 py-3.5 sm:px-5">
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#9c9590', marginBottom: 10 }}>Active Promos</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                  {tonightPromo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean).map((p, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>🧧</span>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1714' }}>{p}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
