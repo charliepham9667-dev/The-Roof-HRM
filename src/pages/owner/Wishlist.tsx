@@ -1374,72 +1374,74 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
     <div className="flex flex-col gap-4 flex-1 min-h-0">
 
       {/* Sync bar */}
-      <div className="flex items-center gap-2 rounded-card border border-border bg-card px-3 py-2 shrink-0 shadow-card flex-wrap">
+      <div className="flex items-center gap-2 rounded-card border border-border bg-card px-3 py-1.5 shrink-0 shadow-card">
         <div className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
-        <span className="text-[11px] text-muted-foreground">
-          Source: <span className="font-medium text-foreground">HQ Calendar (Google Sheets)</span>
-          <span className="mx-1.5 opacity-30">·</span>Jan 1 – Today
+        <span className="text-[10px] text-muted-foreground truncate flex-1">
+          <span className="hidden sm:inline">Source: </span>
+          <span className="font-medium text-foreground">HQ Calendar</span>
+          <span className="mx-1 opacity-30">·</span>Jan – Today
         </span>
         {syncMsg && (
-          <span className="text-[10px] text-muted-foreground border border-border rounded px-2 py-0.5">{syncMsg}</span>
+          <span className="text-[9px] text-muted-foreground border border-border rounded px-1.5 py-0.5 hidden sm:inline">{syncMsg}</span>
         )}
-        <div className="ml-auto flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {canManage && (
             <button
               type="button"
               onClick={() => setProfilesOpen(true)}
-              className="flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="flex items-center gap-1 rounded border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             >
-              DJ Profiles
+              Profiles
             </button>
           )}
           <button
             type="button"
             onClick={handleSync}
             disabled={isSyncing}
-            className="flex items-center gap-1.5 rounded border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 rounded border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
           >
             <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
-            {isSyncing ? "Syncing…" : "Sync Now"}
+            <span className="hidden sm:inline">{isSyncing ? "Syncing…" : "Sync"}</span>
           </button>
         </div>
       </div>
 
       <DJProfilesModal open={profilesOpen} onClose={() => setProfilesOpen(false)} />
 
-      {/* Summary cards — 3-col on mobile (hide No Shows on small screens) */}
-      <div className="grid grid-cols-3 gap-2 md:grid-cols-5 md:gap-3 shrink-0">
-        {[
-          { label: "Sets", value: stats.totalSets, sub: "Jan–Today" },
-          { label: "Total Paid", value: `${formatVndAmount(stats.totalPaid)} ₫`, accent: "green" },
-          { label: "Outstanding", value: `${formatVndAmount(stats.outstanding)} ₫`, accent: "amber" },
-          { label: "Unique DJs", value: stats.uniqueDJs, sub: "period", mobileHide: true },
-          { label: "No Shows", value: stats.noShows, sub: "N/A", mobileHide: true },
-        ].map((c) => (
-          <div
-            key={c.label}
-            className={cn(
-              "rounded-card border p-2 shadow-card",
-              (c as any).mobileHide ? "hidden md:block" : "",
-              c.accent === "green" ? "border-green-200 bg-green-50" :
-              c.accent === "amber" ? "border-amber-200 bg-amber-50" :
-              "border-border bg-card"
-            )}
-          >
-            <div className={cn(
-              "text-[9px] font-bold uppercase tracking-widest mb-1",
-              c.accent === "green" ? "text-green-700" :
-              c.accent === "amber" ? "text-[#b5620a]" :
-              "text-muted-foreground"
-            )}>{c.label}</div>
-            <div className={cn(
-              "font-mono text-base font-semibold leading-none tabular-nums",
-              c.accent === "green" ? "text-green-700" :
-              c.accent === "amber" ? "text-[#b5620a]" :
-              "text-foreground"
-            )}>{c.value}</div>
+      {/* Summary strip — compact horizontal bar */}
+      <div className="shrink-0 rounded-card border border-border bg-card shadow-card overflow-hidden">
+        <div className="grid grid-cols-3 divide-x divide-border/50">
+          {/* Sets */}
+          <div className="flex flex-col items-center px-2 py-2 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Sets</span>
+            <span className="text-base font-bold text-foreground tabular-nums">{stats.totalSets}</span>
           </div>
-        ))}
+          {/* Total Paid */}
+          <div className="flex flex-col items-center px-2 py-2 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-green-700">Paid</span>
+            <span className="text-[11px] font-semibold tabular-nums text-green-700 text-center leading-tight">
+              {formatVndAmount(stats.totalPaid)}<span className="ml-0.5">₫</span>
+            </span>
+          </div>
+          {/* Outstanding */}
+          <div className="flex flex-col items-center px-2 py-2 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-[#b5620a]">Owed</span>
+            <span className="text-[11px] font-semibold tabular-nums text-[#b5620a] text-center leading-tight">
+              {stats.outstanding > 0 ? <>{formatVndAmount(stats.outstanding)}<span className="ml-0.5">₫</span></> : <span className="text-muted-foreground">—</span>}
+            </span>
+          </div>
+        </div>
+        {/* Desktop extras */}
+        <div className="hidden md:flex divide-x divide-border/50 border-t border-border/50">
+          <div className="flex flex-col px-4 py-1.5 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Unique DJs</span>
+            <span className="text-sm font-semibold text-foreground">{stats.uniqueDJs}</span>
+          </div>
+          <div className="flex flex-col px-4 py-1.5 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">No Shows</span>
+            <span className="text-sm font-semibold text-foreground">{stats.noShows}</span>
+          </div>
+        </div>
       </div>
 
       {/* Filter bar — horizontal scroll on mobile */}
