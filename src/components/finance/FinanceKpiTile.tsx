@@ -38,25 +38,21 @@ export function FinanceKpiTile({
   className,
 }: FinanceKpiTileProps) {
   const isWarning = tone === "warning"
-  const pillTone =
-    trendPercent !== undefined ? trendPillTone(trendPercent) : "neutral"
+  const pillTone = trendPercent !== undefined ? trendPillTone(trendPercent) : "neutral"
 
   return (
     <div
       className={cn(
-        "rounded-card border shadow-card",
-        "flex items-center gap-3 px-3 py-2.5 sm:block sm:p-4",
-        isWarning
-          ? "border-warning/25 bg-warning/[0.05]"
-          : "border-border bg-card",
+        "rounded-card border shadow-card flex flex-col gap-1 px-3 py-2.5 sm:p-4",
+        isWarning ? "border-warning/25 bg-warning/[0.05]" : "border-border bg-card",
         className,
       )}
     >
-      {/* Mobile: left label column */}
-      <div className="shrink-0 sm:hidden">
+      {/* Label + trend pill row */}
+      <div className="flex items-center justify-between gap-1 min-w-0">
         <span
           className={cn(
-            "block text-[9px] font-semibold uppercase tracking-wide",
+            "text-[9px] font-bold uppercase tracking-widest truncate",
             isWarning ? "text-warning" : "text-muted-foreground",
           )}
         >
@@ -65,7 +61,7 @@ export function FinanceKpiTile({
         {trendPercent !== undefined && (
           <span
             className={cn(
-              "mt-0.5 inline-flex items-center whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-bold tracking-wide",
+              "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-bold tracking-wide",
               pillStyles[pillTone],
             )}
           >
@@ -74,57 +70,28 @@ export function FinanceKpiTile({
         )}
       </div>
 
-      {/* Mobile: right value */}
+      {/* Value */}
       <p
         className={cn(
-          "flex-1 whitespace-nowrap font-serif text-lg font-semibold tabular-nums tracking-tight sm:hidden",
+          "whitespace-nowrap font-semibold tabular-nums leading-none",
+          "text-xl sm:text-[28px]",
           isWarning ? "text-warning" : "text-foreground",
         )}
       >
         {value}
       </p>
 
-      {/* Desktop layout (sm+) */}
-      <div className="hidden sm:block">
-        <div className="flex items-start justify-between gap-2">
-          <span
-            className={cn(
-              "min-w-0 text-[10.5px] font-semibold uppercase tracking-wide",
-              isWarning ? "text-warning" : "text-muted-foreground",
-            )}
-          >
-            {label}
-          </span>
-          {trendPercent !== undefined && (
-            <span
-              className={cn(
-                "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-wide",
-                pillStyles[pillTone],
-              )}
-            >
-              {trendPillLabel(trendPercent)}
-            </span>
-          )}
-        </div>
+      {/* Comparison — hidden on mobile, shown on sm+ */}
+      {comparisonLine && (
         <p
           className={cn(
-            "mt-1.5 whitespace-nowrap font-serif text-[28px] font-semibold tabular-nums tracking-tight",
-            isWarning ? "text-warning" : "text-foreground",
+            "hidden sm:block text-[11px] leading-snug",
+            isWarning ? "text-amber-900/80" : "text-muted-foreground",
           )}
         >
-          {value}
+          {comparisonLine}
         </p>
-        {comparisonLine && (
-          <p
-            className={cn(
-              "mt-1 text-[11.5px] leading-snug",
-              isWarning ? "text-amber-900/80" : "text-muted-foreground",
-            )}
-          >
-            {comparisonLine}
-          </p>
-        )}
-      </div>
+      )}
     </div>
   )
 }

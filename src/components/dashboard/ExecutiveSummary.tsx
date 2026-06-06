@@ -88,29 +88,27 @@ export function ExecutiveSummary({
   const requiredDailyToMiss =
     remainingDays > 0 ? (monthlyTarget - mtdRevenue) / remainingDays : 0;
 
+  const statusPill = (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10.5px] font-bold ${
+        pace.isAheadOfPace ? 'bg-success/15 text-success' : 'bg-error/15 text-error'
+      }`}
+    >
+      {pace.isAheadOfPace ? 'On Track' : 'Behind Pace'} · Day {currentDay}/{daysInMonth}
+    </span>
+  );
+
   const headerRow = showHeader ? (
     <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-      <h3 className="font-serif text-lg font-semibold text-foreground">Executive Summary</h3>
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10.5px] font-bold ${
-          pace.isAheadOfPace ? 'bg-success/15 text-success' : 'bg-error/15 text-error'
-        }`}
-      >
-        {pace.isAheadOfPace ? 'On Track' : 'Behind Pace'} · Day {currentDay}/{daysInMonth}
-      </span>
+      <h3 className="text-base font-semibold text-foreground">Executive Summary</h3>
+      {statusPill}
     </div>
   ) : (
     <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
       <p className="text-xs text-muted-foreground">
         Goal: <span className="font-medium text-foreground">{formatVND(monthlyTarget)}</span>
       </p>
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10.5px] font-bold ${
-          pace.isAheadOfPace ? 'bg-success/15 text-success' : 'bg-error/15 text-error'
-        }`}
-      >
-        {pace.isAheadOfPace ? 'On Track' : 'Behind Pace'} · Day {currentDay}/{daysInMonth}
-      </span>
+      {statusPill}
     </div>
   );
 
@@ -118,42 +116,47 @@ export function ExecutiveSummary({
     <>
       {headerRow}
 
-      <p className="font-serif text-base leading-relaxed text-foreground">
-        <span className="font-semibold text-primary">Strategic Headline · </span>
-        {isPast ? (
-          <>
-            Finished with <strong className="text-success">{formatM(mtdRevenue)} đ</strong> against a{' '}
-            <strong>{formatM(monthlyTarget)}</strong> target
-            {mtdRevenue >= monthlyTarget ? ' — target cleared.' : '.'}
-          </>
-        ) : (
-          <>
-            You&apos;ve cleared <strong className="text-success">{formatM(mtdRevenue)} đ</strong> in {currentDay}{' '}
-            days — already{' '}
-            <strong className="text-success">
-              {pace.paceAheadPercent > 0 ? '+' : ''}
-              {pace.paceAheadPercent}% ahead of pace
-            </strong>{' '}
-            for the {formatM(monthlyTarget)} target. At your current {formatM(avgDailyRevenue)}/day run-rate,
-            you&apos;re projected to close at{' '}
-            <strong className="text-success">{formatM(projectedMonthEnd)} đ</strong>
-            {targetAbovePct > 0 ? ` — ${targetAbovePct}% above target.` : '.'}
-          </>
-        )}
-      </p>
+      {/* Strategic Headline — label on own line, body below */}
+      <div className="space-y-0.5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Strategic Headline</p>
+        <p className="text-sm leading-relaxed text-foreground">
+          {isPast ? (
+            <>
+              Finished with <strong className="text-success">{formatM(mtdRevenue)} đ</strong> against a{' '}
+              <strong>{formatM(monthlyTarget)}</strong> target
+              {mtdRevenue >= monthlyTarget ? ' — target cleared.' : '.'}
+            </>
+          ) : (
+            <>
+              You&apos;ve cleared <strong className="text-success">{formatM(mtdRevenue)} đ</strong> in {currentDay}{' '}
+              days — already{' '}
+              <strong className="text-success">
+                {pace.paceAheadPercent > 0 ? '+' : ''}
+                {pace.paceAheadPercent}% ahead of pace
+              </strong>{' '}
+              for the {formatM(monthlyTarget)} target. At your current {formatM(avgDailyRevenue)}/day run-rate,
+              you&apos;re projected to close at{' '}
+              <strong className="text-success">{formatM(projectedMonthEnd)} đ</strong>
+              {targetAbovePct > 0 ? ` — ${targetAbovePct}% above target.` : '.'}
+            </>
+          )}
+        </p>
+      </div>
 
       {kpi.avgSpend.trend < 0 && (
-        <p className="mt-3 font-serif text-base leading-relaxed text-foreground">
-          <span className="font-semibold text-primary">One watch-out · </span>
-          Avg spend per guest is <strong className="text-warning">{formatVND(kpi.avgSpend.value)}</strong>, down{' '}
-          {Math.abs(Math.round(kpi.avgSpend.trend * 10) / 10)}% YoY. Pax volume more than made up for it (
-          {kpi.pax.value.toLocaleString()} guests, +{Math.round(kpi.pax.trend)}%), but the ticket-mix shift is
-          worth a menu review.
-        </p>
+        <div className="mt-3 space-y-0.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-warning">One Watch-out</p>
+          <p className="text-sm leading-relaxed text-foreground">
+            Avg spend per guest is <strong className="text-warning">{formatVND(kpi.avgSpend.value)}</strong>, down{' '}
+            {Math.abs(Math.round(kpi.avgSpend.trend * 10) / 10)}% YoY. Pax volume more than made up for it (
+            {kpi.pax.value.toLocaleString()} guests, +{Math.round(kpi.pax.trend)}%), but the ticket-mix shift is
+            worth a menu review.
+          </p>
+        </div>
       )}
 
       <div className="mt-4 rounded-lg border border-[#E7D5BC]/80 bg-[#F5EDE0] p-3 text-sm leading-relaxed text-foreground/90">
-        <span className="font-semibold text-primary">Forecast · </span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Forecast · </span>
         {isPast ? (
           <>Final daily average was {formatM(avgDailyRevenue)} across the month.</>
         ) : (
@@ -193,11 +196,11 @@ export function ExecutiveSummary({
     </>
   );
 
-  if (noContainer) return <div className="space-y-1">{content}</div>;
+  if (noContainer) return <div className="space-y-3">{content}</div>;
 
   return (
     <div className="flex min-h-[300px] w-full flex-col rounded-card border border-border bg-card p-4 shadow-card md:p-6">
-      <h3 className="mb-4 font-serif text-lg font-semibold text-foreground">Executive Summary</h3>
+      <h3 className="mb-4 text-base font-semibold text-foreground">Executive Summary</h3>
       {content}
     </div>
   );

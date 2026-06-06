@@ -850,7 +850,7 @@ export function CFOExecutiveSummary({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Confidential Internal Memorandum</p>
-            <h2 className="text-xl font-serif text-foreground">CFO Executive Summary</h2>
+            <h2 className="text-xl font-semibold text-foreground">CFO Executive Summary</h2>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">{monthName} {editionYear} Edition</p>

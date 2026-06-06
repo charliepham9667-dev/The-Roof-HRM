@@ -62,7 +62,7 @@ export function MonthPaceCard({
         </div>
       </div>
 
-      <p className="mt-1.5 font-serif text-2xl font-semibold tracking-tight text-green-950 sm:text-[30px]">
+      <p className="mt-1.5 text-xl font-semibold tracking-tight text-green-950 sm:text-2xl">
         {headline}
       </p>
 
