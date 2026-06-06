@@ -17,8 +17,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CHART_COLORS } from '@/lib/chart-colors';
+import { cn } from '@/lib/utils';
 
 type TimeRange = '7d' | '30d';
 type WeeklyVariant = 'default' | 'financeSummary';
@@ -193,23 +193,24 @@ export function WeeklySalesTrend({
 
             <div className="flex flex-col items-end gap-1.5">
               <div className="flex items-center gap-2">
-                {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-                  <TabsList className="h-8 rounded-md border border-border bg-background p-0.5">
-                    <TabsTrigger
-                      value="7d"
-                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+                {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                <div className="flex rounded-lg border border-border bg-secondary/50 p-0.5 text-xs font-medium">
+                  {(['7d', '30d'] as TimeRange[]).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setTimeRange(r)}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 transition-all",
+                        timeRange === r
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
                     >
-                      7d
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="30d"
-                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
-                    >
-                      30d
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                      {r}
+                    </button>
+                  ))}
+                </div>
               </div>
               <WeeklyTotalsLegend
                 actualTotal={thisPeriodTotal}
