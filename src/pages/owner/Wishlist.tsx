@@ -770,8 +770,8 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
             </div>
           )}
 
-          {/* Mobile: grouped list */}
-          <div className="md:hidden space-y-2">
+          {/* Mobile: single card with sticky section dividers */}
+          <div className="md:hidden">
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2">
                 <div className="text-sm text-muted-foreground">No tasks found.</div>
@@ -780,99 +780,102 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                 )}
               </div>
             ) : (
-              MAINT_STATUS_ORDER.map((status) => {
-                const accent = MAINT_STATUS_ACCENT[status]
-                const cfg = MAINT_STATUS_CONFIG[status]
-                const sectionTasks = grouped[status]
-                const isCollapsed = collapsedSections.has(status)
+              <div className="rounded-card border border-border shadow-card bg-card" style={{ overflow: 'clip' }}>
+                {MAINT_STATUS_ORDER.map((status) => {
+                  const accent = MAINT_STATUS_ACCENT[status]
+                  const cfg = MAINT_STATUS_CONFIG[status]
+                  const sectionTasks = grouped[status]
+                  const isCollapsed = collapsedSections.has(status)
 
-                if (sectionTasks.length === 0) return null
+                  if (sectionTasks.length === 0) return null
 
-                return (
-                  <div key={status} className="rounded-card border border-border shadow-card" style={{ overflow: 'clip' }}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(status)}
-                      className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border bg-card transition-colors hover:bg-secondary/30"
-                      style={{ borderTop: `2px solid ${accent}` }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full shrink-0" style={{ background: accent }} />
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>
-                          {cfg.label}
+                  return (
+                    <div key={status}>
+                      {/* Sticky section header — floats within the single card */}
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(status)}
+                        className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 bg-card border-b border-border shadow-sm transition-colors hover:bg-secondary/20"
+                        style={{ borderTop: `2px solid ${accent}` }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ background: accent }} />
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>
+                            {cfg.label}
+                          </span>
+                          <span
+                            className="rounded-full px-1.5 py-px text-[10px] font-semibold"
+                            style={{ background: `${accent}22`, color: accent }}
+                          >
+                            {sectionTasks.length}
+                          </span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
                         </span>
-                        <span
-                          className="rounded-full px-1.5 py-px text-[10px] font-semibold"
-                          style={{ background: `${accent}22`, color: accent }}
-                        >
-                          {sectionTasks.length}
-                        </span>
-                      </div>
-                      <span className="text-muted-foreground">
-                        {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-                      </span>
-                    </button>
+                      </button>
 
-                    {!isCollapsed && (
-                      <div className="divide-y divide-border/40">
-                        {sectionTasks.map((task) => {
-                          const pri = MAINT_PRIORITY_BADGE[task.priority]
-                          return (
-                            <div
-                              key={task.id}
-                              className="flex items-center gap-2 px-3 py-2"
-                              style={{ borderLeft: `3px solid ${accent}55` }}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <span
-                                    onClick={() => canManage && openEdit(task)}
-                                    className={cn("text-[13px] font-medium text-foreground leading-snug truncate", canManage && "cursor-pointer")}
-                                  >
-                                    {task.title}
-                                  </span>
-                                  <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
-                                </div>
-                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                  <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
-                                  {task.location && (
-                                    <span className="text-[10px] text-muted-foreground">📍 {task.location}</span>
-                                  )}
-                                  {task.estimatedCost != null && (
-                                    <span className="text-[10px] tabular-nums text-muted-foreground">{formatVnd(task.estimatedCost)}</span>
-                                  )}
-                                  {canManage && (
-                                    <button
-                                      type="button"
-                                      onClick={() => cycleStatus(task)}
-                                      className="text-[9px] font-medium text-primary hover:underline transition-colors"
+                      {!isCollapsed && (
+                        <div className="divide-y divide-border/40">
+                          {sectionTasks.map((task) => {
+                            const pri = MAINT_PRIORITY_BADGE[task.priority]
+                            return (
+                              <div
+                                key={task.id}
+                                className="flex items-center gap-2 px-3 py-2"
+                                style={{ borderLeft: `3px solid ${accent}55` }}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span
+                                      onClick={() => canManage && openEdit(task)}
+                                      className={cn("text-[13px] font-medium text-foreground leading-snug truncate", canManage && "cursor-pointer")}
                                     >
-                                      {status === "open" ? "→ In Progress" : status === "in_progress" ? "→ Done" : "↺ Reopen"}
-                                    </button>
+                                      {task.title}
+                                    </span>
+                                    <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    <Badge variant="neutral" className="text-[9px] px-1.5 py-px">{CATEGORY_LABELS[task.category]}</Badge>
+                                    {task.location && (
+                                      <span className="text-[10px] text-muted-foreground">📍 {task.location}</span>
+                                    )}
+                                    {task.estimatedCost != null && (
+                                      <span className="text-[10px] tabular-nums text-muted-foreground">{formatVnd(task.estimatedCost)}</span>
+                                    )}
+                                    {canManage && (
+                                      <button
+                                        type="button"
+                                        onClick={() => cycleStatus(task)}
+                                        className="text-[9px] font-medium text-primary hover:underline transition-colors"
+                                      >
+                                        {status === "open" ? "→ In Progress" : status === "in_progress" ? "→ Done" : "↺ Reopen"}
+                                      </button>
+                                    )}
+                                  </div>
+                                  {task.description && (
+                                    <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
                                   )}
                                 </div>
-                                {task.description && (
-                                  <div className="mt-0.5 text-[10px] text-muted-foreground line-clamp-1">{task.description}</div>
+                                {canManage && (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
-                              {canManage && (
-                                <div className="flex items-center gap-0.5 shrink-0">
-                                  <button type="button" onClick={() => openEdit(task)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button type="button" onClick={() => handleDelete(task.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
 
@@ -1501,8 +1504,8 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
         </div>
       </div>
 
-      {/* Filter bar — wraps naturally on mobile */}
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* Filter bar — desktop only */}
+      <div className="hidden sm:flex flex-wrap items-center gap-1.5">
         {/* Status */}
         <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5">
           {(["all", "done", "scheduled", "no_show"] as const).map((v) => (
