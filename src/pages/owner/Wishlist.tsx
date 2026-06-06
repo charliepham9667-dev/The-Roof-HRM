@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Trash2, Plus, Pencil, Wrench, ShoppingCart, Music2, RefreshCw, Download, ChevronDown, ChevronUp, FileText, Wallet, Boxes } from "lucide-react"
 import { SheetEmbedTab } from "@/components/operations/SheetEmbedTab"
 import { RequestOverviewPanel } from "@/components/operations/RequestOverviewPanel"
@@ -127,6 +128,7 @@ function WishlistItemSheet({
   item?: WishlistItem | null
 }) {
   const isEdit = !!item
+  const isMobile = useIsMobile()
   const createItem = useCreateWishlistItem()
   const updateItem = useUpdateWishlistItem()
 
@@ -154,18 +156,19 @@ function WishlistItemSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-[440px] p-0 flex flex-col overflow-hidden">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
-          <SheetTitle className="text-base font-semibold">
-            {isEdit ? "Edit Item" : "Add Item"}
-          </SheetTitle>
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn("p-0 flex flex-col", isMobile ? "max-h-[92dvh] rounded-t-2xl" : "sm:max-w-[440px] overflow-hidden")}
+      >
+        {isMobile && <div className="mx-auto mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />}
+
+        <SheetHeader className="px-5 pt-4 pb-3 border-b border-border shrink-0">
+          <SheetTitle className="text-base font-semibold">{isEdit ? "Edit Item" : "Add Item"}</SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {error && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {error}
-            </div>
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
           )}
 
           <div>
@@ -176,11 +179,10 @@ function WishlistItemSheet({
               placeholder="e.g. Cocktail Shakers (set of 6)"
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              autoFocus
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Quantity</label>
               <input
@@ -202,15 +204,13 @@ function WishlistItemSheet({
                 onChange={(e) => setDraft((d) => ({ ...d, estimatedCost: e.target.value ? parseFloat(e.target.value) : null }))}
               />
             </div>
-            <div>
-              <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1">Total Cost</label>
-              <div className="form-input-base bg-secondary/50 text-muted-foreground select-none text-sm tabular-nums">
-                {draft.estimatedCost != null
-                  ? new Intl.NumberFormat("vi-VN").format(draft.quantity * draft.estimatedCost) + " ₫"
-                  : "—"}
-              </div>
-            </div>
           </div>
+
+          {draft.estimatedCost != null && (
+            <div className="rounded-md bg-secondary/50 px-3 py-2 text-[11px] text-muted-foreground">
+              Total: <span className="font-semibold text-foreground tabular-nums">{new Intl.NumberFormat("vi-VN").format(draft.quantity * draft.estimatedCost)} ₫</span>
+            </div>
+          )}
 
           <div>
             <label className="text-[10px] tracking-widest font-medium text-muted-foreground uppercase block mb-1.5">Priority</label>
@@ -221,7 +221,7 @@ function WishlistItemSheet({
                   type="button"
                   onClick={() => setDraft((d) => ({ ...d, priority: p }))}
                   className={cn(
-                    "rounded-sm border px-3 py-0.5 text-[10px] tracking-wide uppercase transition-all",
+                    "rounded-sm border px-3 py-1 text-[10px] tracking-wide uppercase transition-all",
                     draft.priority === p ? VARIANT_CLS[PRIORITY_BADGE[p].variant!] + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
                   )}
                 >
@@ -240,7 +240,7 @@ function WishlistItemSheet({
                   type="button"
                   onClick={() => setDraft((d) => ({ ...d, status: s }))}
                   className={cn(
-                    "rounded-sm border px-3 py-0.5 text-[10px] tracking-wide transition-all",
+                    "rounded-sm border px-3 py-1 text-[10px] tracking-wide transition-all",
                     draft.status === s ? VARIANT_CLS[STATUS_BADGE[s].variant!] + " font-semibold" : "border-border bg-transparent text-muted-foreground hover:bg-secondary",
                   )}
                 >
@@ -262,11 +262,9 @@ function WishlistItemSheet({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-auto px-4 py-2 text-xs">
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending} className="h-auto px-4 py-2 text-xs">
+        <div className="px-5 py-4 border-t border-border shrink-0 flex gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-10 text-sm">Cancel</Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} className="flex-1 h-10 text-sm">
             {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Item"}
           </Button>
         </div>
@@ -299,6 +297,7 @@ function MaintenanceTaskSheet({
   task?: MaintenanceTask | null
 }) {
   const isEdit = !!task
+  const isMobile = useIsMobile()
   const createTask = useCreateMaintenanceTask()
   const updateTask = useUpdateMaintenanceTask()
 
@@ -326,14 +325,19 @@ function MaintenanceTaskSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-[440px] p-0 flex flex-col overflow-hidden">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn("p-0 flex flex-col", isMobile ? "max-h-[92dvh] rounded-t-2xl" : "sm:max-w-[440px] overflow-hidden")}
+      >
+        {isMobile && <div className="mx-auto mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />}
+
+        <SheetHeader className="px-5 pt-4 pb-3 border-b border-border shrink-0">
           <SheetTitle className="text-base font-semibold">
             {isEdit ? "Edit Task" : "Log Maintenance Task"}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {error && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               {error}
@@ -439,11 +443,9 @@ function MaintenanceTaskSheet({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-auto px-4 py-2 text-xs">
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending} className="h-auto px-4 py-2 text-xs">
+        <div className="px-5 py-4 border-t border-border shrink-0 flex gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-10 text-sm">Cancel</Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} className="flex-1 h-10 text-sm">
             {isPending ? "Saving…" : isEdit ? "Save Changes" : "Log Task"}
           </Button>
         </div>
