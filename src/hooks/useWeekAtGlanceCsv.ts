@@ -377,6 +377,11 @@ export function mergeRoofCalendarWithDbEvents(
   weekEndIso: string,
 ): RoofCalendarWeekData {
   const csvEvents = csvData?.events ?? []
+  // Dates that already have a real CSV event — DB events for these dates are skipped
+  // to avoid showing duplicates like "Girls Night Out" + "Ladies Night" on the same day.
+  const csvDatesWithEvents = new Set(
+    csvEvents.filter((e) => e.eventName).map((e) => e.dateIso),
+  )
   const dbRows = dbEvents.flatMap((event) =>
     mapDbEventToRoofRows(event, weekStartIso, weekEndIso),
   )
@@ -385,6 +390,8 @@ export function mergeRoofCalendarWithDbEvents(
   )
   const merged = [...csvEvents]
   for (const row of dbRows) {
+    // Skip DB fallback if the CSV already has an event for this date
+    if (csvDatesWithEvents.has(row.dateIso)) continue
     const key = `${row.dateIso}|${row.eventName ?? ""}|${row.startTime ?? ""}|${row.endTime ?? ""}`
     if (seen.has(key)) continue
     seen.add(key)

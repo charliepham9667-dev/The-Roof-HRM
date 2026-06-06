@@ -215,12 +215,12 @@ function MetricCard({
   className?: string
 }) {
   return (
-    <div className={cn("rounded-card border border-border bg-card p-5 shadow-card", className)}>
-      <div className="text-xs tracking-widest font-semibold text-foreground uppercase">
+    <div className={cn("rounded-card border border-border bg-card p-3 shadow-card sm:p-5", className)}>
+      <div className="text-[9px] tracking-widest font-semibold text-foreground uppercase sm:text-xs">
         {title}
       </div>
-      <div className="mt-2">{children}</div>
-      {footer ? <div className="mt-3">{footer}</div> : null}
+      <div className="mt-1 sm:mt-2">{children}</div>
+      {footer ? <div className="mt-2 sm:mt-3">{footer}</div> : null}
     </div>
   )
 }
@@ -707,77 +707,77 @@ export default function OwnerDashboardPage() {
 
           {/* Right: 3 metric cards (row 1) + revenue bar (row 2) */}
           <div className="flex flex-col gap-4 h-full">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
+          <div className="grid grid-cols-3 gap-2 min-w-0 sm:gap-4">
             <MetricCard
               title="Reservations"
               footer={
-                <div className="rounded-sm border border-success/25 bg-success/8 px-2 py-1.5 text-xs text-success">
+                <div className="rounded-sm border border-success/25 bg-success/8 px-1.5 py-1 text-[10px] text-success sm:px-2 sm:py-1.5 sm:text-xs">
                   {allCsvReservations.filter((r) => r.status === "upcoming").length} upcoming
                 </div>
               }
             >
-              <div className="font-display text-[26px] sm:text-[34px] leading-none tracking-[2px] text-foreground">
+              <div className="font-display text-[22px] leading-none tracking-[2px] text-foreground sm:text-[34px]">
                 {csvPaxLoading ? "—" : allCsvReservations.filter((r) => r.status === "today").length}
               </div>
-              <div className="mt-2 text-xs text-muted-foreground">Confirmed tonight</div>
+              <div className="mt-1 text-[10px] text-muted-foreground sm:mt-2 sm:text-xs">Tonight</div>
             </MetricCard>
 
             <MetricCard
-              title="Google rating"
+              title="Rating"
               footer={
                 googleReviews?.monthlySummaries && googleReviews.monthlySummaries.length === 2 ? (
-                  <div className="rounded-sm border border-border bg-secondary/50 px-2 py-1.5 text-xs text-muted-foreground space-y-0.5">
+                  <div className="hidden rounded-sm border border-border bg-secondary/50 px-2 py-1.5 text-xs text-muted-foreground space-y-0.5 sm:block">
                     <div>
                       <span className="text-secondary-foreground font-medium">{googleReviews.monthlySummaries[0].count.toLocaleString()}</span>
-                      {" reviews in "}
+                      {" in "}
                       <span className="text-secondary-foreground">{googleReviews.monthlySummaries[0].monthLabel}</span>
                     </div>
                     <div>
                       <span className="text-primary font-medium">{googleReviews.monthlySummaries[1].count.toLocaleString()}</span>
-                      {" reviews so far in "}
-                      <span className="text-secondary-foreground">{googleReviews.monthlySummaries[1].monthLabel}</span>
+                      {" this month"}
                     </div>
                   </div>
                 ) : null
               }
             >
-              <div className="text-[13px] text-primary">★★★★★</div>
-              <div className="font-display text-[26px] sm:text-[34px] leading-none tracking-[2px] text-foreground">
+              <div className="text-[11px] text-primary sm:text-[13px]">★★★★★</div>
+              <div className="font-display text-[22px] leading-none tracking-[2px] text-foreground sm:text-[34px]">
                 {googleReviews?.rating ? googleReviews.rating.toFixed(1) : "—"}
               </div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                {googleReviews?.reviewCount ? googleReviews.reviewCount.toLocaleString() : "—"} reviews total
+              <div className="mt-1 text-[10px] text-muted-foreground sm:mt-2 sm:text-xs">
+                {googleReviews?.reviewCount ? googleReviews.reviewCount.toLocaleString() : "—"} reviews
               </div>
             </MetricCard>
 
             <MetricCard
-              title="Monthly pax"
+              title="Pax"
               footer={
                 monthlyPaxPercent === null ? (
                   <button
                     type="button"
                     onClick={() => setPaxTargetEditOpen(true)}
-                    className="inline-flex w-full items-center justify-center gap-1 rounded-sm border border-border px-2 py-1.5 text-xs tracking-wider text-muted-foreground uppercase hover:border-primary/30 hover:text-secondary-foreground"
+                    className="inline-flex w-full items-center justify-center gap-1 rounded-sm border border-border px-1.5 py-1 text-[10px] tracking-wider text-muted-foreground uppercase hover:border-primary/30 hover:text-secondary-foreground sm:px-2 sm:py-1.5 sm:text-xs"
                   >
-                    <Pencil className="h-3 w-3" />
-                    Set pax target
+                    <Pencil className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                    <span className="hidden sm:inline">Set target</span>
+                    <span className="sm:hidden">Target</span>
                   </button>
                 ) : (
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-1">
                     <div
                       className={cn(
-                        "flex-1 rounded-sm border px-2 py-1.5 text-xs",
+                        "flex-1 rounded-sm border px-1.5 py-1 text-[10px] sm:px-2 sm:py-1.5 sm:text-xs",
                         monthlyPaxPercent >= 100
                           ? "border-success/25 bg-success/8 text-success"
                           : "border-warning/25 bg-warning/8 text-warning",
                       )}
                     >
-                      {monthlyPaxPercent >= 100 ? "On track" : "Behind"} · {monthlyPaxPercent}%
+                      {monthlyPaxPercent >= 100 ? "✓" : "↓"} {monthlyPaxPercent}%
                     </div>
                     <button
                       type="button"
                       onClick={() => setPaxTargetEditOpen(true)}
-                      className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-xs tracking-wider text-secondary-foreground uppercase hover:border-primary/30"
+                      className="hidden sm:inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-xs tracking-wider text-secondary-foreground uppercase hover:border-primary/30"
                     >
                       <Pencil className="h-3 w-3" />
                       Edit
@@ -786,11 +786,11 @@ export default function OwnerDashboardPage() {
                 )
               }
             >
-              <div className="font-display text-[26px] sm:text-[34px] leading-none tracking-[2px] text-foreground">
+              <div className="font-display text-[22px] leading-none tracking-[2px] text-foreground sm:text-[34px]">
                 {kpiLoading ? "—" : mtdPax.toLocaleString()}
               </div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                Target: {paxTarget ? Number(paxTarget).toLocaleString() : "—"}
+              <div className="mt-1 text-[10px] text-muted-foreground sm:mt-2 sm:text-xs">
+                / {paxTarget ? Number(paxTarget).toLocaleString() : "—"}
               </div>
             </MetricCard>
           </div>
@@ -1147,7 +1147,85 @@ export default function OwnerDashboardPage() {
       <div className="space-y-3">
         <SectionTitle label="TASK BOARD & TEAM ACCOUNTABILITY" />
 
-        <div className="grid gap-3 grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]" style={{ alignItems: "start" }}>
+        {/* Mobile task summary — compact status overview */}
+        {!tasksLoading && !tasksError && (
+          <div className="md:hidden space-y-2">
+            {/* Status counts */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Not Started", count: grouped.not_started.length, cls: "text-muted-foreground" },
+                { label: "Active", count: grouped.in_progress.length + grouped.finish_today.length, cls: "text-primary" },
+                { label: "Done", count: grouped.done.length, cls: "text-success" },
+                { label: "Delegated", count: followUpList.length, cls: followUpList.some((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done") ? "text-destructive" : "text-warning" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-card border border-border bg-card p-2.5 shadow-card text-center">
+                  <div className={cn("text-[22px] font-bold leading-none", s.cls)}>{s.count}</div>
+                  <div className="mt-1 text-[9px] uppercase tracking-wider text-muted-foreground">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Top active + urgent tasks */}
+            {(() => {
+              const urgent = [
+                ...grouped.finish_today,
+                ...grouped.in_progress.filter((t) => t.priority === "urgent"),
+                ...grouped.in_progress.filter((t) => t.priority !== "urgent"),
+                ...grouped.not_started.filter((t) => t.priority === "urgent"),
+              ].slice(0, 5)
+              if (urgent.length === 0) return null
+              const STATUS_LABEL: Record<string, string> = { todo: "Not started", in_progress: "Active", done: "Done", blocked: "Delegated" }
+              return (
+                <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+                  <div className="px-3 py-2 border-b border-border text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Priority tasks
+                  </div>
+                  {urgent.map((task) => {
+                    const colKey = mapToBoardColumn(task, todayIso, myUserId)
+                    const isOverdue = task.dueDate && task.dueDate < todayIso && task.status !== "done"
+                    return (
+                      <button
+                        key={task.id}
+                        type="button"
+                        onClick={() => openTask(task)}
+                        className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 border-b border-border last:border-b-0 hover:bg-secondary/40 transition-colors"
+                      >
+                        <div className={cn(
+                          "shrink-0 h-2 w-2 rounded-full",
+                          colKey === "finish_today" ? "bg-warning" : colKey === "done" ? "bg-success" : "bg-primary",
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate text-foreground">{task.title}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {STATUS_LABEL[task.status] ?? task.status}
+                            {task.dueDate && (
+                              <span className={cn("ml-1.5", isOverdue ? "text-destructive font-semibold" : "")}>
+                                · {isOverdue ? "Overdue " : ""}{formatDue(task.dueDate)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {task.priority === "urgent" && (
+                          <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-destructive/10 text-destructive">urgent</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+
+            {/* Delegated overdue alert */}
+            {followUpList.some((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done") && (
+              <div className="rounded-card border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                {followUpList.filter((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done").length} delegated task(s) overdue — check the full board.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Full task board — desktop only */}
+        <div className="hidden md:grid gap-3 grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]" style={{ alignItems: "start" }}>
           {/* Left: My Tasks */}
           <div>
             <div className="flex items-center justify-between mb-3 gap-2">
@@ -1537,11 +1615,9 @@ export default function OwnerDashboardPage() {
             )}
           </div>
         </div>
-        {/* Two-column: vertical glance left, pipeline table right */}
-        <div className="grid gap-3 grid-cols-1 lg:grid-cols-[220px_1fr]" style={{ alignItems: "stretch" }}>
-
-        {/* LEFT — vertical day cards */}
-        <div className="flex flex-col gap-1.5" style={{ height: "100%" }}>
+        {/* REMOVED_LEFT_COL_START */}
+        <div className="hidden">
+        <div>
         {weekDates.map((d, dIdx) => {
             const row = weekByDate.get(d.iso)
             const isToday = d.iso === todayIso && isCurrentWeek
@@ -1657,9 +1733,10 @@ export default function OwnerDashboardPage() {
               </div>
             )
           })}
-        </div>{/* end glance-col */}
+        </div>
+        </div>{/* end REMOVED_LEFT_COL */}
 
-        {/* RIGHT — Pipeline card */}
+        {/* Pipeline card — full width */}
         <div className="overflow-x-auto" style={{
           border: "1px solid #e2ddd7",
           borderRadius: 8,
@@ -2013,8 +2090,6 @@ export default function OwnerDashboardPage() {
         })()}
 
         </div>{/* end pipeline-card */}
-
-        </div>{/* end two-column grid */}
       </div>{/* end THIS WEEK section */}
 
       {/* Promotions — two-row bento layout */}
