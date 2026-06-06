@@ -604,7 +604,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                       <div
                         key={item.id}
                         className="flex items-center gap-2 px-3 py-2"
-                        style={{ borderLeft: `3px solid ${cfg.accent}55` }}
+                        style={{ borderLeft: `3px solid ${cfg.accent}55`, background: cfg.sectionBg }}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -660,6 +660,12 @@ const MAINT_STATUS_ACCENT: Record<MaintenanceStatus, string> = {
   open:        "#6b7280",
   in_progress: "#f59e0b",
   done:        "#10b981",
+}
+
+const MAINT_STATUS_BG: Record<MaintenanceStatus, string> = {
+  open:        "#f4f4f5",
+  in_progress: "#fef9ef",
+  done:        "#f0fdf4",
 }
 
 function MaintenanceTab({ canManage }: { canManage: boolean }) {
@@ -803,7 +809,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                         type="button"
                         onClick={() => toggleSection(status)}
                         className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border shadow-sm transition-colors"
-                        style={{ borderTop: `2px solid ${accent}`, background: 'var(--card, #ffffff)' }}
+                        style={{ borderTop: `2px solid ${accent}`, background: MAINT_STATUS_BG[status] }}
                       >
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full shrink-0" style={{ background: accent }} />
@@ -830,7 +836,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                               <div
                                 key={task.id}
                                 className="flex items-center gap-2 px-3 py-2"
-                                style={{ borderLeft: `3px solid ${accent}55` }}
+                                style={{ borderLeft: `3px solid ${accent}55`, background: MAINT_STATUS_BG[status] }}
                               >
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 min-w-0">
