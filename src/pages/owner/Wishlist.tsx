@@ -563,7 +563,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
         </div>
       )}
 
-      {/* Flat item list */}
+      {/* Grouped list sorted by status */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">Loading…</div>
       ) : filtered.length === 0 ? (
@@ -575,52 +575,64 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
         </div>
       ) : (
         <div className="flex-1 overflow-auto rounded-card border border-border bg-card shadow-card overflow-hidden">
-          <div className="divide-y divide-border/40">
-            {filtered.map((item) => {
-              const cfg = STATUS_SECTION[item.status]
-              const pri = PRIORITY_BADGE[item.priority]
-              const totalCost = (item.estimatedCost ?? 0) * item.quantity
-              return (
+          {STATUS_ORDER.map((status) => {
+            const sectionItems = filtered.filter((i) => i.status === status)
+            if (sectionItems.length === 0) return null
+            const cfg = STATUS_SECTION[status]
+            return (
+              <div key={status}>
+                {/* Status divider header */}
                 <div
-                  key={item.id}
-                  className="flex items-center gap-2 px-3 py-2"
-                  style={{ borderLeft: `3px solid ${cfg.accent}55` }}
+                  className="flex items-center gap-2 px-3 py-1.5 border-b border-border"
+                  style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[13px] font-medium text-foreground leading-snug truncate">{item.title}</span>
-                      <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span
-                        className="rounded-sm border px-1.5 py-px text-[9px] tracking-wide uppercase font-semibold"
-                        style={{ color: cfg.accent, borderColor: `${cfg.accent}40`, background: `${cfg.accent}12` }}
-                      >
-                        {cfg.label}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">×<span className="font-medium text-foreground">{item.quantity}</span></span>
-                      {(totalCost || item.estimatedCost) ? (
-                        <span className="text-[11px] tabular-nums font-medium text-foreground">{formatVnd(totalCost || item.estimatedCost)}</span>
-                      ) : null}
-                      {item.notes && (
-                        <span className="text-[10px] italic text-muted-foreground truncate">{item.notes}</span>
-                      )}
-                    </div>
-                  </div>
-                  {canManage && (
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      <button type="button" onClick={() => openEdit(item)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button type="button" onClick={() => handleDelete(item.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: cfg.accent }}>{cfg.label}</span>
+                  <span className="rounded-full px-1.5 py-px text-[9px] font-bold" style={{ background: `${cfg.accent}22`, color: cfg.accent }}>{sectionItems.length}</span>
                 </div>
-              )
-            })}
-          </div>
+                {/* Items in this status */}
+                <div className="divide-y divide-border/40">
+                  {sectionItems.map((item) => {
+                    const pri = PRIORITY_BADGE[item.priority]
+                    const totalCost = (item.estimatedCost ?? 0) * item.quantity
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 px-3 py-2"
+                        style={{ borderLeft: `3px solid ${cfg.accent}55` }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-[13px] font-medium text-foreground leading-snug truncate">{item.title}</span>
+                            <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-[11px] text-muted-foreground">×<span className="font-medium text-foreground">{item.quantity}</span></span>
+                            {(totalCost || item.estimatedCost) ? (
+                              <span className="text-[11px] tabular-nums font-medium text-foreground">{formatVnd(totalCost || item.estimatedCost)}</span>
+                            ) : null}
+                            {item.notes && (
+                              <span className="text-[10px] italic text-muted-foreground truncate">{item.notes}</span>
+                            )}
+                          </div>
+                        </div>
+                        {canManage && (
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button type="button" onClick={() => openEdit(item)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" onClick={() => handleDelete(item.id)} className="rounded p-1.5 text-muted-foreground hover:text-error hover:bg-muted transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
