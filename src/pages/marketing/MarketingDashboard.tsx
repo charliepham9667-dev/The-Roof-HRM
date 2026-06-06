@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react"
-import { addDays, format, isSameDay, startOfWeek, differenceInDays } from "date-fns"
+import { addDays, format, isSameDay, startOfWeek } from "date-fns"
 import { cn } from "@/lib/utils"
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — lucide deprecated brand icons still ship
@@ -1436,6 +1436,10 @@ function UpcomingEventsTable({
   const [showPast, setShowPast] = useState(false)
   const [windowDays, setWindowDays] = useState<7 | 14 | 30 | 60 | 90>(7)
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const tomorrowIso = useMemo(() => {
+    const [y, m, d] = todayIso.split("-").map(Number)
+    return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10)
+  }, [todayIso])
   const horizonIso = useMemo(() => {
     const [y, m, d] = todayIso.split("-").map(Number)
     const dt = new Date(Date.UTC(y, m - 1, d))
@@ -1514,11 +1518,10 @@ function UpcomingEventsTable({
       <div className="rounded-card border border-[#e2ddd7] bg-card shadow-card overflow-hidden md:hidden divide-y divide-[#e2ddd7]">
         {visible.map((row) => {
           const dt = new Date(row.iso + "T00:00:00")
-          const daysUntil = differenceInDays(dt, new Date())
-          const isToday = daysUntil === 0
-          const isTomorrow = daysUntil === 1
-          const isPast = daysUntil < 0
-          const isSoon = daysUntil > 0 && daysUntil <= 2
+          const isToday = row.iso === todayIso
+          const isTomorrow = row.iso === tomorrowIso
+          const isPast = row.iso < todayIso
+          const isSoon = !isToday && !isPast && row.iso <= tomorrowIso
           const time = row.csv?.startTime && row.csv?.endTime ? `${row.csv.startTime} – ${row.csv.endTime}` : ""
           const headline = row.csv?.eventName || row.supa?.title || "Untitled"
           const clickable = !!row.supa
@@ -1629,11 +1632,10 @@ function UpcomingEventsTable({
             <tbody>
               {visible.map((row) => {
                 const dt = new Date(row.iso + "T00:00:00")
-                const daysUntil = differenceInDays(dt, new Date())
-                const isToday = daysUntil === 0
-                const isTomorrow = daysUntil === 1
-                const isPast = daysUntil < 0
-                const isSoon = daysUntil > 0 && daysUntil <= 2
+                const isToday = row.iso === todayIso
+                const isTomorrow = row.iso === tomorrowIso
+                const isPast = row.iso < todayIso
+                const isSoon = !isToday && !isPast && row.iso <= tomorrowIso
 
                 const djs = row.csv ? [row.csv.dj1, row.csv.dj2].filter(Boolean).join(" · ") : ""
                 const time =
@@ -1754,7 +1756,7 @@ function UpcomingEventsTable({
                       </span>
                       {!isPast && (
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          {isToday ? "Today" : isTomorrow ? "Tomorrow" : `${daysUntil}d away`}
+                          {isToday ? "Today" : isTomorrow ? "Tomorrow" : `${Math.round((new Date(row.iso + "T00:00:00").getTime() - new Date(todayIso + "T00:00:00").getTime()) / 86400000)}d away`}
                         </div>
                       )}
                     </td>
@@ -2396,7 +2398,12 @@ function EventDetailPanel({ event, onClose, onUpdate }: EventDetailPanelProps) {
 
   const doneCount = checklist.filter(c => c.done).length
   const progress = checklist.length > 0 ? Math.round((doneCount / checklist.length) * 100) : 0
-  const daysUntil = differenceInDays(new Date(event.startDate + 'T00:00:00'), new Date())
+  const eventTodayIso = new Date().toISOString().slice(0, 10)
+  const isEventToday = event.startDate === eventTodayIso
+  const isEventPast = event.startDate < eventTodayIso
+  const daysUntil = isEventToday ? 0 : isEventPast
+    ? -Math.round((new Date(eventTodayIso).getTime() - new Date(event.startDate + 'T00:00:00').getTime()) / 86400000)
+    : Math.round((new Date(event.startDate + 'T00:00:00').getTime() - new Date(eventTodayIso + 'T00:00:00').getTime()) / 86400000)
 
   return (
     <>
