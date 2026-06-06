@@ -130,28 +130,28 @@ export function LineItemPerformanceTable({ actualData, budgetData, className = '
   );
 
   return (
-    <div className={`rounded-card border border-border bg-card p-4 shadow-card ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-medium text-foreground">Detailed P&L Financial Statement</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">MTD Actual vs Budget comparison</p>
+    <div className={`rounded-card border border-border bg-card p-3 shadow-card sm:p-4 ${className}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-foreground">Detailed P&amp;L Statement</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">MTD Actual vs Budget</p>
         </div>
-        <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1">
+        <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1 shrink-0">
           {monthName} {actualData.year}
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto -mx-3 sm:mx-0">
+        <table className="w-full min-w-[320px] sm:min-w-[580px]">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left text-xs font-medium text-primary uppercase py-3 pr-4">Account Description</th>
-              <th className="text-right text-xs font-medium text-primary uppercase py-3 px-4">MTD Actual</th>
-              <th className="text-right text-xs font-medium text-primary uppercase py-3 px-4">MTD Budget</th>
-              <th className="text-right text-xs font-medium text-primary uppercase py-3 px-4">Variance (đ)</th>
-              <th className="text-right text-xs font-medium text-primary uppercase py-3 pl-4">Variance (%)</th>
+              <th className="text-left text-[10px] font-semibold text-primary uppercase py-2.5 px-3 sm:py-3 sm:pr-4">Account</th>
+              <th className="text-right text-[10px] font-semibold text-primary uppercase py-2.5 px-2 sm:py-3 sm:px-4 whitespace-nowrap">Actual</th>
+              <th className="text-right text-[10px] font-semibold text-primary uppercase py-2.5 px-2 sm:py-3 sm:px-4 whitespace-nowrap hidden sm:table-cell">Budget</th>
+              <th className="text-right text-[10px] font-semibold text-primary uppercase py-2.5 px-2 sm:py-3 sm:px-4 whitespace-nowrap hidden sm:table-cell">Var (đ)</th>
+              <th className="text-right text-[10px] font-semibold text-primary uppercase py-2.5 px-3 sm:py-3 sm:pl-4 whitespace-nowrap">Var%</th>
             </tr>
           </thead>
           <tbody>
@@ -198,8 +198,8 @@ export function LineItemPerformanceTable({ actualData, budgetData, className = '
               if (item.isSection) {
                 return (
                   <tr key={index} className="bg-muted/50">
-                    <td colSpan={5} className="py-3 px-2">
-                      <span className="text-sm font-semibold text-primary">{item.name}</span>
+                    <td colSpan={5} className="py-2 px-3 sm:py-3">
+                      <span className="text-xs font-bold text-primary uppercase tracking-wide">{item.name}</span>
                     </td>
                   </tr>
                 );
@@ -215,32 +215,32 @@ export function LineItemPerformanceTable({ actualData, budgetData, className = '
                     isNetIncome ? 'bg-primary/20' : isMainTotal ? 'bg-muted/50' : item.isTotal ? 'bg-muted/30' : ''
                   }`}
                 >
-                  <td className={`py-2.5 pr-4 ${item.indent ? 'pl-6' : ''}`}>
-                    <span className={`text-sm ${item.isTotal ? 'font-semibold text-foreground' : 'text-foreground'} ${
-                      isNetIncome ? 'text-primary font-bold text-base' : isMainTotal ? 'font-bold' : ''
+                  <td className={`py-2 px-3 sm:py-2.5 sm:pr-4 ${item.indent ? 'pl-6 sm:pl-8' : ''}`}>
+                    <span className={`text-xs sm:text-sm ${item.isTotal ? 'font-semibold text-foreground' : 'text-foreground'} ${
+                      isNetIncome ? 'text-primary font-bold' : isMainTotal ? 'font-bold' : ''
                     }`}>
                       {item.name}
                     </span>
                   </td>
-                  <td className="py-2.5 px-4 text-right">
-                    <span className={`text-sm tabular-nums ${item.isTotal ? 'font-semibold text-foreground' : 'text-foreground'} ${
-                      isNetIncome ? 'text-primary font-bold text-base' : isMainTotal ? 'font-bold' : ''
+                  <td className="py-2 px-2 sm:py-2.5 sm:px-4 text-right">
+                    <span className={`text-xs sm:text-sm tabular-nums whitespace-nowrap ${item.isTotal ? 'font-semibold text-foreground' : 'text-foreground'} ${
+                      isNetIncome ? 'text-primary font-bold' : isMainTotal ? 'font-bold' : ''
                     }`}>
                       {formatVND(item.actual)}
                     </span>
                   </td>
-                  <td className="py-2.5 px-4 text-right">
-                    <span className="text-sm text-muted-foreground tabular-nums">
+                  <td className="py-2 px-2 sm:py-2.5 sm:px-4 text-right hidden sm:table-cell">
+                    <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">
                       {item.budget !== 0 ? formatVND(item.budget) : '—'}
                     </span>
                   </td>
-                  <td className="py-2.5 px-4 text-right">
-                    <span className={`text-sm tabular-nums ${varianceColor}`}>
+                  <td className="py-2 px-2 sm:py-2.5 sm:px-4 text-right hidden sm:table-cell">
+                    <span className={`text-sm tabular-nums whitespace-nowrap ${varianceColor}`}>
                       {item.budget !== 0 ? formatVariance(variance) : '—'}
                     </span>
                   </td>
-                  <td className="py-2.5 pl-4 text-right">
-                    <span className={`text-sm tabular-nums font-medium ${varianceColor}`}>
+                  <td className="py-2 px-3 sm:py-2.5 sm:pl-4 text-right">
+                    <span className={`text-xs sm:text-sm tabular-nums font-medium whitespace-nowrap ${varianceColor}`}>
                       {item.budget !== 0 ? formatPercent(variancePercent) : '—'}
                     </span>
                   </td>
@@ -252,9 +252,9 @@ export function LineItemPerformanceTable({ actualData, budgetData, className = '
       </div>
       
       {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-        <span>Last synced: {actualData.syncedAt ? new Date(actualData.syncedAt).toLocaleString() : 'Unknown'}</span>
-        <span>Fiscal Year: Jan 01 - Dec 31</span>
+      <div className="mt-3 pt-3 border-t border-border flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between text-[10px] text-muted-foreground">
+        <span>Synced: {actualData.syncedAt ? new Date(actualData.syncedAt).toLocaleString() : 'Unknown'}</span>
+        <span className="hidden sm:inline">Fiscal Year: Jan 01 – Dec 31</span>
       </div>
     </div>
   );

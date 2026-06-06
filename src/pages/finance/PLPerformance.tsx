@@ -4,7 +4,8 @@ import {
   AlertCircle, 
   ChevronDown,
   Download,
-  Filter
+  Filter,
+  ChevronUp
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ export function PLPerformance() {
   const [selectedMonth, setSelectedMonth] = useState<number | 'latest'>('latest');
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const [showCFOSummary, setShowCFOSummary] = useState(false);
 
   // Fetch data
   const { data: yearsData } = usePLYears();
@@ -172,16 +174,14 @@ export function PLPerformance() {
           </div>
           
           {/* Action buttons */}
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
-            <Button variant="outline" className="h-auto flex-1 px-4 py-2 text-sm sm:flex-none">
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Export</span>
-              <span className="sm:hidden">Export</span>
+          <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-1.5">
+              <Download className="h-3.5 w-3.5" />
+              <span>Export</span>
             </Button>
-            <Button className="h-auto flex-1 px-4 py-2 text-sm sm:flex-none">
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Download PDF</span>
-              <span className="sm:hidden">PDF</span>
+            <Button size="sm" className="flex-1 sm:flex-none gap-1.5">
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Download </span>PDF
             </Button>
           </div>
         </div>
@@ -300,15 +300,15 @@ export function PLPerformance() {
           />
 
           {/* Charts row: Revenue Mix, Expense Breakdown, Profit Margin, Alerts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <RevenueMixChart data={displayMonth} />
-            <ExpenseBreakdownChart data={displayMonth} />
-            <ProfitMarginGauge data={displayMonth} previousData={previousMonth} />
             <PLAlertsPanel 
               currentData={displayMonth} 
               previousData={previousMonth}
               budgetData={monthBudget}
             />
+            <ExpenseBreakdownChart data={displayMonth} />
+            <ProfitMarginGauge data={displayMonth} previousData={previousMonth} />
           </div>
 
           {/* Profitability Trend - use actual if available, otherwise budget */}
@@ -317,14 +317,28 @@ export function PLPerformance() {
             selectedMonth={selectedMonth}
           />
 
-          {/* CFO Executive Summary */}
-          <CFOExecutiveSummary 
-            currentMonth={displayMonth}
-            previousMonth={previousMonth}
-            budgetMonth={monthBudget}
-            allMonths={plData?.months?.length ? plData.months : budgetData?.months || []}
-            year={selectedYear}
-          />
+          {/* CFO Executive Summary – collapsible */}
+          <div className="rounded-card border border-border bg-card shadow-card overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowCFOSummary(s => !s)}
+              className="flex w-full items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors"
+            >
+              <span className="text-sm font-semibold text-foreground">CFO Executive Summary</span>
+              {showCFOSummary ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {showCFOSummary && (
+              <div className="border-t border-border">
+                <CFOExecutiveSummary 
+                  currentMonth={displayMonth}
+                  previousMonth={previousMonth}
+                  budgetMonth={monthBudget}
+                  allMonths={plData?.months?.length ? plData.months : budgetData?.months || []}
+                  year={selectedYear}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Detailed P&L Financial Statement */}
           <LineItemPerformanceTable 
