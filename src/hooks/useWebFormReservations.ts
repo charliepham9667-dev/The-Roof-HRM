@@ -111,3 +111,37 @@ export function useDeclineReservation() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['webform-reservations'] }),
   })
 }
+
+export function useSendReminder() {
+  return useMutation({
+    mutationFn: async ({ id, token }: { id: string; token: string }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+      const { error } = await reservationClient.functions.invoke('send-reminder', {
+        body: { id, token },
+      })
+      if (error) throw error
+    },
+  })
+}
+
+export function useSendGuestMessage() {
+  return useMutation({
+    mutationFn: async ({
+      id,
+      token,
+      body,
+      channel,
+    }: {
+      id: string
+      token: string
+      body: string
+      channel: 'email' | 'whatsapp'
+    }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+      const { error } = await reservationClient.functions.invoke('send-guest-message', {
+        body: { id, token, body, channel },
+      })
+      if (error) throw error
+    },
+  })
+}

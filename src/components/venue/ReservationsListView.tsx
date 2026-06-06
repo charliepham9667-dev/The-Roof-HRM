@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useAcceptReservation, useDeclineReservation } from "@/hooks/useWebFormReservations"
+import { useWebFormReservations, useAcceptReservation, useDeclineReservation, useSendReminder, useSendGuestMessage } from "@/hooks/useWebFormReservations"
 import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { InlineComment } from "@/components/venue/ReservationPanel"
@@ -19,6 +19,9 @@ import {
   Search,
   Loader2,
   Trash2,
+  Bell,
+  Send,
+  CheckCircle2,
 } from "lucide-react"
 
 const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -71,13 +74,42 @@ function ReservationRow({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [composeText, setComposeText] = useState("")
+  const [composeChannel, setComposeChannel] = useState<'email' | 'whatsapp'>('email')
+  const [reminderSent, setReminderSent] = useState(false)
+  const [messageSent, setMessageSent] = useState(false)
   const deleteRes = useDeleteReservation()
   const acceptRes = useAcceptReservation()
   const declineRes = useDeclineReservation()
+  const sendReminder = useSendReminder()
+  const sendMessage = useSendGuestMessage()
   const badge = sourceBadge(r)
   const dbId = r.mustHaves ?? null
   const isPending = r.bookingStatus === 'pending'
+  const isConfirmed = r.bookingStatus === 'accepted'
   const isWebForm = !!r.reservationSystemId
+  const hasEmail = !!r.email
+  const hasPhone = !!r.phone
+
+  async function handleSendReminder() {
+    if (!r.reservationSystemId || !r.reservationSystemToken) return
+    await sendReminder.mutateAsync({ id: r.reservationSystemId, token: r.reservationSystemToken })
+    setReminderSent(true)
+    setTimeout(() => setReminderSent(false), 4000)
+  }
+
+  async function handleSendMessage() {
+    if (!r.reservationSystemId || !r.reservationSystemToken || !composeText.trim()) return
+    await sendMessage.mutateAsync({
+      id: r.reservationSystemId,
+      token: r.reservationSystemToken,
+      body: composeText.trim(),
+      channel: composeChannel,
+    })
+    setComposeText("")
+    setMessageSent(true)
+    setTimeout(() => setMessageSent(false), 4000)
+  }
 
   async function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
@@ -249,6 +281,81 @@ function ReservationRow({
                 {declineRes.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                 Decline
               </button>
+            </div>
+          )}
+
+          {/* Send Reminder — confirmed web form reservations with email */}
+          {isConfirmed && isWebForm && hasEmail && (
+            <div className="flex items-center gap-2 pt-0.5">
+              {reminderSent ? (
+                <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Reminder sent
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={sendReminder.isPending}
+                  onClick={handleSendReminder}
+                  className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold border border-border text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 transition-colors"
+                >
+                  {sendReminder.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
+                  Send Reminder
+                </button>
+              )}
+              {sendReminder.isError && (
+                <span className="text-xs text-red-500">Failed — try again</span>
+              )}
+            </div>
+          )}
+
+          {/* Follow-up compose box — all web form reservations with contact info */}
+          {isWebForm && (hasEmail || hasPhone) && (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Follow-up message
+              </p>
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={composeChannel}
+                  onChange={(e) => setComposeChannel(e.target.value as 'email' | 'whatsapp')}
+                  className="rounded border border-input bg-background px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {hasEmail && <option value="email">Email</option>}
+                  {hasPhone && <option value="whatsapp">WhatsApp</option>}
+                </select>
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {composeChannel === 'email' ? r.email : r.phone}
+                </span>
+              </div>
+              <textarea
+                value={composeText}
+                onChange={(e) => setComposeText(e.target.value)}
+                placeholder="Type your message…"
+                rows={3}
+                className="w-full rounded border border-input bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+              />
+              <div className="flex items-center justify-between">
+                {messageSent ? (
+                  <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Message sent
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">
+                    {sendMessage.isError ? "Send failed — try again" : ""}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  disabled={sendMessage.isPending || !composeText.trim()}
+                  onClick={handleSendMessage}
+                  className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {sendMessage.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                  Send
+                </button>
+              </div>
             </div>
           )}
 
