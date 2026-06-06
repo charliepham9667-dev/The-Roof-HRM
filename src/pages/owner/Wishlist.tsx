@@ -657,6 +657,8 @@ const MAINT_STATUS_ACCENT: Record<MaintenanceStatus, string> = {
 }
 
 function MaintenanceTab({ canManage }: { canManage: boolean }) {
+  const [priorityFilter, setPriorityFilter] = useState<MaintenancePriority | "all">("all")
+  const [categoryFilter, setCategoryFilter] = useState<MaintenanceCategory | "all">("all")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<MaintenanceTask | null>(null)
   // Collapse "done" by default — it tends to accumulate
@@ -666,7 +668,11 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   const deleteTask = useDeleteMaintenanceTask()
   const updateTask = useUpdateMaintenanceTask()
 
-  const filtered = tasks
+  const filtered = useMemo(() => tasks.filter((t) => {
+    if (priorityFilter !== "all" && t.priority !== priorityFilter) return false
+    if (categoryFilter !== "all" && t.category !== categoryFilter) return false
+    return true
+  }), [tasks, priorityFilter, categoryFilter])
 
   const grouped = useMemo(() =>
     MAINT_STATUS_ORDER.reduce<Record<MaintenanceStatus, MaintenanceTask[]>>((acc, s) => {
@@ -701,7 +707,31 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0">
       {/* Controls bar */}
-      <div className="shrink-0 flex items-center">
+      <div className="shrink-0 flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value as any)}
+          className="shrink-0 rounded border border-border bg-card px-2 py-1 text-[11px] text-foreground outline-none cursor-pointer"
+        >
+          <option value="all">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value as any)}
+          className="shrink-0 rounded border border-border bg-card px-2 py-1 text-[11px] text-foreground outline-none cursor-pointer"
+        >
+          <option value="all">All Categories</option>
+          <option value="electrical">Electrical</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="structural">Structural</option>
+          <option value="equipment">Equipment</option>
+          <option value="aesthetic">Aesthetic</option>
+          <option value="safety">Safety</option>
+          <option value="other">Other</option>
+        </select>
         {canManage && (
           <Button type="button" size="sm" onClick={openAdd} className="ml-auto h-8 px-3 text-xs gap-1 shrink-0">
             <Plus className="h-3.5 w-3.5" />
