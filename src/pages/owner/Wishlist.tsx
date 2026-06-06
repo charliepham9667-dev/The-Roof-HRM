@@ -465,10 +465,10 @@ const STATUS_SECTION: Record<WishlistStatus, {
   badgeBg: string
   borderTop: string
 }> = {
-  request:   { label: "Requested",  accent: "#6b7280", sectionBg: "rgba(107,114,128,0.06)", badgeBg: "#f3f4f6", borderTop: "#6b7280" },
-  approved:  { label: "Approved",   accent: "#3b82f6", sectionBg: "rgba(59,130,246,0.06)",  badgeBg: "#dbeafe", borderTop: "#3b82f6" },
-  ordered:   { label: "Ordered",    accent: "#f59e0b", sectionBg: "rgba(245,158,11,0.06)",  badgeBg: "#fef3c7", borderTop: "#f59e0b" },
-  delivered: { label: "Delivered",  accent: "#10b981", sectionBg: "rgba(16,185,129,0.06)",  badgeBg: "#d1fae5", borderTop: "#10b981" },
+  request:   { label: "Requested",  accent: "#6b7280", sectionBg: "#f4f4f5", badgeBg: "#f3f4f6", borderTop: "#6b7280" },
+  approved:  { label: "Approved",   accent: "#3b82f6", sectionBg: "#eff6ff", badgeBg: "#dbeafe", borderTop: "#3b82f6" },
+  ordered:   { label: "Ordered",    accent: "#f59e0b", sectionBg: "#fffbeb", badgeBg: "#fef3c7", borderTop: "#f59e0b" },
+  delivered: { label: "Delivered",  accent: "#10b981", sectionBg: "#ecfdf5", badgeBg: "#d1fae5", borderTop: "#10b981" },
 }
 
 const STATUS_ORDER: WishlistStatus[] = ["request", "approved", "ordered", "delivered"]
@@ -587,7 +587,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
               <div key={status}>
                 {/* Status divider header — sticky within the single card */}
                 <div
-                  className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 border-b border-border shadow-sm"
+                  className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 border-b border-border shadow-sm backdrop-blur-0"
                   style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
                 >
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ background: cfg.accent }} />
@@ -799,8 +799,8 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                       <button
                         type="button"
                         onClick={() => toggleSection(status)}
-                        className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 bg-card border-b border-border shadow-sm transition-colors hover:bg-secondary/20"
-                        style={{ borderTop: `2px solid ${accent}` }}
+                        className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border shadow-sm transition-colors hover:bg-secondary/20"
+                        style={{ borderTop: `2px solid ${accent}`, background: 'var(--card, #ffffff)' }}
                       >
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full shrink-0" style={{ background: accent }} />
