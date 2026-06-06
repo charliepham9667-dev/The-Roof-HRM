@@ -1939,6 +1939,7 @@ type Tab = "procurement" | "maintenance" | "dj_payments" | "purchase_request" | 
 export function Wishlist() {
   const profile = useAuthStore((s) => s.profile)
   const canManage = profile?.role === "owner" || profile?.role === "manager"
+  const isOwner = profile?.role === "owner"
   const [activeTab, setActiveTab] = useState<Tab>("procurement")
 
   const tabCls = (t: Tab) => cn(
@@ -1975,18 +1976,24 @@ export function Wishlist() {
             <Music2 className="h-3.5 w-3.5 shrink-0" />
             <span>DJ Pay</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("purchase_request")} className={cn(tabCls("purchase_request"), "hidden sm:flex")}>
-            <FileText className="h-3.5 w-3.5 shrink-0" />
-            <span>Purchase Request</span>
-          </button>
-          <button type="button" onClick={() => setActiveTab("payment_request")} className={cn(tabCls("payment_request"), "hidden sm:flex")}>
-            <Wallet className="h-3.5 w-3.5 shrink-0" />
-            <span>Payment Request</span>
-          </button>
-          <button type="button" onClick={() => setActiveTab("inventory")} className={cn(tabCls("inventory"), "hidden sm:flex")}>
-            <Boxes className="h-3.5 w-3.5 shrink-0" />
-            <span>Inventory</span>
-          </button>
+          {isOwner && (
+            <button type="button" onClick={() => setActiveTab("purchase_request")} className={cn(tabCls("purchase_request"), "hidden sm:flex")}>
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span>Purchase Request</span>
+            </button>
+          )}
+          {isOwner && (
+            <button type="button" onClick={() => setActiveTab("payment_request")} className={cn(tabCls("payment_request"), "hidden sm:flex")}>
+              <Wallet className="h-3.5 w-3.5 shrink-0" />
+              <span>Payment Request</span>
+            </button>
+          )}
+          {isOwner && (
+            <button type="button" onClick={() => setActiveTab("inventory")} className={cn(tabCls("inventory"), "hidden sm:flex")}>
+              <Boxes className="h-3.5 w-3.5 shrink-0" />
+              <span>Inventory</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1997,7 +2004,7 @@ export function Wishlist() {
         <MaintenanceTab canManage={canManage} />
       ) : activeTab === "dj_payments" ? (
         <DJPaymentsTab canManage={canManage} />
-      ) : activeTab === "purchase_request" ? (
+      ) : activeTab === "purchase_request" && isOwner ? (
         <div className="flex flex-col gap-3">
           <RequestOverviewPanel kind="purchase_request" />
           <SheetEmbedTab
@@ -2008,7 +2015,7 @@ export function Wishlist() {
             fullView
           />
         </div>
-      ) : activeTab === "payment_request" ? (
+      ) : activeTab === "payment_request" && isOwner ? (
         <div className="flex flex-col gap-3">
           <RequestOverviewPanel kind="payment_request" />
           <SheetEmbedTab
@@ -2019,14 +2026,14 @@ export function Wishlist() {
             fullView
           />
         </div>
-      ) : (
+      ) : activeTab === "inventory" && isOwner ? (
         <SheetEmbedTab
           kind="inventory"
           title="Inventory"
           description="Current stock levels and reorder status. Connect the inventory sheet maintained by the bar or kitchen team."
           canManage={canManage}
         />
-      )}
+      ) : null}
     </div>
   )
 }
