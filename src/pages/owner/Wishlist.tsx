@@ -1005,6 +1005,7 @@ function DJPaymentSheet({
   payment?: DJPayment | null
 }) {
   const isEdit = !!payment
+  const isMobile = useIsMobile()
   const create = useCreateDJPayment()
   const update = useUpdateDJPayment()
   const [draft, setDraft] = useState<CreateDJPaymentInput>(() => defaultDjDraft(payment))
@@ -1056,14 +1057,19 @@ function DJPaymentSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-[420px] p-0 flex flex-col overflow-hidden">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn("p-0 flex flex-col", isMobile ? "max-h-[92dvh] rounded-t-2xl" : "sm:max-w-[420px] overflow-hidden")}
+      >
+        {isMobile && <div className="mx-auto mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />}
+
+        <SheetHeader className="px-5 pt-4 pb-3 border-b border-border shrink-0">
           <SheetTitle className="text-base font-semibold">
             {isEdit ? "Edit DJ Set" : "Add DJ Set"}
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {error && (
             <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
           )}
@@ -1176,11 +1182,9 @@ function DJPaymentSheet({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="h-auto px-4 py-1.5 text-xs">
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending} className="h-auto px-4 py-1.5 text-xs">
+        <div className="px-5 py-4 border-t border-border shrink-0 flex gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-10 text-sm">Cancel</Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} className="flex-1 h-10 text-sm">
             {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Set"}
           </Button>
         </div>
