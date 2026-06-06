@@ -121,10 +121,9 @@ export function WeeklySalesTrend({
   const [timeRange, setTimeRange] = React.useState<TimeRange>('7d');
 
   React.useEffect(() => {
-    if (isFinanceSummary) {
-      setTimeRange('30d');
-    }
-  }, [isFinanceSummary]);
+    // Mobile always starts at 7d; desktop starts at 30d
+    setTimeRange(isMobile ? '7d' : '30d');
+  }, [isMobile]);
 
   const { data: weeklyData, isLoading, isFetching } = useWeeklySales(timeRange);
 
@@ -194,32 +193,22 @@ export function WeeklySalesTrend({
 
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-              {isFinanceSummary ? (
-                <WeeklyTotalsLegend
-                  actualTotal={thisPeriodTotal}
-                  lastYearTotal={lastYearTotal}
-                  actualColor={colors.actual}
-                  lastYearColor={colors.lastYear}
-                  inline
-                />
-              ) : (
-                <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-                  <TabsList className="h-8 rounded-md border border-border bg-background p-0.5">
-                    <TabsTrigger
-                      value="7d"
-                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
-                    >
-                      7 days
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="30d"
-                      className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
-                    >
-                      30 days
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              )}
+              <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
+                <TabsList className="h-8 rounded-md border border-border bg-background p-0.5">
+                  <TabsTrigger
+                    value="7d"
+                    className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+                  >
+                    7d
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="30d"
+                    className="h-7 rounded-[6px] px-2.5 text-xs data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+                  >
+                    30d
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
 
