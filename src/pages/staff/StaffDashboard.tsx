@@ -256,10 +256,10 @@ export function StaffDashboard() {
           </div>
 
           {/* Right */}
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] text-muted-foreground">Open 14:00 – 02:00</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">Open 14:00 – 02:00</span>
             {todayPromos.length > 0 && (
-              <span className="rounded border border-foreground px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] shrink-0">
+              <span className="rounded border border-foreground px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] shrink-0">
                 {todayPromos[0].label}
               </span>
             )}

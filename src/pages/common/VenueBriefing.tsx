@@ -462,8 +462,8 @@ export function VenueBriefing({ isManager: _isManager = false }: VenueBriefingPr
         {/* Two-column: vertical glance left, pipeline table right — EXACT owner dashboard */}
         <div className="grid gap-3 lg:grid-cols-[220px_1fr]" style={{ alignItems: 'stretch' }}>
 
-          {/* LEFT — vertical day cards (pixel-perfect copy of owner dashboard) */}
-          <div className="flex flex-col gap-1.5" style={{ height: '100%' }}>
+          {/* LEFT — vertical day cards — desktop only (mobile uses pipeline card list below) */}
+          <div className="hidden lg:flex flex-col gap-1.5" style={{ height: '100%' }}>
             {weekDates.map((d, dIdx) => {
               const row = weekByDate.get(d.iso);
               const isToday = d.iso === todayIso && isCurrentWeek;

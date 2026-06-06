@@ -406,12 +406,20 @@ export function MyShifts() {
                     )}
                   </div>
                   {dayShift && (
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-1">
                       <div className="font-mono text-xs text-muted-foreground">
                         {shiftHours(dayShift.startTime, dayShift.endTime)}
                       </div>
-                      {hasPendingSwap && (
-                        <div className="mt-1 text-[9px] font-semibold uppercase text-blue-600">Swap Pending</div>
+                      {hasPendingSwap ? (
+                        <div className="text-[9px] font-semibold uppercase text-blue-600">Swap Pending</div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openSwap(dayShift)}
+                          className="text-[9px] font-medium text-muted-foreground border border-border rounded px-1.5 py-0.5 hover:bg-muted transition-colors"
+                        >
+                          Request Swap
+                        </button>
                       )}
                     </div>
                   )}

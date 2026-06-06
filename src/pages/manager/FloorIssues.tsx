@@ -224,7 +224,8 @@ function IssueRow({ task, myName, onEscalate, onResolve, onClose }: IssueRowProp
                 className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors whitespace-nowrap"
               >
                 <ArrowUpCircle className="h-3 w-3" />
-                Escalate to Charlie
+                <span className="sm:hidden">Escalate</span>
+                <span className="hidden sm:inline">Escalate to Charlie</span>
               </button>
             )}
             <button

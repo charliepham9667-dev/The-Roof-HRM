@@ -606,7 +606,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                       <div
                         key={item.id}
                         className="flex items-center gap-2 px-3 py-2"
-                        style={{ borderLeft: `3px solid ${cfg.accent}55`, backgroundColor: cfg.sectionBg }}
+                        style={{ borderLeft: `3px solid ${cfg.accent}55` }}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -838,7 +838,7 @@ function MaintenanceTab({ canManage }: { canManage: boolean }) {
                               <div
                                 key={task.id}
                                 className="flex items-center gap-2 px-3 py-2"
-                                style={{ borderLeft: `3px solid ${accent}55`, backgroundColor: MAINT_STATUS_BG[status] }}
+                                style={{ borderLeft: `3px solid ${accent}55` }}
                               >
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 min-w-0">

@@ -1075,8 +1075,8 @@ export function ManagerDashboard() {
             </div>
             <div className="flex-1 px-4 py-3">
               {/* Rating half */}
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
+              <div className="flex items-start gap-3 flex-col sm:flex-row">
+                <div className="flex-1 min-w-0">
                   <div className="text-[11px] text-primary" aria-label={`Rating ${googleReviews?.rating?.toFixed(1) ?? "—"} out of 5`}>
                     {(() => {
                       const rounded = Math.max(0, Math.min(5, Math.round(googleReviews?.rating ?? 0)))
@@ -1096,10 +1096,11 @@ export function ManagerDashboard() {
                     </div>
                   )}
                 </div>
-                {/* Vertical divider */}
-                <div className="w-px self-stretch bg-border shrink-0" />
+                {/* Vertical divider — desktop only */}
+                <div className="hidden sm:block w-px self-stretch bg-border shrink-0" />
+                <div className="sm:hidden h-px w-full bg-border" />
                 {/* Pax half */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-muted-foreground mb-1">Monthly Pax</div>
                   <div className="font-mono text-2xl font-normal leading-none text-foreground">
                     {kpiLoading ? "—" : mtdPax.toLocaleString()}

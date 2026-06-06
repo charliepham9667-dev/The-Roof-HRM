@@ -95,7 +95,7 @@ export function Profile() {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <button
           onClick={() => setIsEditing(!isEditing)}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-foreground/70 hover:bg-muted transition-colors"

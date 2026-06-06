@@ -219,7 +219,7 @@ function LeaveRequestCard({ request, showActions }: LeaveRequestCardProps) {
 
         {/* Actions */}
         {showActions && request.status === 'pending' && (
-          <div className="flex items-center gap-2 sm:flex-shrink-0">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-shrink-0">
             <button
               onClick={handleApprove}
               disabled={reviewRequest.isPending}
