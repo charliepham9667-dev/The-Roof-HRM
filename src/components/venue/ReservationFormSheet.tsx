@@ -4,6 +4,24 @@ import { cn } from "@/lib/utils"
 import { useCreateReservation, useUpdateReservation } from "@/hooks/useReservations"
 import type { Reservation, CreateReservationInput, ReservationSource } from "@/types"
 
+// ─── Source normalizer ─────────────────────────────────────────────────────────
+// CSV / external sources may arrive capitalized or with different spacing.
+// Map everything to the valid DB enum values.
+
+const VALID_SOURCES = new Set<ReservationSource>(["phone", "website", "social_media", "walk_in", "email"])
+
+function normalizeSource(raw: string | null | undefined): ReservationSource {
+  if (!raw) return "phone"
+  const s = raw.toLowerCase().replace(/[\s\-]/g, "_")
+  if (VALID_SOURCES.has(s as ReservationSource)) return s as ReservationSource
+  if (s.includes("whatsapp") || s.includes("social") || s.includes("zalo") || s.includes("instagram")) return "social_media"
+  if (s.includes("walk"))  return "walk_in"
+  if (s.includes("web") || s.includes("online") || s.includes("booking")) return "website"
+  if (s.includes("email") || s.includes("mail")) return "email"
+  if (s.includes("phone") || s.includes("call") || s.includes("tel")) return "phone"
+  return "phone"
+}
+
 // ─── Source options ────────────────────────────────────────────────────────────
 
 const SOURCES: Array<{ value: ReservationSource; label: string; color: string }> = [
@@ -35,7 +53,7 @@ function defaultDraft(reservation?: Reservation | null): CreateReservationInput 
     partySize: reservation?.partySize ?? 2,
     tablePreference: reservation?.tablePreference ?? "",
     specialRequests: reservation?.specialRequests ?? "",
-    source: reservation?.source ?? "phone",
+    source: normalizeSource(reservation?.source),
     notes: reservation?.notes ?? "",
     status: reservation?.status ?? "confirmed",
   }
@@ -71,7 +89,7 @@ export function ReservationFormSheet({
     if (!reservation) {
       if (defaultTable)  setDraft((d) => ({ ...d, tablePreference: defaultTable }))
       if (defaultTime)   setDraft((d) => ({ ...d, reservationTime: defaultTime }))
-      if (defaultSource) setDraft((d) => ({ ...d, source: defaultSource as any }))
+      if (defaultSource) setDraft((d) => ({ ...d, source: normalizeSource(defaultSource) }))
     }
   }, [reservation?.id, open])
 

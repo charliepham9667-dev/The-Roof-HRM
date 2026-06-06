@@ -74,7 +74,7 @@ export function useCreateReservation() {
         party_size: input.partySize,
         table_preference: input.tablePreference || null,
         special_requests: input.specialRequests || null,
-        source: input.source || 'phone',
+        source: (['phone','website','social_media','walk_in','email'].includes(input.source || '') ? input.source : 'phone') || 'phone',
         notes: input.notes || null,
         status: 'confirmed',
         created_by: profile?.id || null,
