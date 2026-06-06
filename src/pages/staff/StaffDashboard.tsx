@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2, AlertTriangle, CloudSun, Zap, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,19 @@ import { useAuthStore } from '../../stores/authStore';
 import { useShifts, useUpcomingShiftReminder } from '../../hooks/useShifts';
 import { useClockIn, useClockOut, useClockStatus } from '../../hooks/useClockRecords';
 import { useMyAssignedTasks } from '../../hooks/useDelegationTasks';
+import { useRoofCalendarWeekData } from '@/hooks/useWeekAtGlanceCsv';
 import { cn } from '@/lib/utils';
 import type { DelegationTask } from '../../types';
+
+function formatPipelineWhen(dateIso: string, startTime: string | null, endTime: string | null) {
+  const [y, m, d] = dateIso.split("-").map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  const dayName = dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })
+  const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+  if (!startTime) return `${dayName} ${dateStr}`
+  const time = endTime ? `${startTime} – ${endTime}` : startTime
+  return `${dayName} ${dateStr}, ${time}`
+}
 
 interface BreakEntry { start: Date; end: Date; durationSecs: number }
 
@@ -95,6 +106,39 @@ export function StaffDashboard() {
   const profile = useAuthStore((s) => s.profile);
   const now = useClock();
   const todayStr = now.toISOString().split('T')[0];
+
+  // ── Weekly pipeline ──────────────────────────────────────────────────────────
+  const { data: roofCalendar } = useRoofCalendarWeekData()
+  const roofEvents = roofCalendar?.events ?? []
+  const weekDates = useMemo(() => {
+    const [y, m, d] = todayStr.split("-").map(Number)
+    const anchor = new Date(Date.UTC(y, m - 1, d))
+    const dowMon0 = (anchor.getUTCDay() + 6) % 7
+    const start = new Date(Date.UTC(y, m - 1, d - dowMon0))
+    const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+    return Array.from({ length: 7 }, (_, i) => {
+      const dt = new Date(start)
+      dt.setUTCDate(start.getUTCDate() + i)
+      const iso = dt.toISOString().slice(0, 10)
+      return { day: dayNames[i], dateNum: dt.getUTCDate(), iso }
+    })
+  }, [todayStr])
+  const pipelineRows = useMemo(() => {
+    const byDate = new Map<string, typeof roofEvents>()
+    for (const e of roofEvents) {
+      if (!e.dateIso) continue
+      const list = byDate.get(e.dateIso) || []
+      list.push(e)
+      byDate.set(e.dateIso, list)
+    }
+    return weekDates.map((d) => {
+      const dayEvents = (byDate.get(d.iso) || []).filter((e) => e.eventName).sort((a, b) => (a.startMinutes ?? 999999) - (b.startMinutes ?? 999999))
+      const first = dayEvents[0]
+      if (!first) return { iso: d.iso, isToday: d.iso === todayStr, event: "TBD", when: formatPipelineWhen(d.iso, null, null), dj1: "—", dj2: "—", genre: "—", promo: "—" }
+      const extra = Math.max(0, dayEvents.length - 1)
+      return { iso: d.iso, isToday: d.iso === todayStr, event: `${first.eventName}${extra ? ` +${extra} more` : ""}`, when: formatPipelineWhen(d.iso, first.startTime, first.endTime), dj1: first.dj1 || "—", dj2: first.dj2 || "—", genre: first.genre || "—", promo: first.promotion || "—" }
+    })
+  }, [roofEvents, weekDates, todayStr])
 
   const { data: shifts } = useShifts(now);
   useUpcomingShiftReminder();
@@ -452,6 +496,47 @@ export function StaffDashboard() {
             ))}
           </div>
         </Panel>
+      </div>
+
+      {/* This Week's Pipeline */}
+      <div className="rounded-card shadow-card overflow-hidden" style={{ border: "1px solid #e2ddd7", background: "#fff" }}>
+        <div style={{ padding: "12px 18px", borderBottom: "1px solid #e2ddd7", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1714" }}>This Week's Pipeline</div>
+        </div>
+        {pipelineRows.map((row, idx) => {
+          const isPast = row.iso < todayStr
+          const genres = row.genre !== "—" ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : []
+          const promos = row.promo !== "—" ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : []
+          return (
+            <div
+              key={`${row.iso}-${idx}`}
+              className={cn("border-b border-[#e2ddd7] px-4 py-3 last:border-b-0", row.isToday && "bg-[#fdf3e7]")}
+              style={{ opacity: isPast ? 0.55 : 1 }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className={cn("text-sm font-semibold truncate", row.isToday ? "text-[#b5620a]" : row.event === "TBD" ? "italic text-[#9c9590]" : "text-[#1a1714]")}>
+                    {row.event}
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-[#9c9590]">{row.when}</div>
+                </div>
+                {row.isToday && (
+                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white" style={{ background: "#b5620a" }}>Tonight</span>
+                )}
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                <div><span className="text-[#9c9590]">DJ 1: </span>{row.dj1}</div>
+                <div><span className="text-[#9c9590]">DJ 2: </span>{row.dj2}</div>
+              </div>
+              {(genres.length > 0 || promos.length > 0) && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {genres.map((g) => <span key={g} className="rounded border border-[#e2ddd7] bg-[#f0ece6] px-1.5 py-0.5 text-[10px] text-[#6b6560]">{g}</span>)}
+                  {promos.map((p) => <span key={p} className="rounded border border-[#b8e0c8] bg-[#edf5f0] px-1.5 py-0.5 text-[10px] text-[#2d7a4f]">{p}</span>)}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Today's Pulse */}

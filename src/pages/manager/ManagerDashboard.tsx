@@ -1469,64 +1469,86 @@ export function ManagerDashboard() {
         </div>
 
         {/* Right column: This Week's Pipeline */}
-        <div className="rounded-card border border-border bg-card shadow-card overflow-hidden h-fit lg:col-span-2">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <div className="text-base font-medium text-foreground">This Week's Pipeline</div>
+        <div className="rounded-card shadow-card overflow-hidden h-fit lg:col-span-2" style={{ border: "1px solid #e2ddd7", background: "#fff" }}>
+          {/* Header */}
+          <div style={{ padding: "12px 18px", borderBottom: "1px solid #e2ddd7", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1714" }}>This Week's Pipeline</div>
           </div>
 
-          {/* Column headers */}
-          <div className="hidden lg:grid lg:grid-cols-[1.6fr_1fr_1fr_1.2fr_1.6fr] gap-4 px-5 py-2.5 border-b border-border">
-            <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Event</div>
-            <div className="text-xs tracking-widest font-semibold text-foreground uppercase">DJ 1</div>
-            <div className="text-xs tracking-widest font-semibold text-foreground uppercase">DJ 2</div>
-            <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Genre</div>
-            <div className="text-xs tracking-widest font-semibold text-foreground uppercase">Promotion</div>
-          </div>
-
-          {/* Rows */}
-          <div className="divide-y divide-border">
-            {pipelineRows.map((row, idx) => (
-              <div
-                key={`${row.iso}-${idx}`}
-                className={cn(
-                  "relative grid grid-cols-1 gap-y-1 gap-x-4 px-5 py-3.5 lg:grid-cols-[1.6fr_1fr_1fr_1.2fr_1.6fr] lg:items-center",
-                  row.isToday && "bg-gradient-to-r from-primary/[0.04] to-transparent",
-                )}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "text-sm leading-snug truncate",
-                      row.event === "TBD" ? "text-muted-foreground italic" : "text-foreground font-medium",
-                    )}>
-                      {row.event}
+          {/* Mobile: card list */}
+          <div className="lg:hidden">
+            {pipelineRows.map((row, idx) => {
+              const isPast = row.iso < todayIso
+              const genres = row.genre !== "—" ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : []
+              const promos = row.promo !== "—" ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : []
+              return (
+                <div
+                  key={`mob-${row.iso}-${idx}`}
+                  className={cn("border-b border-[#e2ddd7] px-4 py-3", row.isToday && "bg-[#fdf3e7]")}
+                  style={{ opacity: isPast ? 0.55 : 1 }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className={cn("text-sm font-semibold truncate", row.isToday ? "text-[#b5620a]" : row.event === "TBD" ? "italic text-[#9c9590]" : "text-[#1a1714]")}>
+                        {row.event}
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-[#9c9590]">{row.when}</div>
                     </div>
                     {row.isToday && (
-                      <span className="shrink-0 rounded-sm border border-primary/25 bg-primary/8 px-1.5 py-0.5 text-[10px] tracking-[1.5px] text-primary uppercase">
-                        Today
-                      </span>
+                      <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white" style={{ background: "#b5620a" }}>Today</span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-xs text-muted-foreground truncate">{row.when}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                    <div><span className="text-[#9c9590]">DJ 1: </span>{row.dj1}</div>
+                    <div><span className="text-[#9c9590]">DJ 2: </span>{row.dj2}</div>
+                  </div>
+                  {(genres.length > 0 || promos.length > 0) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {genres.map((g) => <span key={g} className="rounded border border-[#e2ddd7] bg-[#f0ece6] px-1.5 py-0.5 text-[10px] text-[#6b6560]">{g}</span>)}
+                      {promos.map((p) => <span key={p} className="rounded border border-[#b8e0c8] bg-[#edf5f0] px-1.5 py-0.5 text-[10px] text-[#2d7a4f]">{p}</span>)}
+                    </div>
+                  )}
                 </div>
-                <div className="min-w-0">
-                  <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">DJ 1</div>
-                  <div className={cn("text-xs truncate", row.dj1 === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.dj1}</div>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">DJ 2</div>
-                  <div className={cn("text-xs truncate", row.dj2 === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.dj2}</div>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">Genre</div>
-                  <div className={cn("text-xs truncate", row.genre === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.genre}</div>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs tracking-widest font-semibold text-foreground uppercase mb-0.5 lg:hidden">Promotion</div>
-                  <div className={cn("text-xs", row.promo === "—" ? "text-muted-foreground/40" : "text-secondary-foreground")}>{row.promo}</div>
-                </div>
-              </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop: column headers */}
+          <div className="hidden lg:grid" style={{ gridTemplateColumns: "1.6fr 1fr 1fr 1.2fr 1.6fr", gap: 16, padding: "7px 18px", borderBottom: "1px solid #e2ddd7", background: "#f0ece6" }}>
+            {["Event", "DJ 1", "DJ 2", "Genre", "Promotion"].map((h) => (
+              <div key={h} style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#9c9590" }}>{h}</div>
             ))}
+          </div>
+
+          {/* Desktop: rows */}
+          <div className="hidden lg:block">
+            {pipelineRows.map((row, idx) => {
+              const isPast = row.iso < todayIso
+              const genres = row.genre !== "—" ? row.genre.split(/[,;]+/).map((g) => g.trim()).filter(Boolean) : []
+              const promos = row.promo !== "—" ? row.promo.split(/[,;]+/).map((p) => p.trim()).filter(Boolean) : []
+              return (
+                <div
+                  key={`desk-${row.iso}-${idx}`}
+                  style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1.2fr 1.6fr", gap: 16, padding: "10px 18px", minHeight: 48, borderBottom: "1px solid #e2ddd7", alignItems: "center", background: row.isToday ? "#fdf3e7" : "transparent", opacity: isPast ? 0.55 : 1 }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: row.isToday ? "#b5620a" : row.event === "TBD" ? "#9c9590" : "#1a1714", fontStyle: row.event === "TBD" ? "italic" : "normal" }}>{row.event}</span>
+                      {row.isToday && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 7px", borderRadius: 3, background: "#b5620a", color: "#fff", textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Today</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#9c9590", marginTop: 2 }}>{row.when}</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: row.dj1 === "—" ? "#c8c0b5" : "#1a1714" }}>{row.dj1}</div>
+                  <div style={{ fontSize: 11, color: row.dj2 === "—" ? "#c8c0b5" : "#1a1714" }}>{row.dj2}</div>
+                  <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap" as const, gap: 3 }}>
+                    {genres.length > 0 ? genres.map((g) => <span key={g} style={{ padding: "2px 7px", borderRadius: 3, fontSize: 10, fontWeight: 500, background: "#f0ece6", border: "1px solid #e2ddd7", color: "#6b6560" }}>{g}</span>) : <span style={{ color: "#c8c0b5", fontSize: 11 }}>—</span>}
+                  </div>
+                  <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap" as const, gap: 3 }}>
+                    {promos.length > 0 ? promos.map((p) => <span key={p} style={{ padding: "2px 7px", borderRadius: 3, fontSize: 10, fontWeight: 500, background: "#edf5f0", border: "1px solid #b8e0c8", color: "#2d7a4f" }}>{p}</span>) : <span style={{ color: "#c8c0b5", fontSize: 11 }}>—</span>}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
