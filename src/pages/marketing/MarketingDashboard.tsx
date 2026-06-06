@@ -1521,19 +1521,21 @@ function UpcomingEventsTable({
           const isToday = row.iso === todayIso
           const isTomorrow = row.iso === tomorrowIso
           const isPast = row.iso < todayIso
-          const isSoon = !isToday && !isPast && row.iso <= tomorrowIso
           const time = row.csv?.startTime && row.csv?.endTime ? `${row.csv.startTime} – ${row.csv.endTime}` : ""
           const headline = row.csv?.eventName || row.supa?.title || "Untitled"
           const clickable = !!row.supa
-          const statusLabel = row.supa
-            ? mktStatusConfig[row.supa.marketingStatus ?? "not_started"]?.label
-            : isPast ? "Past" : isToday ? "Tonight" : isTomorrow ? "Tomorrow" : isSoon ? "Soon" : "Upcoming"
-          const statusCls = row.supa
-            ? mktStatusConfig[row.supa.marketingStatus ?? "not_started"]?.cls
-            : isPast ? "border-border bg-secondary text-muted-foreground"
-            : isToday ? "border-primary/30 bg-primary/8 text-primary"
-            : isSoon || isTomorrow ? "border-warning/25 bg-warning/8 text-warning"
-            : "border-success/25 bg-success/8 text-success"
+          const crmStatus = row.supa?.marketingStatus
+          const hasMeaningfulStatus = crmStatus && crmStatus !== "not_started"
+          const dateBadge = isPast ? "Past" : isToday ? "Tonight" : isTomorrow ? "Tomorrow" : "Upcoming"
+          const dateCls = isPast
+            ? "border-border bg-secondary text-muted-foreground"
+            : isToday
+            ? "border-[#b5620a]/40 bg-[#fdf3e7] text-[#b5620a]"
+            : isTomorrow
+            ? "border-warning/25 bg-warning/8 text-warning"
+            : "border-border bg-secondary/60 text-muted-foreground"
+          const statusLabel = hasMeaningfulStatus ? mktStatusConfig[crmStatus!]?.label : dateBadge
+          const statusCls = hasMeaningfulStatus ? mktStatusConfig[crmStatus!]?.cls : dateCls
           const checklist = row.supa?.checklist ?? []
           const done = checklist.filter((c) => c.done).length
           const total = checklist.length
@@ -1635,7 +1637,6 @@ function UpcomingEventsTable({
                 const isToday = row.iso === todayIso
                 const isTomorrow = row.iso === tomorrowIso
                 const isPast = row.iso < todayIso
-                const isSoon = !isToday && !isPast && row.iso <= tomorrowIso
 
                 const djs = row.csv ? [row.csv.dj1, row.csv.dj2].filter(Boolean).join(" · ") : ""
                 const time =
@@ -1652,26 +1653,18 @@ function UpcomingEventsTable({
 
                 const clickable = !!row.supa
 
-                const statusLabel = row.supa
-                  ? mktStatusConfig[row.supa.marketingStatus ?? "not_started"]?.label
-                  : isPast
-                  ? "Past"
-                  : isToday
-                  ? "Tonight"
-                  : isTomorrow
-                  ? "Tomorrow"
-                  : isSoon
-                  ? "Soon"
-                  : "Upcoming"
-                const statusCls = row.supa
-                  ? mktStatusConfig[row.supa.marketingStatus ?? "not_started"]?.cls
-                  : isPast
+                const crmStatus = row.supa?.marketingStatus
+                const hasMeaningfulStatus = crmStatus && crmStatus !== "not_started"
+                const dateBadge = isPast ? "Past" : isToday ? "Tonight" : isTomorrow ? "Tomorrow" : "Upcoming"
+                const dateCls = isPast
                   ? "border-border bg-secondary text-muted-foreground"
                   : isToday
-                  ? "border-primary/30 bg-primary/8 text-primary"
-                  : isSoon || isTomorrow
+                  ? "border-[#b5620a]/40 bg-[#fdf3e7] text-[#b5620a]"
+                  : isTomorrow
                   ? "border-warning/25 bg-warning/8 text-warning"
-                  : "border-success/25 bg-success/8 text-success"
+                  : "border-border bg-secondary/60 text-muted-foreground"
+                const statusLabel = hasMeaningfulStatus ? mktStatusConfig[crmStatus!]?.label : dateBadge
+                const statusCls = hasMeaningfulStatus ? mktStatusConfig[crmStatus!]?.cls : dateCls
 
                 const checklist = row.supa?.checklist ?? []
                 const done = checklist.filter((c) => c.done).length
