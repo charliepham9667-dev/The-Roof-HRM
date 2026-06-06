@@ -319,6 +319,7 @@ export default function OwnerDashboardPage() {
   const { data: roofCalendar, isLoading: weekCsvLoading, error: weekCsvError } = useRoofCalendarWeekData()
 
   const [weekOffset, setWeekOffset] = useState(0)
+  const [showDashboardPromos, setShowDashboardPromos] = useState(false)
   const isCurrentWeek = weekOffset === 0
 
   const weekDates = useMemo(() => {
@@ -1217,8 +1218,15 @@ export default function OwnerDashboardPage() {
 
             {/* Delegated overdue alert */}
             {followUpList.some((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done") && (
-              <div className="rounded-card border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                {followUpList.filter((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done").length} delegated task(s) overdue — check the full board.
+              <div className="rounded-card border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive flex items-center justify-between gap-2">
+                <span>{followUpList.filter((x) => x.task.dueDate && x.task.dueDate < todayIso && x.task.status !== "done").length} delegated task(s) overdue</span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/owner/tasks")}
+                  className="shrink-0 font-semibold underline underline-offset-2 hover:opacity-70"
+                >
+                  View board →
+                </button>
               </div>
             )}
           </div>
@@ -1980,16 +1988,6 @@ export default function OwnerDashboardPage() {
             })
           }
 
-          // 3. Unplanned days → opportunity
-          if (unplannedCount > 0) {
-            const names = unplannedDays.map((d) => d.day).join(", ")
-            insights.push({
-              icon: CalendarDays,
-              title: `${unplannedCount} Unplanned ${unplannedCount === 1 ? "Night" : "Nights"}`,
-              body: `${names} ${unplannedCount === 1 ? "has" : "have"} no event scheduled — opportunity to fill the calendar.`,
-            })
-          }
-
           // 4. Fully planned week
           if (unplannedCount === 0 && eventCount === 7) {
             insights.push({
@@ -2158,7 +2156,11 @@ export default function OwnerDashboardPage() {
 
         return (
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowDashboardPromos(s => !s)}
+              className="flex items-center gap-3 w-full group"
+            >
               <div className="text-xs font-medium tracking-widest text-muted-foreground uppercase whitespace-nowrap">
                 This Week's Promotions
               </div>
@@ -2166,8 +2168,10 @@ export default function OwnerDashboardPage() {
                 8 active
               </span>
               <div className="h-px flex-1 bg-border" />
-            </div>
+              <span className="text-[11px] text-muted-foreground shrink-0">{showDashboardPromos ? "Hide ▲" : "Show ▼"}</span>
+            </button>
 
+            {showDashboardPromos && <>
             {/* Row 1 — Daily Happy Hour hero */}
             <div className="rounded-lg border border-primary/20 bg-primary/[0.03] shadow-card overflow-hidden">
               <div className="flex items-center gap-3 px-5 py-3 border-b border-primary/15">
@@ -2233,6 +2237,7 @@ export default function OwnerDashboardPage() {
                 </div>
               ))}
             </div>
+            </>}
           </div>
         )
       })()}
