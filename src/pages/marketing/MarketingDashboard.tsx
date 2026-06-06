@@ -688,78 +688,111 @@ export default function MarketingDashboard() {
         </div>
       </div>
 
-      {/* ── 1. BRAND IDENTITY HERO — desktop only ── */}
-      <div className="hidden sm:grid sm:grid-cols-[1fr_1px_1fr_1px_1fr] rounded-card overflow-hidden border border-border shadow-card" style={{ background: "#1a1714" }}>
-        {/* Mission */}
-        <div className="p-7 border-b border-white/10 sm:border-b-0">
-          <div className="text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Mission</div>
-          <div className="font-subheading text-[15px] font-medium text-white/90 leading-snug mb-2">
-            The Roof brings <em className="not-italic" style={{ color: "#c9a84c" }}>like-minded souls</em> together
-          </div>
-          <div className="text-[12px] text-white/50 leading-relaxed">
-            Creating unhurried moments above the city, where emotions are shaped by the sea breeze, music, and every thoughtfully crafted cocktail.
-          </div>
-        </div>
+      {/* ── 1. IDENTITY & TARGETS — desktop only ── */}
+      <div className="hidden sm:grid sm:grid-cols-[1fr_1px_1fr_1px_0.55fr] rounded-card overflow-hidden border shadow-card" style={{ background: "#2b1e0d", borderColor: "rgba(201,168,76,0.25)" }}>
 
-        {/* divider */}
-        <div className="hidden sm:block" style={{ background: "rgba(255,255,255,0.1)" }} />
+        {/* Vision */}
+        <div className="p-7">
+          <div className="text-[9px] font-semibold tracking-[0.14em] uppercase mb-3" style={{ color: "#c9a84c" }}>Vision</div>
+          <p className="text-[12px] italic leading-relaxed mb-5" style={{ color: "rgba(255,245,220,0.65)" }}>
+            We aim to become a melting pot of culture, where diverse backgrounds, ideas, and experiences come together to create a vibrant, inclusive space. We celebrate the richness of different cultures and believe in the power of unity through shared experiences and connection.
+          </p>
 
-        {/* Big Idea */}
-        <div className="p-7 border-b border-white/10 sm:border-b-0">
-          <div className="text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Big Idea</div>
-          <div className="font-subheading text-[20px] font-medium leading-snug mb-2" style={{ color: "#c9a84c", fontStyle: "italic" }}>
-            Nốt nhịp tắng không
-          </div>
-          <div className="text-[12px] text-white/50 leading-relaxed mb-3">
-            A beachside rooftop defined by slow moments, refined atmosphere, and genuine connection. The emotional pause above the city.
-          </div>
-          <div className="flex gap-1.5 flex-wrap">
-            {["Fun & Positive", "Down to Earth", "Care"].map((tag) => (
-              <span key={tag} className="text-[10px] px-2 py-0.5 rounded-sm" style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c", border: "1px solid rgba(201,168,76,0.3)" }}>
-                {tag}
-              </span>
+          <div className="text-[9px] font-semibold tracking-[0.14em] uppercase mb-3" style={{ color: "#c9a84c" }}>Values</div>
+          <div className="space-y-2.5">
+            {[
+              { name: "Fun & Positive", desc: "We bring a fun and positive energy to everything we do." },
+              { name: "Down to Earth",  desc: "We embrace freedom of expression and show up as our true selves." },
+              { name: "Teamwork",       desc: "We are a team of service-oriented individuals focused on guests' needs." },
+              { name: "Attitude",       desc: "We are individuals with a growth mindset, always striving to improve." },
+              { name: "Care",           desc: "We genuinely prioritize the comfort and wellbeing of our guests and team." },
+            ].map((v) => (
+              <div key={v.name} className="flex gap-2 items-start">
+                <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-sm leading-snug" style={{ background: "rgba(201,168,76,0.14)", color: "#c9a84c", border: "1px solid rgba(201,168,76,0.28)" }}>
+                  {v.name}
+                </span>
+                <span className="text-[11px] leading-snug" style={{ color: "rgba(255,245,220,0.50)" }}>{v.desc}</span>
+              </div>
             ))}
           </div>
         </div>
 
         {/* divider */}
-        <div className="hidden sm:block" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div style={{ background: "rgba(201,168,76,0.15)" }} />
 
-        {/* Niche */}
+        {/* Niche + Three Uniques */}
         <div className="p-7">
-          <div className="text-[9px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Niche</div>
-          <div className="font-subheading text-[15px] font-medium text-white/90 leading-snug mb-2">
+          <div className="text-[9px] font-semibold tracking-[0.14em] uppercase mb-2" style={{ color: "#c9a84c" }}>Niche</div>
+          <div className="text-[13px] font-medium leading-snug mb-2" style={{ color: "rgba(255,245,220,0.88)" }}>
             International rooftop lounge —{" "}
             <em className="not-italic" style={{ color: "#c9a84c" }}>Da Nang's only beachfront</em>
           </div>
-          <div className="text-[12px] text-white/50 leading-relaxed mb-3">
+          <div className="text-[11px] leading-relaxed mb-5" style={{ color: "rgba(255,245,220,0.50)" }}>
             Not a club. Not a restaurant. The only rooftop directly on Mỹ Khê Beach. Where east meets west, sunset to late night.
           </div>
-          <div className="text-[11px] text-white/30 italic">"Do one thing and do it better than anyone."</div>
+
+          <div className="text-[9px] font-semibold tracking-[0.14em] uppercase mb-2.5" style={{ color: "#c9a84c" }}>Three Uniques</div>
+          <ol className="space-y-2.5">
+            {[
+              { num: "①", title: "Our View",       desc: "Panoramic views of My Khe Beach. Perfect for sunset evenings and relaxing nights in paradise." },
+              { num: "②", title: "The Atmosphere", desc: "Laidback, relaxing, genuine and unique — including the events." },
+              { num: "③", title: "The Offerings",  desc: "High quality shisha, refreshing cocktails at a reasonable price, attractive promotions and good food." },
+            ].map((u) => (
+              <li key={u.title} className="flex gap-2 text-[11px]" style={{ color: "rgba(255,245,220,0.50)" }}>
+                <span style={{ color: "#c9a84c" }} className="shrink-0 font-semibold">{u.num}</span>
+                <span><span style={{ color: "rgba(255,245,220,0.80)" }} className="font-medium">{u.title}</span> — {u.desc}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {/* divider */}
+        <div style={{ background: "rgba(201,168,76,0.15)" }} />
+
+        {/* Targets */}
+        <div className="p-7">
+          <div className="text-[9px] font-semibold tracking-[0.14em] uppercase mb-4" style={{ color: "#c9a84c" }}>Targets</div>
+          <div className="space-y-4">
+            {[
+              { label: "10 Year", year: "2035", items: ["6,000 Monthly pax (avg)", "2.0B VND / month (avg)", "25B VND for the year", "9B VND in profits", "35% Net profit"] },
+              { label: "3 Year",  year: "2028", items: ["4,250 Monthly pax (avg)", "1.5B VND / month (avg)", "18B VND for the year", "6B VND in profits", "35% Net profit"] },
+              { label: "1 Year",  year: "2026", items: ["2,500 Monthly pax (avg)", "1.0B VND / month (avg)", "9B VND for the year",  "3B VND in profits", "30% Net profit"] },
+            ].map((t, i) => (
+              <div key={t.year} className={i > 0 ? "pt-4 border-t" : ""} style={{ borderColor: "rgba(201,168,76,0.15)" }}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "rgba(255,245,220,0.80)" }}>{t.label} Target</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-sm" style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}>{t.year}</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {t.items.map((item) => (
+                    <li key={item} className="flex items-start gap-1.5 text-[10px]" style={{ color: "rgba(255,245,220,0.48)" }}>
+                      <span className="mt-[4px] h-1 w-1 rounded-full shrink-0" style={{ background: "#c9a84c", opacity: 0.6 }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Brand Kit moved to Marketing Plans / Settings */}
-
       {/* ── MOBILE ONLY: compact brand summary + USPs ── */}
-      <div className="sm:hidden rounded-card border border-border overflow-hidden shadow-card" style={{ background: "#1a1714" }}>
-        {/* Mission + Big Idea one-liners */}
-        <div className="px-4 pt-4 pb-3 border-b border-white/10">
-          <div className="text-[8px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-1">Mission</div>
-          <div className="font-subheading text-[13px] font-medium text-white/90 leading-snug">
-            The Roof brings <em className="not-italic" style={{ color: "#c9a84c" }}>like-minded souls</em> together
+      <div className="sm:hidden rounded-card border overflow-hidden shadow-card" style={{ background: "#2b1e0d", borderColor: "rgba(201,168,76,0.25)" }}>
+        {/* Vision one-liner */}
+        <div className="px-4 pt-4 pb-3 border-b" style={{ borderColor: "rgba(201,168,76,0.15)" }}>
+          <div className="text-[8px] font-semibold tracking-[0.14em] uppercase mb-1" style={{ color: "#c9a84c" }}>Vision</div>
+          <div className="text-[12px] italic leading-snug" style={{ color: "rgba(255,245,220,0.70)" }}>
+            A melting pot of culture — where diverse backgrounds come together.
           </div>
-          <div className="mt-2 text-[8px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-1">Big Idea</div>
-          <div className="font-subheading text-[13px] italic leading-snug" style={{ color: "#c9a84c" }}>
-            Nốt nhịp tắng không
-          </div>
-          <div className="text-[11px] text-white/45 leading-snug mt-0.5">
-            Da Nang's only beachfront rooftop — where east meets west.
+          <div className="mt-2 text-[8px] font-semibold tracking-[0.14em] uppercase mb-1" style={{ color: "#c9a84c" }}>Niche</div>
+          <div className="text-[12px] font-medium leading-snug" style={{ color: "rgba(255,245,220,0.85)" }}>
+            International rooftop lounge — <em className="not-italic" style={{ color: "#c9a84c" }}>Da Nang's only beachfront</em>
           </div>
         </div>
         {/* USP chips */}
         <div className="px-4 py-3">
-          <div className="text-[8px] font-semibold tracking-[0.12em] uppercase text-white/35 mb-2">Our 5 Unique Selling Points</div>
+          <div className="text-[8px] font-semibold tracking-[0.14em] uppercase mb-2" style={{ color: "#c9a84c" }}>Our 5 Unique Selling Points</div>
           <div className="flex flex-wrap gap-1.5">
             {USPS.map((u) => (
               <span
