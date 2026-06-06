@@ -53,6 +53,7 @@ import {
 import { useUpdateEmployeeProfile } from "@/hooks/useEmployees"
 import { useAuthStore } from "@/stores/authStore"
 import { useOrgChart, useUpdateReportsTo, type OrgMember } from "@/hooks/useOrgChart"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -431,36 +432,32 @@ export function TeamDirectory() {
         </div>
       ) : null}
 
-      {/* ── Stats strip ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" style={{ padding: "4px 0", gap: 0 }}>
-        <StatCard
-          label="Total"
-          value={stats.total}
-          sub="Full-time & part-time"
-          icon={<Users size={13} color="#7A7260" />}
-          noRightBorder
-        />
-        <StatCard
-          label="On Shift Now"
-          value={stats.onNow}
-          sub={`Active right now · ${nowTime}`}
-          icon={<Clock size={13} color="#3D6B4A" />}
-          live
-          noRightBorder
-        />
-        <StatCard
-          label="Scheduled This Week"
-          value={stats.total}
-          sub={`${Math.max(0, allStaff.length - stats.onNow)} unscheduled`}
-          icon={<Calendar size={13} color="#7A7260" />}
-        />
-        <StatCard
-          label="Managers"
-          value={stats.managers}
-          sub="GM · Floor · Supervisor · Mkt"
-          icon={<Briefcase size={13} color="#7A7260" />}
-          noRightBorder
-        />
+      {/* ── Stats strip — mobile: compact 2-col, desktop: 5-col ── */}
+      {/* Mobile */}
+      <div className="sm:hidden grid grid-cols-2" style={{ borderTop: "1px solid #E0D8C8", borderBottom: "1px solid #E0D8C8", marginTop: 8 }}>
+        {[
+          { label: "Total", value: stats.total, sub: "staff", live: false },
+          { label: "On Shift", value: stats.onNow, sub: nowTime, live: true },
+          { label: "Scheduled", value: stats.total, sub: "this week", live: false },
+          { label: "Managers", value: stats.managers, sub: "GM · Floor · Mkt", live: false },
+        ].map((s, i) => (
+          <div key={s.label} style={{
+            padding: "8px 12px",
+            borderRight: i % 2 === 0 ? "1px solid #E0D8C8" : "none",
+            borderBottom: i < 2 ? "1px solid #E0D8C8" : "none",
+          }}>
+            <div style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: ".09em", color: s.live ? "#3D6B4A" : "#7A7260", fontWeight: 600, marginBottom: 1 }}>{s.label}</div>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600, lineHeight: 1, color: s.live ? "#3D6B4A" : "#1A1814" }}>{s.value}</div>
+            <div style={{ fontSize: 9, color: "#A89E8C", marginTop: 1 }}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+      {/* Desktop */}
+      <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5" style={{ padding: "4px 0", gap: 0 }}>
+        <StatCard label="Total" value={stats.total} sub="Full-time & part-time" icon={<Users size={13} color="#7A7260" />} noRightBorder />
+        <StatCard label="On Shift Now" value={stats.onNow} sub={`Active right now · ${nowTime}`} icon={<Clock size={13} color="#3D6B4A" />} live noRightBorder />
+        <StatCard label="Scheduled This Week" value={stats.total} sub={`${Math.max(0, allStaff.length - stats.onNow)} unscheduled`} icon={<Calendar size={13} color="#7A7260" />} />
+        <StatCard label="Managers" value={stats.managers} sub="GM · Floor · Supervisor · Mkt" icon={<Briefcase size={13} color="#7A7260" />} noRightBorder />
         <StatCard
           label="Contracts Signed"
           value={stats.contractsSigned}
@@ -473,8 +470,8 @@ export function TeamDirectory() {
 
       {view === "list" && (
         <>
-          {/* ── Dept chips ──────────────────────────────────────────────── */}
-          <div style={{ padding: "10px 24px", background: "rgba(255, 255, 255, 1)", borderBottom: "1px solid rgba(255, 255, 255, 1)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* ── Dept chips — desktop only ────────────────────────────── */}
+          <div className="hidden sm:flex" style={{ padding: "10px 24px", background: "rgba(255, 255, 255, 1)", borderBottom: "1px solid rgba(255, 255, 255, 1)", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".09em", color: "#7A7260", fontWeight: 600, marginRight: 4 }}>Departments</span>
             {departments.map((d) => {
               const t = getDeptTheme(d)
@@ -497,21 +494,21 @@ export function TeamDirectory() {
             })}
           </div>
 
-          {/* ── Filter bar ──────────────────────────────────────────────── */}
-          <div style={{ padding: "10px 24px", background: "rgba(255, 255, 255, 1)", borderBottom: "1px solid rgba(255, 255, 255, 1)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 6, padding: "6px 12px", flex: 1, minWidth: 200, maxWidth: 320 }}>
-              <Search size={13} color="#A89E8C" />
+          {/* ── Filter bar — all 3 on one row ───────────────────────── */}
+          <div style={{ padding: "8px 12px", background: "rgba(255, 255, 255, 1)", borderBottom: "1px solid #E0D8C8", display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 6, padding: "5px 10px", flex: 1, minWidth: 0 }}>
+              <Search size={12} color="#A89E8C" style={{ flexShrink: 0 }} />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search employees…"
-                style={{ border: "none", outline: "none", background: "none", fontSize: 12.5, fontFamily: "'DM Sans', sans-serif", color: "#1A1814", width: "100%" }}
+                style={{ border: "none", outline: "none", background: "none", fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: "#1A1814", width: "100%", minWidth: 0 }}
               />
             </div>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              style={{ padding: "6px 10px", border: "1px solid #E0D8C8", borderRadius: 6, fontSize: 12, fontFamily: "'DM Sans', sans-serif", background: "#FDFAF5", color: "#4A4538", outline: "none", cursor: "pointer" }}
+              style={{ padding: "5px 6px", border: "1px solid #E0D8C8", borderRadius: 6, fontSize: 11, fontFamily: "'DM Sans', sans-serif", background: "#FDFAF5", color: "#4A4538", outline: "none", cursor: "pointer", flexShrink: 0 }}
             >
               <option value="all">All types</option>
               <option value="full">Full-time</option>
@@ -520,16 +517,16 @@ export function TeamDirectory() {
             <select
               value={shiftFilter}
               onChange={(e) => setShiftFilter(e.target.value)}
-              style={{ padding: "6px 10px", border: "1px solid #E0D8C8", borderRadius: 6, fontSize: 12, fontFamily: "'DM Sans', sans-serif", background: "#FDFAF5", color: "#4A4538", outline: "none", cursor: "pointer" }}
+              style={{ padding: "5px 6px", border: "1px solid #E0D8C8", borderRadius: 6, fontSize: 11, fontFamily: "'DM Sans', sans-serif", background: "#FDFAF5", color: "#4A4538", outline: "none", cursor: "pointer", flexShrink: 0 }}
             >
               <option value="all">All staff</option>
-              <option value="on">On shift now</option>
+              <option value="on">On shift</option>
               <option value="off">Off shift</option>
             </select>
           </div>
 
           {/* ── Content ─────────────────────────────────────────────────── */}
-          <div style={{ padding: "20px 24px" }}>
+          <div className="px-3 py-4 sm:px-6 sm:py-5">
             {isLoading ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
                 {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -576,8 +573,8 @@ export function TeamDirectory() {
                         </span>
                       </div>
 
-                      {/* Cards grid */}
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
+                      {/* Cards grid — 1 col on mobile, auto-fill on desktop */}
+                      <div className="grid gap-2 sm:gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}>
                         {people.map((person) => (
                           <TeamMemberCard
                             key={person.id}
@@ -1196,6 +1193,7 @@ function TeamMemberCard({
   const [accessEditOpen, setAccessEditOpen] = useState(false)
   const updateProfile = useUpdateEmployeeProfile(person.id)
   const isOwner = useAuthStore((s) => s.isOwner())
+  const isMobile = useIsMobile()
   const qc = useQueryClient()
   const canChangeAccess = isOwner && person.role !== "owner"
   const maxHrs = person.role === "owner" ? 50 : 40
@@ -1210,6 +1208,10 @@ function TeamMemberCard({
   const hireDisplay = person.hire_date
     ? new Date(person.hire_date).toLocaleDateString("en-US", { month: "short", year: "numeric" })
     : null
+
+  const cardPad = isMobile ? 10 : 14
+  const avatarSize = isMobile ? 30 : 36
+  const nameFontSize = isMobile ? 12.5 : 13.5
 
   return (
     <div
@@ -1227,14 +1229,14 @@ function TeamMemberCard({
       onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 3px 12px rgba(0,0,0,.07)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)" }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; (e.currentTarget as HTMLDivElement).style.transform = "none" }}
     >
-      <Link to={`/team/${person.id}`} style={{ display: "block", padding: 14, textDecoration: "none", color: "inherit" }}>
+      <Link to={`/team/${person.id}`} style={{ display: "block", padding: cardPad, textDecoration: "none", color: "inherit" }}>
         {/* Top row: avatar + info + menu */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: isMobile ? 8 : 10, marginBottom: isMobile ? 7 : 10 }}>
           {/* Avatar */}
           <div style={{ position: "relative", flexShrink: 0 }}>
-            <Avatar className="h-9 w-9" style={{ width: 36, height: 36 }}>
+            <Avatar style={{ width: avatarSize, height: avatarSize }}>
               <AvatarImage src={person.avatar_url ?? undefined} alt={displayName} />
-              <AvatarFallback style={{ background: deptTheme.accent, color: "#fff", fontSize: 12, fontWeight: 700 }}>
+              <AvatarFallback style={{ background: deptTheme.accent, color: "#fff", fontSize: isMobile ? 10 : 12, fontWeight: 700 }}>
                 {initials(displayName)}
               </AvatarFallback>
             </Avatar>
@@ -1249,21 +1251,21 @@ function TeamMemberCard({
 
           {/* Name + role + badges */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1814", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div style={{ fontSize: nameFontSize, fontWeight: 600, color: "#1A1814", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {displayName}
             </div>
-            <div style={{ fontSize: 11.5, color: "#7A7260", marginTop: 1 }}>{jobLabel ?? ""}</div>
-            <div style={{ display: "flex", gap: 5, marginTop: 5, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: deptTheme.badgeBg, color: deptTheme.badgeText, border: `1px solid ${deptTheme.badgeBorder}` }}>
+            <div style={{ fontSize: isMobile ? 10.5 : 11.5, color: "#7A7260", marginTop: 1 }}>{jobLabel ?? ""}</div>
+            <div style={{ display: "flex", gap: 4, marginTop: isMobile ? 3 : 5, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: deptTheme.badgeBg, color: deptTheme.badgeText, border: `1px solid ${deptTheme.badgeBorder}` }}>
                 {person.department ?? "—"}
               </span>
               {isManager && (
-                <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#F5EEE0", color: "#7A5820", border: "1px solid #D8CAAC" }}>
+                <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#F5EEE0", color: "#7A5820", border: "1px solid #D8CAAC" }}>
                   Manager
                 </span>
               )}
               {person.employment_type && (
-                <span style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#EDE8DD", color: "#7A7260", border: "1px solid #E0D8C8" }}>
+                <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 4, textTransform: "uppercase", letterSpacing: ".04em", background: "#EDE8DD", color: "#7A7260", border: "1px solid #E0D8C8" }}>
                   {person.employment_type.replace(/[_-]/g, " ")}
                 </span>
               )}
@@ -1296,40 +1298,67 @@ function TeamMemberCard({
           </DropdownMenu>
         </div>
 
-        {/* KPI grid: week hours + joined */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
-          <div style={{ background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 5, padding: "7px 9px" }}>
-            <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".07em", color: "#7A7260", fontWeight: 600, marginBottom: 2 }}>Week Hours</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: hrsColor, fontFamily: "'DM Mono', monospace" }}>{weekHrs}h</div>
-            <div style={{ height: 3, background: "#E0D8C8", borderRadius: 2, marginTop: 4 }}>
-              <div style={{ height: 3, borderRadius: 2, background: hrsColor, width: `${hrsPct}%` }} />
+        {/* KPI row — compact on mobile, grid on desktop */}
+        {isMobile ? (
+          <div style={{ display: "flex", gap: 6, marginBottom: isOnNow ? 6 : 0, alignItems: "center" }}>
+            <div style={{ flex: 1, background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 5, padding: "5px 8px" }}>
+              <div style={{ fontSize: 8.5, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7260", fontWeight: 600 }}>Week hrs</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 1 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: hrsColor, fontFamily: "'DM Mono', monospace" }}>{weekHrs}h</span>
+                <div style={{ flex: 1, height: 3, background: "#E0D8C8", borderRadius: 2 }}>
+                  <div style={{ height: 3, borderRadius: 2, background: hrsColor, width: `${hrsPct}%` }} />
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: 9.5, color: "#A89E8C", marginTop: 2 }}>of {maxHrs}h target</div>
+            <div style={{ flex: 1, background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 5, padding: "5px 8px" }}>
+              <div style={{ fontSize: 8.5, textTransform: "uppercase", letterSpacing: ".06em", color: "#7A7260", fontWeight: 600 }}>Joined</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#1A1814", marginTop: 1 }}>{hireDisplay ?? "—"}</div>
+            </div>
+            {isOnNow && (
+              <div style={{ background: "#EBF2ED", border: "1px solid #C0D8C8", borderRadius: 5, padding: "5px 8px", display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3D6B4A", flexShrink: 0, display: "inline-block" }} />
+                <span style={{ fontSize: 10, color: "#3D6B4A", fontWeight: 500, whiteSpace: "nowrap" }}>On shift</span>
+              </div>
+            )}
           </div>
-          <div style={{ background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 5, padding: "7px 9px" }}>
-            <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".07em", color: "#7A7260", fontWeight: 600, marginBottom: 2 }}>Joined</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1814" }}>{hireDisplay ?? "—"}</div>
-            <div style={{ fontSize: 9.5, color: "#A89E8C" }}>Start date</div>
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* KPI grid: week hours + joined */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+              <div style={{ background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 5, padding: "7px 9px" }}>
+                <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".07em", color: "#7A7260", fontWeight: 600, marginBottom: 2 }}>Week Hours</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: hrsColor, fontFamily: "'DM Mono', monospace" }}>{weekHrs}h</div>
+                <div style={{ height: 3, background: "#E0D8C8", borderRadius: 2, marginTop: 4 }}>
+                  <div style={{ height: 3, borderRadius: 2, background: hrsColor, width: `${hrsPct}%` }} />
+                </div>
+                <div style={{ fontSize: 9.5, color: "#A89E8C", marginTop: 2 }}>of {maxHrs}h target</div>
+              </div>
+              <div style={{ background: "#F4EFE6", border: "1px solid #E0D8C8", borderRadius: 5, padding: "7px 9px" }}>
+                <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: ".07em", color: "#7A7260", fontWeight: 600, marginBottom: 2 }}>Joined</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1814" }}>{hireDisplay ?? "—"}</div>
+                <div style={{ fontSize: 9.5, color: "#A89E8C" }}>Start date</div>
+              </div>
+            </div>
 
-        {/* On shift bar */}
-        {isOnNow && (
-          <div style={{ background: "#EBF2ED", border: "1px solid #C0D8C8", borderRadius: 5, padding: "5px 9px", display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#3D6B4A", fontWeight: 500, marginBottom: 10 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3D6B4A", animation: "rpulse 1.5s infinite", flexShrink: 0, display: "inline-block" }} />
-            On shift right now
-          </div>
+            {/* On shift bar */}
+            {isOnNow && (
+              <div style={{ background: "#EBF2ED", border: "1px solid #C0D8C8", borderRadius: 5, padding: "5px 9px", display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#3D6B4A", fontWeight: 500, marginBottom: 10 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3D6B4A", animation: "rpulse 1.5s infinite", flexShrink: 0, display: "inline-block" }} />
+                On shift right now
+              </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 9, borderTop: "1px solid #E0D8C8" }}>
+              {displayEmail && (
+                <span style={{ fontSize: 11, color: "#7A7260", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Mail size={11} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{displayEmail}</span>
+                </span>
+              )}
+            </div>
+          </>
         )}
-
-        {/* Footer */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 9, borderTop: "1px solid #E0D8C8" }}>
-          {displayEmail && (
-            <span style={{ fontSize: 11, color: "#7A7260", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, display: "flex", alignItems: "center", gap: 5 }}>
-              <Mail size={11} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{displayEmail}</span>
-            </span>
-          )}
-        </div>
       </Link>
 
       {/* Edit access modal */}
