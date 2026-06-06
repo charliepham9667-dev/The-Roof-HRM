@@ -489,7 +489,6 @@ const STATUS_ORDER: WishlistStatus[] = ["request", "approved", "ordered", "deliv
 // ─── Procurement tab ───────────────────────────────────────────────────────────
 
 function ProcurementTab({ canManage }: { canManage: boolean }) {
-  const [priorityFilter, setPriorityFilter] = useState<WishlistPriority | "all">("all")
   const [collapsedSections, setCollapsedSections] = useState<Set<WishlistStatus>>(new Set())
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
@@ -497,10 +496,7 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
   const { data: items = [], isLoading } = useWishlistItems()
   const deleteItem = useDeleteWishlistItem()
 
-  const filtered = useMemo(() => items.filter((item) => {
-    if (priorityFilter !== "all" && item.priority !== priorityFilter) return false
-    return true
-  }), [items, priorityFilter])
+  const filtered = items
 
   const grouped = useMemo(() =>
     STATUS_ORDER.reduce<Record<WishlistStatus, WishlistItem[]>>((acc, s) => {
@@ -530,82 +526,56 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-4 flex-1 min-h-0">
-      {/* Controls */}
-      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        {/* Priority pills */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] tracking-widest text-muted-foreground uppercase font-semibold mr-1">Priority</span>
-          {PRIORITIES.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => setPriorityFilter(p.value as any)}
-              className={cn(
-                "rounded-full px-[14px] py-[6px] text-[13px] font-medium transition-all",
-                priorityFilter === p.value
-                  ? "bg-[#78350F] text-white"
-                  : "bg-white border border-[#D1D5DB] text-[#6B7280] hover:border-[#9CA3AF]"
-              )}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-        {canManage && (
+    <div className="flex flex-col gap-3 flex-1 min-h-0">
+      {/* Top bar: Add Item only */}
+      {canManage && (
+        <div className="shrink-0 flex justify-end">
           <Button
             type="button"
+            size="sm"
             onClick={openAdd}
-            className="w-full shrink-0 sm:w-auto"
+            className="h-8 px-3 text-xs gap-1"
           >
-            <Plus className="h-4 w-4" />
-            + Add Item
+            <Plus className="h-3.5 w-3.5" />
+            Add Item
           </Button>
-        )}
-      </div>
-
-      {/* Summary strip */}
-      {!isLoading && filtered.length > 0 && (
-        <div className="shrink-0 rounded-card border border-border bg-card shadow-card overflow-hidden">
-          {/* Status grid — 2×2 on mobile, horizontal on desktop */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:gap-4 sm:px-4 sm:py-2.5">
-            {STATUS_ORDER.map((s, idx) => {
-              const cfg = STATUS_SECTION[s]
-              const count = grouped[s].length
-              const sectionSpend = grouped[s].reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
-              return (
-                <div
-                  key={s}
-                  className={cn(
-                    "flex items-center justify-between gap-2 px-3 py-2",
-                    /* Mobile: add border between cells */
-                    idx % 2 === 0 ? "border-r border-border/50 sm:border-r-0" : "",
-                    idx < 2 ? "border-b border-border/50 sm:border-b-0" : "",
-                    "sm:flex-none sm:px-0 sm:py-0"
-                  )}
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cfg.accent }} />
-                    <span className="text-[11px] font-semibold truncate" style={{ color: cfg.accent }}>{cfg.label}</span>
-                    <span className="rounded-full px-1.5 py-px text-[10px] font-bold shrink-0" style={{ background: cfg.badgeBg, color: cfg.accent }}>{count}</span>
-                  </div>
-                  <span className="text-[11px] tabular-nums whitespace-nowrap font-medium text-foreground shrink-0">
-                    {sectionSpend > 0 ? formatVnd(sectionSpend) : "—"}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-          {/* Pending spend footer */}
-          <div className="border-t border-border/50 px-3 py-2 flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Pending spend</span>
-            <span className="text-[11px] font-bold tabular-nums text-foreground">{formatVnd(totalPendingSpend)}</span>
-          </div>
         </div>
       )}
 
+      {/* Summary strip */}
+      {!isLoading && filtered.length > 0 && (() => {
+        const SHORT: Record<WishlistStatus, string> = { request: "Req", approved: "App", ordered: "Ord", delivered: "Del" }
+        return (
+          <div className="shrink-0 rounded-card border border-border bg-card shadow-card overflow-hidden">
+            <div className="grid grid-cols-4 divide-x divide-border/50">
+              {STATUS_ORDER.map((s) => {
+                const cfg = STATUS_SECTION[s]
+                const count = grouped[s].length
+                const spend = grouped[s].reduce((sum, i) => sum + (i.estimatedCost ?? 0) * i.quantity, 0)
+                return (
+                  <div key={s} className="flex flex-col items-center px-2 py-2 gap-0.5">
+                    <div className="flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: cfg.accent }} />
+                      <span className="text-[10px] font-bold" style={{ color: cfg.accent }}>{SHORT[s]}</span>
+                      <span className="text-[10px] font-bold" style={{ color: cfg.accent }}>{count}</span>
+                    </div>
+                    <span className="text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
+                      {spend > 0 ? formatVnd(spend) : "—"}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="border-t border-border/50 px-3 py-1.5 flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">Pending spend</span>
+              <span className="text-[10px] font-bold tabular-nums text-foreground">{formatVnd(totalPendingSpend)}</span>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Status-grouped sections */}
-      <div className="flex-1 overflow-auto space-y-3">
+      <div className="flex-1 overflow-auto space-y-2">
         {isLoading ? (
           <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">Loading…</div>
         ) : filtered.length === 0 ? (
@@ -624,11 +594,11 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
 
             return (
               <div key={status} className="rounded-card border border-border overflow-hidden shadow-card">
-                {/* Section header */}
+                {/* Section header — sticky so label stays visible while scrolling */}
                 <button
                   type="button"
                   onClick={() => toggleSection(status)}
-                  className="w-full flex items-center justify-between px-3 py-2 border-b border-border transition-colors hover:bg-secondary/30"
+                  className="sticky top-0 z-10 w-full flex items-center justify-between px-3 py-2 border-b border-border transition-colors hover:bg-secondary/30"
                   style={{ background: cfg.sectionBg, borderTop: `2px solid ${cfg.accent}` }}
                 >
                   <div className="flex items-center gap-2">
@@ -698,39 +668,39 @@ function ProcurementTab({ canManage }: { canManage: boolean }) {
                       </div>
 
                       {/* Mobile card list */}
-                      <div className="md:hidden divide-y divide-border/50">
+                      <div className="md:hidden divide-y divide-border/40">
                         {sectionItems.map((item) => {
                           const pri = PRIORITY_BADGE[item.priority]
                           const totalCost = (item.estimatedCost ?? 0) * item.quantity
                           return (
                             <div
                               key={item.id}
-                              className="flex items-start gap-2 px-3 py-2.5"
+                              className="flex items-center gap-2 px-3 py-2"
                               style={{ borderLeft: `3px solid ${cfg.accent}55` }}
                             >
                               {/* Main content */}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-sm font-medium text-foreground leading-snug">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-[13px] font-medium text-foreground leading-snug truncate">
                                     {item.title}
                                   </span>
-                                  <Badge variant={pri.variant} className="shrink-0">{pri.label}</Badge>
+                                  <Badge variant={pri.variant} className="shrink-0 text-[9px] px-1.5 py-px">{pri.label}</Badge>
                                 </div>
-                                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                                  <span>Qty <span className="font-medium text-foreground">{item.quantity}</span></span>
+                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                  <span>×<span className="font-medium text-foreground">{item.quantity}</span></span>
                                   {(totalCost || item.estimatedCost) ? (
-                                    <span className="whitespace-nowrap tabular-nums font-medium text-foreground">
+                                    <span className="tabular-nums font-medium text-foreground">
                                       {formatVnd(totalCost || item.estimatedCost)}
                                     </span>
                                   ) : null}
+                                  {item.notes && (
+                                    <span className="italic text-muted-foreground truncate">{item.notes}</span>
+                                  )}
                                 </div>
-                                {item.notes && (
-                                  <div className="mt-0.5 text-[11px] italic text-muted-foreground line-clamp-2">{item.notes}</div>
-                                )}
                               </div>
                               {/* Actions always visible */}
                               {canManage && (
-                                <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                                <div className="flex items-center gap-0.5 shrink-0">
                                   <button type="button" onClick={() => openEdit(item)} className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                                     <Pencil className="h-3.5 w-3.5" />
                                   </button>
@@ -1412,7 +1382,7 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
     <div className="flex flex-col gap-4 flex-1 min-h-0">
 
       {/* Sync bar */}
-      <div className="flex items-center gap-3 rounded-card border border-border bg-card px-4 py-2.5 shrink-0 shadow-card flex-wrap">
+      <div className="flex items-center gap-2 rounded-card border border-border bg-card px-3 py-2 shrink-0 shadow-card flex-wrap">
         <div className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
         <span className="text-[11px] text-muted-foreground">
           Source: <span className="font-medium text-foreground">HQ Calendar (Google Sheets)</span>
@@ -1445,19 +1415,20 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
 
       <DJProfilesModal open={profilesOpen} onClose={() => setProfilesOpen(false)} />
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-5 md:gap-3 shrink-0">
+      {/* Summary cards — 3-col on mobile (hide No Shows on small screens) */}
+      <div className="grid grid-cols-3 gap-2 md:grid-cols-5 md:gap-3 shrink-0">
         {[
-          { label: "Total Sets", value: stats.totalSets, sub: "Jan 1 – Today" },
-          { label: "Unique DJs", value: stats.uniqueDJs, sub: "in this period" },
-          { label: "Total Paid", value: `${formatVndAmount(stats.totalPaid)} ₫`, sub: "confirmed", accent: "green" },
-          { label: "Outstanding", value: `${formatVndAmount(stats.outstanding)} ₫`, sub: "unpaid sets", accent: "amber" },
-          { label: "No Shows", value: stats.noShows, sub: "no payment due" },
+          { label: "Sets", value: stats.totalSets, sub: "Jan–Today" },
+          { label: "Total Paid", value: `${formatVndAmount(stats.totalPaid)} ₫`, accent: "green" },
+          { label: "Outstanding", value: `${formatVndAmount(stats.outstanding)} ₫`, accent: "amber" },
+          { label: "Unique DJs", value: stats.uniqueDJs, sub: "period", mobileHide: true },
+          { label: "No Shows", value: stats.noShows, sub: "N/A", mobileHide: true },
         ].map((c) => (
           <div
             key={c.label}
             className={cn(
-              "rounded-card border p-3 shadow-card",
+              "rounded-card border p-2 shadow-card",
+              (c as any).mobileHide ? "hidden md:block" : "",
               c.accent === "green" ? "border-green-200 bg-green-50" :
               c.accent === "amber" ? "border-amber-200 bg-amber-50" :
               "border-border bg-card"
@@ -1470,54 +1441,54 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
               "text-muted-foreground"
             )}>{c.label}</div>
             <div className={cn(
-              "font-mono text-lg font-semibold leading-none",
+              "font-mono text-base font-semibold leading-none tabular-nums",
               c.accent === "green" ? "text-green-700" :
               c.accent === "amber" ? "text-[#b5620a]" :
               "text-foreground"
             )}>{c.value}</div>
-            <div className="text-[10px] text-muted-foreground mt-1">{c.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* Filter bar */}
-      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        {/* Status */}
-        <div className="flex flex-wrap items-center gap-1 rounded border border-border bg-card p-0.5">
-          {(["all", "done", "scheduled", "no_show"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setStatusFilter(v)} className={filterBtnCls(statusFilter === v)}>
-              {v === "all" ? "All" : v === "no_show" ? "No Show" : v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
-        </div>
-        {/* Payment */}
-        <div className="flex items-center gap-1 rounded border border-border bg-card p-0.5">
-          {(["all", "unpaid", "paid"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setPayFilter(v)} className={filterBtnCls(payFilter === v)}>
-              {v === "all" ? "All Payment" : v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
-        </div>
-        {/* Payer */}
-        <div className="flex items-center gap-1 rounded border border-border bg-card p-0.5">
-          {(["all", "foreigner_charlie", "local_company"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setPayerFilter(v)} className={filterBtnCls(payerFilter === v)}>
-              {v === "all" ? "All Payer" : v === "foreigner_charlie" ? "Charlie" : "Company"}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
-          <Button type="button" variant="outline" onClick={exportCsv} className="h-auto flex-1 px-3 py-1 text-[10px] font-medium sm:flex-none">
-            <Download className="h-3 w-3" />
-            Export CSV
-          </Button>
-          {canManage && (
-            <Button type="button" onClick={openAdd} className="h-auto flex-1 px-3 py-1.5 text-[10px] font-semibold sm:flex-none">
-              <Plus className="h-3.5 w-3.5" />
-              Add DJ Set
+      {/* Filter bar — horizontal scroll on mobile */}
+      <div className="shrink-0">
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+          {/* Status */}
+          <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5 shrink-0">
+            {(["all", "done", "scheduled", "no_show"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setStatusFilter(v)} className={filterBtnCls(statusFilter === v)}>
+                {v === "all" ? "All" : v === "no_show" ? "No Show" : v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+          {/* Payment */}
+          <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5 shrink-0">
+            {(["all", "unpaid", "paid"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setPayFilter(v)} className={filterBtnCls(payFilter === v)}>
+                {v === "all" ? "All" : v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+          {/* Payer */}
+          <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5 shrink-0">
+            {(["all", "foreigner_charlie", "local_company"] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setPayerFilter(v)} className={filterBtnCls(payerFilter === v)}>
+                {v === "all" ? "All" : v === "foreigner_charlie" ? "Charlie" : "Company"}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-1.5 shrink-0">
+            <Button type="button" variant="outline" onClick={exportCsv} className="h-7 px-2.5 text-[10px]">
+              <Download className="h-3 w-3" />
+              <span className="hidden sm:inline">Export CSV</span>
             </Button>
-          )}
+            {canManage && (
+              <Button type="button" onClick={openAdd} className="h-7 px-2.5 text-[10px]">
+                <Plus className="h-3 w-3" />
+                Add Set
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1747,11 +1718,11 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
 
                 return (
                   <div key={`m-${monthKey}`}>
-                    {/* Month header */}
+                    {/* Month header — sticky */}
                     <button
                       type="button"
                       onClick={() => toggleMonth(monthKey)}
-                      className="flex w-full flex-wrap items-center gap-2 bg-muted/30 px-4 py-2 text-left border-b border-border"
+                      className="sticky top-0 z-10 flex w-full flex-wrap items-center gap-2 bg-muted/50 backdrop-blur-sm px-3 py-1.5 text-left border-b border-border"
                     >
                       {isExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronUp className="h-3 w-3 text-muted-foreground" />}
                       <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{monthLabel(monthKey)}</span>
@@ -1793,27 +1764,26 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
                           key={p.id}
                           onClick={() => canManage && openEdit(p)}
                           className={cn(
-                            "px-4 py-3 transition-colors",
+                            "px-3 py-2 transition-colors",
                             isNoShow ? "opacity-55" : "",
                             isTonight ? "bg-amber-50/50" : "",
                             isOutstanding ? "border-l-2 border-l-[#b5620a]" : "",
                           )}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="font-medium text-sm text-foreground truncate">{p.event_name}</div>
-                              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <span className="font-mono">
-                                  {new Date(p.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" })}
-                                </span>
-                                {isTonight && <span className="text-[9px] font-bold text-[#b5620a] uppercase tracking-wide">Tonight</span>}
-                              </div>
+                          {/* Row 1: event name + amount */}
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-mono text-[10px] text-muted-foreground shrink-0">
+                                {new Date(p.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" })}
+                              </span>
+                              <span className="font-medium text-[13px] text-foreground truncate">{p.event_name}</span>
+                              {isTonight && <span className="text-[9px] font-bold text-[#b5620a] uppercase tracking-wide shrink-0">Tonight</span>}
                             </div>
                             {isNoShow ? (
-                              <span className="text-[11px] text-muted-foreground/40 whitespace-nowrap tabular-nums">—</span>
+                              <span className="text-[11px] text-muted-foreground/40 whitespace-nowrap tabular-nums shrink-0">—</span>
                             ) : (
                               <span className={cn(
-                                "font-mono text-sm font-medium whitespace-nowrap tabular-nums",
+                                "font-mono text-[12px] font-semibold whitespace-nowrap tabular-nums shrink-0",
                                 p.payment_status === "paid" ? "text-green-700" :
                                 p.payment_status === "unpaid" ? "text-[#b5620a]" :
                                 "text-muted-foreground"
@@ -1823,36 +1793,36 @@ function DJPaymentsTab({ canManage }: { canManage: boolean }) {
                             )}
                           </div>
 
-                          <div className="mt-1.5 flex items-center gap-1.5 text-xs">
-                            <span className="font-semibold text-foreground">{p.dj_name}</span>
+                          {/* Row 2: DJ + badges */}
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <span className="text-[11px] font-semibold text-foreground">{p.dj_name}</span>
                             {isOwnerDJ(p.dj_name) ? (
-                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded border bg-amber-50 text-[#b5620a] border-amber-200">👑 Owner</span>
+                              <span className="text-[9px] font-semibold px-1.5 py-px rounded border bg-amber-50 text-[#b5620a] border-amber-200">Owner</span>
                             ) : payerCfg ? (
-                              <span className={cn("text-[11px] font-medium", payerCfg.cls)}>{payerCfg.label}</span>
+                              <span className={cn("text-[10px] font-medium", payerCfg.cls)}>{payerCfg.label}</span>
                             ) : null}
-                          </div>
-
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={cycleStatus}
-                              title="Click to change status"
-                              className={cn(canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default")}
-                            >
-                              <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
-                            </button>
-                            {isNoShow ? (
-                              <span className="text-[10px] text-muted-foreground">N/A</span>
-                            ) : (
+                            <div className="flex items-center gap-1 ml-auto">
                               <button
                                 type="button"
-                                onClick={cyclePayment}
-                                title="Click to change payment status"
+                                onClick={cycleStatus}
+                                title="Click to change status"
                                 className={cn(canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default")}
                               >
-                                <Badge variant={payCfg.variant}>{payCfg.label}</Badge>
+                                <Badge variant={statusCfg.variant} className="text-[9px] px-1.5 py-px">{statusCfg.label}</Badge>
                               </button>
-                            )}
+                              {isNoShow ? (
+                                <span className="text-[10px] text-muted-foreground">N/A</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={cyclePayment}
+                                  title="Click to change payment status"
+                                  className={cn(canManage ? "hover:opacity-70 cursor-pointer" : "cursor-default")}
+                                >
+                                  <Badge variant={payCfg.variant} className="text-[9px] px-1.5 py-px">{payCfg.label}</Badge>
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )
@@ -1931,17 +1901,15 @@ export function Wishlist() {
             <Music2 className="h-3.5 w-3.5 shrink-0" />
             <span>DJ Pay</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("purchase_request")} className={tabCls("purchase_request")}>
+          <button type="button" onClick={() => setActiveTab("purchase_request")} className={cn(tabCls("purchase_request"), "hidden sm:flex")}>
             <FileText className="h-3.5 w-3.5 shrink-0" />
-            <span className="sm:hidden">Purchase</span>
-            <span className="hidden sm:inline">Purchase Request</span>
+            <span>Purchase Request</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("payment_request")} className={tabCls("payment_request")}>
+          <button type="button" onClick={() => setActiveTab("payment_request")} className={cn(tabCls("payment_request"), "hidden sm:flex")}>
             <Wallet className="h-3.5 w-3.5 shrink-0" />
-            <span className="sm:hidden">Payment</span>
-            <span className="hidden sm:inline">Payment Request</span>
+            <span>Payment Request</span>
           </button>
-          <button type="button" onClick={() => setActiveTab("inventory")} className={tabCls("inventory")}>
+          <button type="button" onClick={() => setActiveTab("inventory")} className={cn(tabCls("inventory"), "hidden sm:flex")}>
             <Boxes className="h-3.5 w-3.5 shrink-0" />
             <span>Inventory</span>
           </button>
