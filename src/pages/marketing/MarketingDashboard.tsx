@@ -1510,8 +1510,8 @@ function UpcomingEventsTable({
         )}
       </div>
 
-      {/* Mobile card list */}
-      <div className="space-y-2 md:hidden">
+      {/* Mobile card list — pipeline style */}
+      <div className="rounded-card border border-[#e2ddd7] bg-card shadow-card overflow-hidden md:hidden divide-y divide-[#e2ddd7]">
         {visible.map((row) => {
           const dt = new Date(row.iso + "T00:00:00")
           const daysUntil = differenceInDays(dt, new Date())
@@ -1519,7 +1519,6 @@ function UpcomingEventsTable({
           const isTomorrow = daysUntil === 1
           const isPast = daysUntil < 0
           const isSoon = daysUntil > 0 && daysUntil <= 2
-          const djs = row.csv ? [row.csv.dj1, row.csv.dj2].filter(Boolean).join(" · ") : ""
           const time = row.csv?.startTime && row.csv?.endTime ? `${row.csv.startTime} – ${row.csv.endTime}` : ""
           const headline = row.csv?.eventName || row.supa?.title || "Untitled"
           const clickable = !!row.supa
@@ -1535,35 +1534,72 @@ function UpcomingEventsTable({
           const checklist = row.supa?.checklist ?? []
           const done = checklist.filter((c) => c.done).length
           const total = checklist.length
-          const detailBits: string[] = []
-          if (djs) detailBits.push(djs)
-          if (row.csv?.genre) detailBits.push(row.csv.genre)
-          if (row.csv?.promotion) detailBits.push(`Promo: ${row.csv.promotion}`)
-          const detailStr = detailBits.join(" · ") || "—"
+          const genres = row.csv?.genre
+            ? row.csv.genre.split(/[,;·]+/).map((g) => g.trim()).filter(Boolean)
+            : []
+          const promos = row.csv?.promotion && row.csv.promotion.toLowerCase() !== "none"
+            ? row.csv.promotion.split(/[,;]+/).map((p) => p.trim()).filter(Boolean)
+            : []
+          const dj1 = row.csv?.dj1 || null
+          const dj2 = row.csv?.dj2 || null
+
           return (
             <div
               key={"m-" + row.iso + (row.supa?.id ?? "")}
               onClick={clickable ? () => onSelectEvent(row.supa!) : undefined}
               className={cn(
-                "rounded-card border border-border bg-card p-3 shadow-card",
+                "px-4 py-3 transition-colors",
+                isToday ? "bg-[#fdf3e7]" : "bg-card",
                 isPast && "opacity-60",
-                clickable && "cursor-pointer active:bg-secondary/50",
+                clickable && "cursor-pointer active:bg-secondary/40",
               )}
             >
+              {/* Row 1: date + status badge */}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{format(dt, "EEE, MMM d")}</div>
-                  <div className="mt-0.5 font-subheading text-sm font-semibold text-foreground">{headline}</div>
-                  {time && <div className="mt-0.5 text-xs tabular-nums text-muted-foreground">{time}</div>}
+                  <div className="text-[10px] uppercase tracking-wider text-[#9c9590]">{format(dt, "EEE, MMM d")}</div>
+                  <div className={cn(
+                    "mt-0.5 text-sm font-semibold leading-snug",
+                    isToday ? "text-[#b5620a]" : "text-[#1a1714]",
+                  )}>
+                    {headline}
+                    {isToday && (
+                      <span className="ml-2 inline-block rounded px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white" style={{ background: "#b5620a" }}>
+                        Tonight
+                      </span>
+                    )}
+                  </div>
+                  {time && <div className="mt-0.5 text-[10px] tabular-nums text-[#9c9590]">{time}</div>}
                 </div>
-                <span className={cn("shrink-0 rounded-sm border px-[7px] py-[2px] text-[10px] uppercase tracking-wide whitespace-nowrap", statusCls)}>
+                <span className={cn("shrink-0 rounded-sm border px-[7px] py-[2px] text-[9px] uppercase tracking-wide whitespace-nowrap font-semibold", statusCls)}>
                   {statusLabel}
                 </span>
               </div>
-              <div className="mt-1.5 text-xs text-foreground">{detailStr}</div>
+
+              {/* Row 2: DJ 1 / DJ 2 grid */}
+              {(dj1 || dj2) && (
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="min-w-0"><span className="text-[#9c9590]">DJ 1: </span><span className="text-[#1a1714]">{dj1 ?? "—"}</span></div>
+                  <div className="min-w-0"><span className="text-[#9c9590]">DJ 2: </span><span className="text-[#1a1714]">{dj2 ?? "—"}</span></div>
+                </div>
+              )}
+
+              {/* Row 3: genre + promo chips */}
+              {(genres.length > 0 || promos.length > 0) && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {genres.map((g) => (
+                    <span key={g} className="rounded border border-[#e2ddd7] bg-[#f0ece6] px-1.5 py-px text-[10px] text-[#6b6560]">{g}</span>
+                  ))}
+                  {promos.map((p) => (
+                    <span key={p} className="rounded border border-[#b8e0c8] bg-[#edf5f0] px-1.5 py-px text-[10px] text-[#2d7a4f]">{p}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* Row 4: tasks + manage */}
               <div className="mt-1.5 flex items-center justify-between gap-2">
-                <span className="text-[11px] text-muted-foreground">
-                  {row.supa ? (total > 0 ? `${done}/${total} prep` : "No tasks") : "Not in CRM"}
+                <span className="text-[10px] text-[#9c9590]">
+                  {row.supa ? (total > 0 ? `${done}/${total} tasks done` : "No tasks") : "Not in CRM"}
                 </span>
                 {clickable && <span className="text-[11px] font-semibold text-primary">Manage →</span>}
               </div>
