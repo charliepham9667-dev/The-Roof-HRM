@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reservationClient, RESERVATION_FUNC_URL } from '@/lib/reservationClient'
 import type { CsvReservation, ReservationStatus } from './useReservationsCsv'
 
+export type RespondType = 'confirm' | 'followup' | 'decline'
+
 const ICT_TZ = 'Asia/Ho_Chi_Minh'
 
 function getTodayIso() {
@@ -34,6 +36,9 @@ function stripTableTag(specialRequests: string | null): string | null {
   return specialRequests.replace(/\[Table preference:[^\]]*\]/i, '').trim() || null
 }
 
+const FULL_SELECT =
+  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, status, token, source, created_at, response_type, response_message, response_channels, responded_at'
+
 function mapRow(row: any): CsvReservation {
   const dateIso = row.requested_date ?? ''
   const tableZone = parseTableZone(row.special_requests)
@@ -56,8 +61,14 @@ function mapRow(row: any): CsvReservation {
     bookingStatus: row.status ?? 'pending',
     reservationSystemId: row.id,
     reservationSystemToken: row.token,
+    responseType: row.response_type ?? null,
+    responseMessage: row.response_message ?? null,
+    responseChannels: row.response_channels ?? null,
+    respondedAt: row.responded_at ?? null,
   }
 }
+
+// ─── Active reservations (today + upcoming) ───────────────────────────────────
 
 export function useWebFormReservations() {
   return useQuery({
@@ -71,7 +82,7 @@ export function useWebFormReservations() {
 
       const { data, error } = await reservationClient
         .from('reservations')
-        .select('id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, status, token, source, created_at')
+        .select(FULL_SELECT)
         .gte('requested_date', pastCutoff)
         .order('requested_date', { ascending: true })
         .order('requested_time', { ascending: true })
@@ -87,6 +98,33 @@ export function useWebFormReservations() {
     staleTime: 30000,
   })
 }
+
+// ─── Declined / cancelled / no-show log ──────────────────────────────────────
+
+export function useDeclinedReservations() {
+  return useQuery({
+    queryKey: ['declined-reservations'],
+    queryFn: async (): Promise<CsvReservation[]> => {
+      if (!reservationClient) return []
+
+      const { data, error } = await reservationClient
+        .from('reservations')
+        .select(FULL_SELECT)
+        .in('status', ['declined', 'cancelled', 'noshow'])
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('[useDeclinedReservations]', error)
+        return []
+      }
+
+      return (data || []).map(mapRow)
+    },
+    staleTime: 30000,
+  })
+}
+
+// ─── Accept / Decline (simple, no message) ───────────────────────────────────
 
 export function useAcceptReservation() {
   const queryClient = useQueryClient()
@@ -112,6 +150,41 @@ export function useDeclineReservation() {
   })
 }
 
+// ─── Respond to guest (confirm / follow-up / decline + send message) ─────────
+
+export function useRespondToGuest() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      token,
+      type,
+      message,
+      reason,
+      channels,
+    }: {
+      id: string
+      token: string
+      type: RespondType
+      message: string
+      reason?: string
+      channels: string[]
+    }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+      const { error } = await reservationClient.functions.invoke('respond-to-guest', {
+        body: { id, token, type, message, reason: reason ?? '', channels },
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webform-reservations'] })
+      queryClient.invalidateQueries({ queryKey: ['declined-reservations'] })
+    },
+  })
+}
+
+// ─── Send reminder email ──────────────────────────────────────────────────────
+
 export function useSendReminder() {
   return useMutation({
     mutationFn: async ({ id, token }: { id: string; token: string }) => {
@@ -123,6 +196,8 @@ export function useSendReminder() {
     },
   })
 }
+
+// ─── Send a custom follow-up message ─────────────────────────────────────────
 
 export function useSendGuestMessage() {
   return useMutation({

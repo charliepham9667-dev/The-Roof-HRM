@@ -22,9 +22,14 @@ export interface CsvReservation {
   mustHaves: string | null
   status: ReservationStatus
   // Optional fields from the reservation system (web form / WhatsApp bookings)
-  bookingStatus?: 'pending' | 'accepted' | 'declined' | 'cancelled'
+  bookingStatus?: 'pending' | 'accepted' | 'declined' | 'cancelled' | 'noshow'
   reservationSystemId?: string
   reservationSystemToken?: string
+  // Response tracking (set when staff respond via the responder modal)
+  responseType?: 'confirm' | 'followup' | 'decline' | null
+  responseMessage?: string | null
+  responseChannels?: string[] | null
+  respondedAt?: string | null
 }
 
 function parseCsvLine(line: string): string[] {

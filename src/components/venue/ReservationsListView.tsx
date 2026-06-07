@@ -5,6 +5,7 @@ import { useWebFormReservations, useAcceptReservation, useDeclineReservation, us
 import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { InlineComment } from "@/components/venue/ReservationPanel"
+import { ResponderModal } from "@/components/venue/ResponderModal"
 import type { Reservation } from "@/types"
 import {
   Calendar,
@@ -22,6 +23,7 @@ import {
   Bell,
   Send,
   CheckCircle2,
+  MessageCircle,
 } from "lucide-react"
 
 const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -67,10 +69,12 @@ function ReservationRow({
   r,
   canEdit,
   onEdit,
+  onRespond,
 }: {
   r: CsvReservation
   canEdit: boolean
   onEdit: (r: CsvReservation) => void
+  onRespond: (r: CsvReservation) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -79,8 +83,6 @@ function ReservationRow({
   const [reminderSent, setReminderSent] = useState(false)
   const [messageSent, setMessageSent] = useState(false)
   const deleteRes = useDeleteReservation()
-  const acceptRes = useAcceptReservation()
-  const declineRes = useDeclineReservation()
   const sendReminder = useSendReminder()
   const sendMessage = useSendGuestMessage()
   const badge = sourceBadge(r)
@@ -90,6 +92,7 @@ function ReservationRow({
   const isWebForm = !!r.reservationSystemId
   const hasEmail = !!r.email
   const hasPhone = !!r.phone
+  const hasResponded = !!r.respondedAt
 
   async function handleSendReminder() {
     if (!r.reservationSystemId || !r.reservationSystemToken) return
@@ -156,6 +159,21 @@ function ReservationRow({
               <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none", badge.cls)}>
                 {badge.label}
               </span>
+              {isWebForm && r.bookingStatus === 'pending' && !hasResponded && (
+                <span
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none"
+                  style={{ border: "1px dashed #d8c08a", color: "#a06820", background: "transparent" }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c9a23f" }} />
+                  Not responded
+                </span>
+              )}
+              {isWebForm && r.bookingStatus === 'pending' && hasResponded && (
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-blue-600">
+                  <Clock className="h-2 w-2" />
+                  Responded
+                </span>
+              )}
               {isWebForm && r.bookingStatus === 'pending' && (
                 <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-amber-50 text-amber-700 border border-amber-200">
                   Pending
@@ -260,26 +278,21 @@ function ReservationRow({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Staff comment</p>
             <InlineComment dbId={dbId} currentNote={r.notes} canEdit={canEdit} />
           </div>
-          {/* Accept / Decline — web form reservations that are still pending */}
+          {/* Respond button — web form reservations that are still pending */}
           {isPending && isWebForm && (
             <div className="flex items-center gap-2 pt-0.5">
               <button
                 type="button"
-                disabled={acceptRes.isPending || declineRes.isPending}
-                onClick={() => acceptRes.mutate({ id: r.reservationSystemId!, token: r.reservationSystemToken! })}
-                className="flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                onClick={() => onRespond(r)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                  hasResponded
+                    ? "border border-border text-foreground hover:bg-muted"
+                    : "bg-primary text-white hover:bg-primary/90",
+                )}
               >
-                {acceptRes.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                Accept
-              </button>
-              <button
-                type="button"
-                disabled={acceptRes.isPending || declineRes.isPending}
-                onClick={() => declineRes.mutate({ id: r.reservationSystemId!, token: r.reservationSystemToken! })}
-                className="flex items-center gap-1 rounded px-3 py-1.5 text-xs font-semibold border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
-              >
-                {declineRes.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                Decline
+                <MessageCircle className="h-3 w-3" />
+                {hasResponded ? "Resend / update" : "Respond"}
               </button>
             </div>
           )}
@@ -454,6 +467,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const [search, setSearch] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
+  const [responderRes, setResponderRes] = useState<CsvReservation | null>(null)
 
   // isLoading covers all three sources
   const csvLoading = webFormLoading || sheetLoading
@@ -609,7 +623,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
               <section>
                 <SectionDivider label="Today" count={todayList.length} pax={todayPax} />
                 {todayList.map((r, i) => (
-                  <ReservationRow key={`t-${i}`} r={r} canEdit={canEdit} onEdit={handleEdit} />
+                  <ReservationRow key={`t-${i}`} r={r} canEdit={canEdit} onEdit={handleEdit} onRespond={setResponderRes} />
                 ))}
               </section>
             )}
@@ -621,7 +635,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
                   <div key={date}>
                     <DateGroupHeader iso={date} todayIso={todayIso} />
                     {rows.map((r, i) => (
-                      <ReservationRow key={`u-${date}-${i}`} r={r} canEdit={canEdit} onEdit={handleEdit} />
+                      <ReservationRow key={`u-${date}-${i}`} r={r} canEdit={canEdit} onEdit={handleEdit} onRespond={setResponderRes} />
                     ))}
                   </div>
                 ))}
@@ -641,6 +655,11 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
           defaultSource={undefined}
         />
       )}
+
+      <ResponderModal
+        reservation={responderRes}
+        onClose={() => setResponderRes(null)}
+      />
     </div>
   )
 }
