@@ -473,6 +473,131 @@ function PastDivider({ count }: { count: number }) {
   )
 }
 
+// ─── Quick replies for "in discussion" reservations ───────────────────────────
+
+const QUICK_REPLIES = [
+  {
+    id: "no_seaview",
+    label: "No seaview tables",
+    getMessage: (first: string) =>
+      `Hi ${first}!\n\nUnfortunately we don't have any seaview tables left for your date. Would you like us to book a standard table instead?\n\nWith Love,\nThe Roof Da Nang`,
+  },
+  {
+    id: "no_children",
+    label: "No children after 7PM",
+    getMessage: (first: string) =>
+      `Hi ${first}!\n\nJust to let you know — we're unable to accommodate children after 7PM. Would an earlier time work for you, or would you like to adjust?\n\nWith Love,\nThe Roof Da Nang`,
+  },
+  {
+    id: "bar_table",
+    label: "Bar table only",
+    getMessage: (first: string) =>
+      `Hi ${first}!\n\nWe're fully booked on regular tables, but we have a great spot at the bar available. Would you be happy with a bar table? 🍹\n\nWith Love,\nThe Roof Da Nang`,
+  },
+] as const
+
+function DiscussionRow({ r }: { r: CsvReservation }) {
+  const [sentId, setSentId] = useState<string | null>(null)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const sendMessage = useSendGuestMessage()
+  const firstName = (r.name ?? "there").split(/\s+/)[0]
+  const hasPhone = !!r.phone
+  const channel: "whatsapp" | "email" = hasPhone ? "whatsapp" : "email"
+
+  const canSend = !!r.reservationSystemId && !!r.reservationSystemToken && (hasPhone || !!r.email)
+
+  async function handleQuickReply(qr: (typeof QUICK_REPLIES)[number]) {
+    if (!canSend) return
+    setLoadingId(qr.id)
+    try {
+      await sendMessage.mutateAsync({
+        id: r.reservationSystemId!,
+        token: r.reservationSystemToken!,
+        body: qr.getMessage(firstName),
+        channel,
+      })
+      setSentId(qr.id)
+      setTimeout(() => setSentId(null), 4000)
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  const formatted = r.dateOfReservation
+    ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : "—"
+
+  return (
+    <div className="border-b border-border/50 last:border-0 px-3 py-2.5">
+      {/* Guest info */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-2">
+        <span className="text-[13px] font-semibold text-foreground">{r.name || "Unknown"}</span>
+        <span className="text-[11px] text-muted-foreground">
+          {formatted} · {r.time || "—"} · {r.numberOfGuests} pax
+        </span>
+        {r.phone && (
+          <a
+            href={`tel:${r.phone}`}
+            className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+          >
+            <Phone className="h-2.5 w-2.5" />
+            {r.phone}
+          </a>
+        )}
+      </div>
+      {/* Quick-reply pills */}
+      {canSend ? (
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_REPLIES.map((qr) => {
+            const isSent = sentId === qr.id
+            const isLoading = loadingId === qr.id
+            return (
+              <button
+                key={qr.id}
+                type="button"
+                disabled={!!loadingId || isSent}
+                onClick={() => handleQuickReply(qr)}
+                className={cn(
+                  "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors disabled:cursor-default",
+                  isSent
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-60",
+                )}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                ) : isSent ? (
+                  <CheckCircle2 className="h-2.5 w-2.5" />
+                ) : null}
+                {isSent ? "Sent" : qr.label}
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="text-[11px] text-muted-foreground italic">No contact info — reply manually</p>
+      )}
+    </div>
+  )
+}
+
+function DiscussionDivider({ count }: { count: number }) {
+  return (
+    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-blue-200/60 bg-blue-50/80 px-3 py-1.5">
+      <MessageCircle className="h-3 w-3 shrink-0 text-blue-500" />
+      <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600">In Discussion</span>
+      <span className="rounded-full bg-blue-100 border border-blue-200 px-1.5 py-0.5 text-[9px] font-semibold text-blue-600">
+        {count}
+      </span>
+    </div>
+  )
+}
+
 // ─── Status filter type ────────────────────────────────────────────────────────
 
 type StatusFilter = "all" | "pending" | "accepted" | "declined"
@@ -565,6 +690,15 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     }
     return list
   }, [allReservations, search, statusFilter])
+
+  // "In discussion" = pending reservations where we already sent a follow-up
+  const discussionList = useMemo(
+    () =>
+      allReservations.filter(
+        (r) => r.bookingStatus === "pending" && r.responseType === "followup" && r.respondedAt,
+      ),
+    [allReservations],
+  )
 
   const todayList = filtered
     .filter((r) => r.dateOfReservation === todayIso)
@@ -699,6 +833,15 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
           </div>
         ) : (
           <>
+            {discussionList.length > 0 && (
+              <section>
+                <DiscussionDivider count={discussionList.length} />
+                {discussionList.map((r, i) => (
+                  <DiscussionRow key={`d-${i}`} r={r} />
+                ))}
+              </section>
+            )}
+
             {todayList.length > 0 && (
               <section>
                 <SectionDivider label="Today" count={todayList.length} pax={todayPax} />
