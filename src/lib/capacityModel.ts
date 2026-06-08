@@ -82,20 +82,28 @@ const SEAVIEW_HINTS = [
 const SOFA_HINTS = ["sofa", "couch", "lounge", "booth"]
 const BAR_HINTS = ["bar", "counter", "standing", "high table", "stool"]
 
-/** Best-effort seating type from a reservation's preference + requests + size. */
+/**
+ * Seating classification based on party size + optional text hints.
+ *
+ * Rules (per Charlie's booking logic):
+ *   < 4 pax  → seaview (if seaview cap hit at runtime, staff follow up via In Discussion)
+ *   ≥ 4 pax  → sofa
+ *
+ * Text hints override the size rule in case a guest explicitly requests a type.
+ */
 export function classifySeating(input: {
   table?: string | null
   specialRequests?: string | null
   numberOfGuests?: number | null
 }): SeatingType {
   const text = `${input.table ?? ""} ${input.specialRequests ?? ""}`.toLowerCase()
+  // Explicit text overrides take priority
   if (SEAVIEW_HINTS.some((h) => text.includes(h))) return "seaview"
   if (SOFA_HINTS.some((h) => text.includes(h))) return "sofa"
   if (BAR_HINTS.some((h) => text.includes(h))) return "bar"
-  // Large parties default to sofa (the only ≥4-pax seating).
-  if ((input.numberOfGuests ?? 0) >= 5) return "sofa"
-  // Otherwise flexible — count against the bar/standing overflow.
-  return "bar"
+  // Party-size rule: 4+ pax → sofa, otherwise seaview (staff follow-up if full)
+  if ((input.numberOfGuests ?? 0) >= 4) return "sofa"
+  return "seaview"
 }
 
 // ─── Recommendation ────────────────────────────────────────────────────────

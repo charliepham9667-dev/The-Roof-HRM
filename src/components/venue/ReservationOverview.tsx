@@ -4,7 +4,6 @@ import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservations
 import { useWebFormReservations, useDeclinedReservations, useSendGuestMessage } from "@/hooks/useWebFormReservations"
 import { useConversations } from "@/hooks/useInbox"
 import { DeclinedLostLog } from "@/components/venue/DeclinedLostLog"
-import { CapacityFullView } from "@/components/venue/CapacityFullView"
 import { CapacityWidget } from "@/components/venue/CapacityWidget"
 import { ResponderModal } from "@/components/venue/ResponderModal"
 import { ReservationsListView } from "@/components/venue/ReservationsListView"
@@ -536,12 +535,11 @@ function DiscussionQueue({ discussionList }: { discussionList: CsvReservation[] 
 
 // ─── Tab bar ──────────────────────────────────────────────────────────────────
 
-type TabId = "overview" | "reservations" | "capacity" | "inbox" | "guests"
+type TabId = "overview" | "reservations" | "inbox" | "guests"
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "overview",     label: "Overview" },
   { id: "reservations", label: "Reservations" },
-  { id: "capacity",     label: "Capacity" },
   { id: "inbox",        label: "AI Inbox" },
   { id: "guests",       label: "Guests" },
 ]
@@ -760,15 +758,7 @@ export function ReservationOverview() {
                 <Widget
                   title="Capacity by Time Slot"
                   icon={<BarChart2 className="h-4 w-4" />}
-                  action={
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("capacity")}
-                      className="rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      Manage
-                    </button>
-                  }
+                  action={null}
                 >
                   <CapacityWidget />
                 </Widget>
@@ -864,9 +854,6 @@ export function ReservationOverview() {
           <ReservationsListView canEdit={canEdit} />
         </div>
       )}
-
-      {/* ── Capacity tab ── */}
-      {activeTab === "capacity" && <CapacityFullView />}
 
       {/* ── AI Inbox tab ── */}
       {activeTab === "inbox" && <AIInbox />}

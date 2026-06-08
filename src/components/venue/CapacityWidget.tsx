@@ -10,32 +10,48 @@ import {
 import { AlertTriangle, Loader2, Waves, Sparkles, CheckCircle2, Ban } from "lucide-react"
 
 const ZONE = {
-  green:      { bar: "var(--primary)", chip: "bg-emerald-100 text-emerald-700", label: "Open" },
-  discussion: { bar: "#a06820",        chip: "bg-amber-100 text-amber-700",     label: "Discuss" },
-  full:       { bar: "#b83232",        chip: "bg-red-100 text-red-600",         label: "Full" },
+  green:      { chip: "bg-emerald-100 text-emerald-700", label: "Open" },
+  discussion: { chip: "bg-amber-100 text-amber-700",     label: "Discuss" },
+  full:       { chip: "bg-red-100 text-red-600",         label: "Full" },
 } as const
 
-// Bars scale against the hard cap so the green-capacity line is visible mid-track.
-const greenLinePct = (GREEN_TABLES_PER_SLOT / MAX_TABLES_PER_SLOT) * 100
+const SEAVIEW_BLUE = "#2c5f9e"
+const TABLE_GREEN = "#2e7a52"
 
+/**
+ * Segmented bar — one block per booked table.
+ *   Blue  = seaview table
+ *   Green = bar table or sofa
+ *   Empty = remaining green-cap headroom (11 tables/slot)
+ */
 function SlotBar({ s }: { s: SlotAllocation }) {
   const z = ZONE[s.zone]
-  const pct = Math.min((s.tablesReserved / MAX_TABLES_PER_SLOT) * 100, 100)
+  const blue = s.seaviewReserved
+  const green = s.sofaReserved + s.barReserved
+  const filled = blue + green
   const seaviewFull = s.seaviewReserved >= SEAVIEW_CAP_PER_SLOT
+  // Always show at least the green-cap (11) cells; extend if a slot overflows.
+  const cellCount = Math.max(GREEN_TABLES_PER_SLOT, filled)
+
   return (
     <div className="flex items-center gap-2.5">
       <span className="w-[40px] shrink-0 font-mono text-[11.5px] font-semibold text-foreground">{s.time}</span>
 
-      {/* Bar track */}
-      <div className="relative h-4 flex-1 overflow-hidden rounded bg-muted/60">
-        <div
-          className="pointer-events-none absolute top-0 bottom-0 z-10 border-r border-dashed border-emerald-500/50"
-          style={{ left: `${greenLinePct}%` }}
-        />
-        <div
-          className="h-full rounded transition-all duration-500"
-          style={{ width: `${pct}%`, background: z.bar, minWidth: s.tablesReserved > 0 ? 6 : 0 }}
-        />
+      {/* Segmented table blocks */}
+      <div className="flex flex-1 gap-[3px]">
+        {Array.from({ length: cellCount }).map((_, i) => {
+          const color = i < blue ? SEAVIEW_BLUE : i < filled ? TABLE_GREEN : null
+          return (
+            <div
+              key={i}
+              className={cn("h-5 flex-1 rounded-sm", color ? "" : "bg-muted/70")}
+              style={color ? { background: color } : undefined}
+              title={
+                color === SEAVIEW_BLUE ? "Seaview table" : color === TABLE_GREEN ? "Bar / sofa table" : "Open"
+              }
+            />
+          )
+        })}
       </div>
 
       {/* Seaview sub-meter */}
@@ -52,7 +68,7 @@ function SlotBar({ s }: { s: SlotAllocation }) {
 
       {/* Count */}
       <span className="w-[42px] shrink-0 text-right font-mono text-[11px] text-muted-foreground">
-        {s.tablesReserved}/{GREEN_TABLES_PER_SLOT}
+        {filled}/{GREEN_TABLES_PER_SLOT}
       </span>
 
       {/* Zone badge */}
@@ -155,19 +171,16 @@ export function CapacityWidget() {
           {/* Legend */}
           <div className="mt-3 flex flex-wrap gap-3.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-sm" style={{ background: "var(--primary)" }} /> Open
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SEAVIEW_BLUE }} /> Seaview table
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-sm" style={{ background: "#a06820" }} /> Discussion
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: TABLE_GREEN }} /> Bar &amp; sofa table
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-sm" style={{ background: "#b83232" }} /> Full
+              <span className="h-2.5 w-2.5 rounded-sm bg-muted/70" /> Open seat
             </span>
             <span className="flex items-center gap-1.5">
-              <Waves className="h-3 w-3 text-sky-600" /> seaview cap {SEAVIEW_CAP_PER_SLOT}/slot
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-3 border-r border-dashed border-emerald-500/70" /> green cap {GREEN_TABLES_PER_SLOT}
+              <Waves className="h-3 w-3 text-sky-600" /> seaview cap {SEAVIEW_CAP_PER_SLOT}/slot · green cap {GREEN_TABLES_PER_SLOT}
             </span>
           </div>
         </>
