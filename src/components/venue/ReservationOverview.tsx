@@ -574,7 +574,7 @@ export function ReservationOverview() {
   const [activeTab, setActiveTab] = useState<TabId>("overview")
   const [responderRes, setResponderRes] = useState<CsvReservation | null>(null)
   const [showDeclinedLog, setShowDeclinedLog] = useState(false)
-  const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>("tonight")
+  const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>("month")
 
   const { data: webFormAll = [], isLoading: webLoading } = useWebFormReservations()
   const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
