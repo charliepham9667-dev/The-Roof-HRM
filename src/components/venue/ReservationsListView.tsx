@@ -634,7 +634,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
   const { data: dbAll = [], isLoading: dbLoading } = useReservations(todayIso, nextMonthIso)
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("accepted")
   const [formOpen, setFormOpen] = useState(false)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
   const [responderRes, setResponderRes] = useState<CsvReservation | null>(null)
