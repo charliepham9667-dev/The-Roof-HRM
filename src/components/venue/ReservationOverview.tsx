@@ -13,7 +13,7 @@ import { useAuthStore } from "@/stores/authStore"
 import { AIInbox } from "@/components/venue/AIInbox"
 import {
   Calendar, Clock, Users, MessageCircle, ChevronRight, CheckCircle,
-  Globe, BarChart2, Ban, Loader2,
+  Globe, BarChart2, Ban, Loader2, RotateCcw,
 } from "lucide-react"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,9 +133,11 @@ function Widget({
 function PendingQueue({
   pending,
   onRespond,
+  returningPhones,
 }: {
   pending: CsvReservation[]
   onRespond: (r: CsvReservation) => void
+  returningPhones: Set<string>
 }) {
   if (pending.length === 0) {
     return (
@@ -149,10 +151,17 @@ function PendingQueue({
     <div className="flex flex-col gap-2">
       {pending.map((r) => {
         const responded = !!r.respondedAt
+        const normPhone = r.phone ? r.phone.replace(/\D/g, "").slice(-9) : ""
+        const isReturning = normPhone.length >= 7 && returningPhones.has(normPhone)
         return (
           <div
             key={r.reservationSystemId ?? r.name}
-            className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-2.5"
+            className={cn(
+              "flex items-center gap-3 rounded-xl border p-2.5",
+              isReturning
+                ? "border-amber-200 bg-amber-50/60"
+                : "border-border/60 bg-card",
+            )}
           >
             {/* Details */}
             <div className="min-w-0 flex-1">
@@ -161,6 +170,13 @@ function PendingQueue({
                   {r.name}
                 </span>
                 <span className="text-[13px]">{flagFromPhone(r.phone)}</span>
+                {/* Returning guest badge */}
+                {isReturning && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    <RotateCcw className="h-2.5 w-2.5" />
+                    Review
+                  </span>
+                )}
                 {/* Response badge */}
                 {responded ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
@@ -452,6 +468,18 @@ export function ReservationOverview() {
 
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
+  // Returning guest detection — phones from past CSV bookings (accepted/confirmed)
+  const returningPhones = useMemo(() => {
+    const phones = new Set<string>()
+    for (const r of sheetAll) {
+      if (r.phone && (r.dateOfReservation ?? "") < todayIso) {
+        const norm = r.phone.replace(/\D/g, "").slice(-9)
+        if (norm.length >= 7) phones.add(norm)
+      }
+    }
+    return phones
+  }, [sheetAll, todayIso])
+
   const todayReservations = allReservations.filter((r) => r.dateOfReservation === todayIso)
   // All pending = today + future (anything not yet responded to, excluding past)
   const pending = allReservations.filter(
@@ -584,7 +612,7 @@ export function ReservationOverview() {
                     )
                   }
                 >
-                  <PendingQueue pending={pending} onRespond={setResponderRes} />
+                  <PendingQueue pending={pending} onRespond={setResponderRes} returningPhones={returningPhones} />
                 </Widget>
 
                 {/* Capacity by Time Slot */}
