@@ -72,10 +72,15 @@ export function CapacityWidget() {
   const seatsLeftPeak = Math.max(totalCap - peak, 0)
   const tightest = [...slots].sort((a, b) => b.booked - a.booked).slice(0, 3)
 
+  // CSS variables are stored as raw RGB tuples (e.g. "199 76 60"), so must wrap in rgb()
+  const C_PRIMARY = "rgb(var(--primary))"
+  const C_WARNING = "rgb(var(--warning))"
+  const C_ERROR   = "rgb(var(--error))"
+
   const colorFor = (booked: number, maxPax: number) => {
-    if (booked >= hardLimit || booked >= maxPax) return "var(--error, #b83232)"
-    if (booked >= warningThreshold) return "var(--warning, #a06820)"
-    return "var(--primary)"
+    if (booked >= hardLimit || booked >= maxPax) return C_ERROR
+    if (booked >= warningThreshold) return C_WARNING
+    return C_PRIMARY
   }
 
   const warnPct = totalCap > 0 ? (warningThreshold / totalCap) * 100 : 0
@@ -128,8 +133,8 @@ export function CapacityWidget() {
       <div className="relative flex items-end gap-1 pr-7" style={{ height: CHART_HEIGHT }}>
         {/* Threshold lines */}
         {[
-          { pct: warnPct, val: warningThreshold, color: "var(--warning, #a06820)" },
-          { pct: limitPct, val: hardLimit,        color: "var(--error, #b83232)" },
+          { pct: warnPct, val: warningThreshold, color: C_WARNING },
+          { pct: limitPct, val: hardLimit,        color: C_ERROR   },
         ].map(({ pct, val, color }) => {
           const bottomPx = Math.round((pct / 100) * CHART_HEIGHT)
           return (
@@ -198,9 +203,9 @@ export function CapacityWidget() {
       {/* Legend */}
       <div className="mt-2.5 flex flex-wrap gap-3.5 text-[11px] text-muted-foreground">
         {[
-          { color: "var(--primary)", label: "Healthy" },
-          { color: "var(--warning, #a06820)", label: `Warning ≥${warningThreshold}` },
-          { color: "var(--error, #b83232)", label: `Limit ${hardLimit}` },
+          { color: C_PRIMARY, label: "Healthy" },
+          { color: C_WARNING, label: `Warning ≥${warningThreshold}` },
+          { color: C_ERROR,   label: `Limit ${hardLimit}` },
         ].map(({ color, label }) => (
           <span key={label} className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-sm" style={{ background: color }} />
