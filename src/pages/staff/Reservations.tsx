@@ -10,9 +10,11 @@ import {
   Loader2,
   Ban,
   MapPin,
+  Plus,
 } from 'lucide-react'
 import { useReservationsCsv, type CsvReservation } from '@/hooks/useReservationsCsv'
 import { useWebFormReservations, useDeclinedReservations } from '@/hooks/useWebFormReservations'
+import { ReservationFormSheet } from '@/components/venue/ReservationFormSheet'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -263,6 +265,7 @@ export function StaffReservations() {
   } = useDeclinedReservations()
 
   const [declinedOpen, setDeclinedOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
 
   const isLoading = csvLoading || supaLoading
   const isFetching = csvFetching || supaFetching
@@ -331,15 +334,24 @@ export function StaffReservations() {
           <h1 className="text-xl font-bold text-foreground">Reservations</h1>
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">{formatTodayFull()}</p>
         </div>
-        <button
-          type="button"
-          onClick={refetchAll}
-          disabled={isFetching}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50 active:bg-muted"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={refetchAll}
+            disabled={isFetching}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50 active:bg-muted"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 active:bg-primary/80"
+          >
+            <Plus className="h-4 w-4" />
+            Add
+          </button>
+        </div>
       </div>
 
       {/* ── KPI cards ── */}
@@ -507,6 +519,13 @@ export function StaffReservations() {
           )}
         </>
       )}
+
+      <ReservationFormSheet
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        reservation={null}
+        defaultSource="phone"
+      />
     </div>
   )
 }
