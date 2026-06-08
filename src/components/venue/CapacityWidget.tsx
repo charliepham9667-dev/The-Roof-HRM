@@ -9,17 +9,63 @@ import {
 } from "@/lib/capacityModel"
 import { AlertTriangle, Loader2, Waves } from "lucide-react"
 
-const CHART_HEIGHT = 160 // px — fixed so bar heights resolve correctly
-
-const ZONE_COLOR = {
-  green: "var(--primary)",
-  discussion: "#a06820",
-  full: "#b83232",
+const ZONE = {
+  green:      { bar: "var(--primary)", chip: "bg-emerald-100 text-emerald-700", label: "Open" },
+  discussion: { bar: "#a06820",        chip: "bg-amber-100 text-amber-700",     label: "Discuss" },
+  full:       { bar: "#b83232",        chip: "bg-red-100 text-red-600",         label: "Full" },
 } as const
+
+// Bars scale against the hard cap so the green-capacity line is visible mid-track.
+const greenLinePct = (GREEN_TABLES_PER_SLOT / MAX_TABLES_PER_SLOT) * 100
+
+function SlotBar({ s }: { s: SlotAllocation }) {
+  const z = ZONE[s.zone]
+  const pct = Math.min((s.tablesReserved / MAX_TABLES_PER_SLOT) * 100, 100)
+  const seaviewFull = s.seaviewReserved >= SEAVIEW_CAP_PER_SLOT
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="w-[40px] shrink-0 font-mono text-[11.5px] font-semibold text-foreground">{s.time}</span>
+
+      {/* Bar track */}
+      <div className="relative h-4 flex-1 overflow-hidden rounded bg-muted/60">
+        <div
+          className="pointer-events-none absolute top-0 bottom-0 z-10 border-r border-dashed border-emerald-500/50"
+          style={{ left: `${greenLinePct}%` }}
+        />
+        <div
+          className="h-full rounded transition-all duration-500"
+          style={{ width: `${pct}%`, background: z.bar, minWidth: s.tablesReserved > 0 ? 6 : 0 }}
+        />
+      </div>
+
+      {/* Seaview sub-meter */}
+      <span
+        className={cn(
+          "flex w-[46px] shrink-0 items-center justify-center gap-0.5 font-mono text-[10px] font-semibold",
+          seaviewFull ? "text-amber-600" : "text-sky-600",
+        )}
+        title="seaview reserved / cap (2 — rest held for walk-ins)"
+      >
+        <Waves className="h-2.5 w-2.5" />
+        {s.seaviewReserved}/{SEAVIEW_CAP_PER_SLOT}
+      </span>
+
+      {/* Count */}
+      <span className="w-[42px] shrink-0 text-right font-mono text-[11px] text-muted-foreground">
+        {s.tablesReserved}/{GREEN_TABLES_PER_SLOT}
+      </span>
+
+      {/* Zone badge */}
+      <span className={cn("w-[56px] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[9.5px] font-bold", z.chip)}>
+        {z.label}
+      </span>
+    </div>
+  )
+}
 
 export function CapacityWidget() {
   const { slots, isLoading, peakSlot, discussionSlots, fullSlots, seaviewOverflowSlots } = useTableCapacity()
-  const [view, setView] = useState<"stats" | "tight">("stats")
+  const [view, setView] = useState<"slots" | "stats">("slots")
 
   if (isLoading) {
     return (
@@ -31,54 +77,26 @@ export function CapacityWidget() {
   }
 
   if (slots.length === 0) {
-    return (
-      <div className="py-6 text-center text-sm text-muted-foreground">No reservable slots configured.</div>
-    )
+    return <div className="py-6 text-center text-sm text-muted-foreground">No reservable slots configured.</div>
   }
 
   const peak = peakSlot?.tablesReserved ?? 0
   const util = Math.round((peak / GREEN_TABLES_PER_SLOT) * 100)
-  const tightest = [...slots].sort((a, b) => b.tablesReserved - a.tablesReserved).slice(0, 3)
 
   const stats = [
-    {
-      label: "Green capacity",
-      value: `${peak}/${GREEN_TABLES_PER_SLOT}`,
-      sub: peakSlot ? `peak ${peakSlot.time}` : "—",
-      danger: peak > GREEN_TABLES_PER_SLOT,
-    },
-    {
-      label: "Seaview pressure",
-      value: `${seaviewOverflowSlots} slot${seaviewOverflowSlots !== 1 ? "s" : ""}`,
-      sub: `over ${SEAVIEW_CAP_PER_SLOT}/slot cap`,
-      danger: seaviewOverflowSlots > 0,
-    },
-    {
-      label: "Need discussion",
-      value: discussionSlots,
-      sub: "offer non-seaview / bar",
-      danger: discussionSlots > 0,
-    },
-    {
-      label: "Full slots",
-      value: fullSlots,
-      sub: `> ${MAX_TABLES_PER_SLOT} tables`,
-      danger: fullSlots > 0,
-    },
+    { label: "Green capacity", value: `${peak}/${GREEN_TABLES_PER_SLOT}`, sub: peakSlot ? `peak ${peakSlot.time}` : "—", danger: peak > GREEN_TABLES_PER_SLOT },
+    { label: "Seaview pressure", value: `${seaviewOverflowSlots} slot${seaviewOverflowSlots !== 1 ? "s" : ""}`, sub: `over ${SEAVIEW_CAP_PER_SLOT}/slot cap`, danger: seaviewOverflowSlots > 0 },
+    { label: "Need discussion", value: discussionSlots, sub: "offer non-seaview / bar", danger: discussionSlots > 0 },
+    { label: "Full slots", value: fullSlots, sub: `> ${MAX_TABLES_PER_SLOT} tables`, danger: fullSlots > 0 },
   ]
 
-  // Threshold lines drawn against the hard cap (chart scale).
-  const greenLinePx = Math.round((GREEN_TABLES_PER_SLOT / MAX_TABLES_PER_SLOT) * CHART_HEIGHT)
-
   return (
-    <div className="flex h-full min-h-[360px] flex-col">
-      {/* Header row */}
+    <div className="flex h-full flex-col">
+      {/* Header */}
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
           <div className="text-[30px] font-bold leading-none tracking-tight">{util}%</div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            peak fill · {peak}/{GREEN_TABLES_PER_SLOT} tables
-          </div>
+          <div className="mt-1 text-[12px] text-muted-foreground">peak fill · {peak}/{GREEN_TABLES_PER_SLOT} tables</div>
         </div>
         {peakSlot && peakSlot.zone !== "green" && (
           <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
@@ -88,132 +106,67 @@ export function CapacityWidget() {
         )}
       </div>
 
-      {/* Bar chart */}
-      <div className="relative flex items-end gap-2 pr-8" style={{ height: CHART_HEIGHT }}>
-        {/* Green capacity line */}
-        <div
-          className="pointer-events-none absolute left-0 right-8"
-          style={{ bottom: greenLinePx, borderTop: "1px dashed #2e7a52", opacity: 0.6 }}
-        >
-          <span className="absolute -right-8 font-mono text-[9px] font-bold text-emerald-700" style={{ top: -10 }}>
-            {GREEN_TABLES_PER_SLOT}
-          </span>
-        </div>
-
-        {slots.map((s: SlotAllocation) => {
-          const barPx = Math.max(
-            Math.round((s.tablesReserved / MAX_TABLES_PER_SLOT) * CHART_HEIGHT),
-            s.tablesReserved > 0 ? 4 : 0,
-          )
-          return (
-            <div
-              key={s.time}
-              className="flex flex-1 flex-col items-center justify-end gap-0.5"
-              title={`${s.time} · ${s.tablesReserved} tables · ${s.seaviewReserved}/${SEAVIEW_CAP_PER_SLOT} seaview · ${s.pax} pax`}
-            >
-              {s.tablesReserved > 0 && (
-                <span className="font-mono text-[8.5px] font-bold text-muted-foreground">{s.tablesReserved}</span>
+      {/* View toggle */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          {view === "slots" ? "Utilization by time slot" : "Service at a glance"}
+        </span>
+        <div className="flex gap-0.5 rounded-lg bg-muted/60 p-0.5">
+          {(["slots", "stats"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap transition-colors",
+                view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
-              <div
-                style={{
-                  width: "60%",
-                  height: barPx,
-                  background: ZONE_COLOR[s.zone],
-                  opacity: 0.92,
-                  borderRadius: "4px 4px 0 0",
-                  transition: "height .5s",
-                }}
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Time labels */}
-      <div className="mt-1 flex gap-2 pr-8">
-        {slots.map((s) => (
-          <span key={s.time} className="flex-1 text-center font-mono text-[9px] text-muted-foreground">
-            {s.time.slice(0, 2)}
-          </span>
-        ))}
-      </div>
-
-      {/* Legend */}
-      <div className="mt-2.5 flex flex-wrap gap-3.5 text-[11px] text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm" style={{ background: "var(--primary)" }} /> Open
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm" style={{ background: "#a06820" }} /> Discussion
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm" style={{ background: "#b83232" }} /> Full
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Waves className="h-3 w-3 text-sky-600" /> seaview cap {SEAVIEW_CAP_PER_SLOT}/slot
-        </span>
-      </div>
-
-      {/* Lower panel — toggle */}
-      <div className="mt-3.5 border-t border-border/60 pt-3.5">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            {view === "stats" ? "Service at a glance" : "Tightest slots"}
-          </span>
-          <div className="flex gap-0.5 rounded-lg bg-muted/60 p-0.5">
-            {(["stats", "tight"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap transition-colors",
-                  view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {v === "stats" ? "Key stats" : "Tightest slots"}
-              </button>
-            ))}
-          </div>
+            >
+              {v === "slots" ? "Time slots" : "Key stats"}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {view === "stats" ? (
-          <div className="grid grid-cols-2 gap-2">
-            {stats.map((st) => (
-              <div key={st.label} className="rounded-lg bg-muted/40 p-3">
-                <div
-                  className={cn(
-                    "text-lg font-bold leading-tight tabular-nums",
-                    st.danger ? "text-destructive" : "text-foreground",
-                  )}
-                >
-                  {st.value}
-                </div>
-                <div className="mt-0.5 text-[11px] font-semibold text-secondary-foreground">{st.label}</div>
-                <div className="text-[10.5px] text-muted-foreground">{st.sub}</div>
-              </div>
+      {view === "slots" ? (
+        <>
+          <div className="flex flex-col gap-2">
+            {slots.map((s) => (
+              <SlotBar key={s.time} s={s} />
             ))}
           </div>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {tightest.map((s) => {
-              const pct = Math.min((s.tablesReserved / GREEN_TABLES_PER_SLOT) * 100, 100)
-              const left = Math.max(GREEN_TABLES_PER_SLOT - s.tablesReserved, 0)
-              return (
-                <div key={s.time} className="flex items-center gap-3">
-                  <span className="w-10 shrink-0 font-mono text-[12.5px] font-bold text-foreground">{s.time}</span>
-                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: ZONE_COLOR[s.zone] }} />
-                  </div>
-                  <span className="w-28 shrink-0 text-right font-mono text-[11.5px] text-muted-foreground">
-                    {s.tablesReserved}/{GREEN_TABLES_PER_SLOT} · {left} left
-                  </span>
-                </div>
-              )
-            })}
+          {/* Legend */}
+          <div className="mt-3 flex flex-wrap gap-3.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-sm" style={{ background: "var(--primary)" }} /> Open
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-sm" style={{ background: "#a06820" }} /> Discussion
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-sm" style={{ background: "#b83232" }} /> Full
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Waves className="h-3 w-3 text-sky-600" /> seaview cap {SEAVIEW_CAP_PER_SLOT}/slot
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-3 border-r border-dashed border-emerald-500/70" /> green cap {GREEN_TABLES_PER_SLOT}
+            </span>
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {stats.map((st) => (
+            <div key={st.label} className="rounded-lg bg-muted/40 p-3">
+              <div className={cn("text-lg font-bold leading-tight tabular-nums", st.danger ? "text-destructive" : "text-foreground")}>
+                {st.value}
+              </div>
+              <div className="mt-0.5 text-[11px] font-semibold text-secondary-foreground">{st.label}</div>
+              <div className="text-[10.5px] text-muted-foreground">{st.sub}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
