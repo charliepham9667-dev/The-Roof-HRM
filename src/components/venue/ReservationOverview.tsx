@@ -2,11 +2,15 @@ import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import type { CsvReservation } from "@/hooks/useReservationsCsv"
 import { useWebFormReservations, useDeclinedReservations } from "@/hooks/useWebFormReservations"
+import { useConversations } from "@/hooks/useInbox"
 import { DeclinedLostLog } from "@/components/venue/DeclinedLostLog"
+import { CapacityFullView } from "@/components/venue/CapacityFullView"
 import { CapacityWidget } from "@/components/venue/CapacityWidget"
 import { ResponderModal } from "@/components/venue/ResponderModal"
 import { ReservationsListView } from "@/components/venue/ReservationsListView"
+import { GuestCRM } from "@/components/venue/GuestCRM"
 import { useAuthStore } from "@/stores/authStore"
+import { AIInbox } from "@/components/venue/AIInbox"
 import {
   Calendar, Clock, Users, MessageCircle, ChevronRight, CheckCircle,
   Globe, BarChart2, Ban, Loader2,
@@ -22,15 +26,31 @@ function getTodayIso() {
 }
 
 // Derive country from phone prefix (best-effort)
-const PHONE_FLAGS: [string, string][] = [
-  ["+84",  "🇻🇳"], ["+44", "🇬🇧"], ["+1",  "🇺🇸"], ["+61", "🇦🇺"],
-  ["+82",  "🇰🇷"], ["+886","🇹🇼"], ["+81", "🇯🇵"], ["+33", "🇫🇷"],
-  ["+49",  "🇩🇪"], ["+353","🇮🇪"], ["+65", "🇸🇬"], ["+66", "🇹🇭"],
+const PHONE_FLAGS: [string, string, string][] = [
+  ["+84",  "🇻🇳", "Vietnam"],
+  ["+44",  "🇬🇧", "United Kingdom"],
+  ["+1",   "🇺🇸", "United States"],
+  ["+61",  "🇦🇺", "Australia"],
+  ["+82",  "🇰🇷", "South Korea"],
+  ["+886", "🇹🇼", "Taiwan"],
+  ["+81",  "🇯🇵", "Japan"],
+  ["+33",  "🇫🇷", "France"],
+  ["+49",  "🇩🇪", "Germany"],
+  ["+353", "🇮🇪", "Ireland"],
+  ["+65",  "🇸🇬", "Singapore"],
+  ["+66",  "🇹🇭", "Thailand"],
 ]
 function flagFromPhone(phone: string | null): string {
   if (!phone) return ""
   for (const [prefix, flag] of PHONE_FLAGS) {
     if (phone.startsWith(prefix)) return flag
+  }
+  return ""
+}
+function countryFromPhone(phone: string | null): string {
+  if (!phone) return ""
+  for (const [prefix, , country] of PHONE_FLAGS) {
+    if (phone.startsWith(prefix)) return country
   }
   return ""
 }
@@ -243,8 +263,9 @@ function NatList({ reservations }: { reservations: CsvReservation[] }) {
     for (const r of reservations) {
       const flag = flagFromPhone(r.phone)
       if (!flag) continue
+      const country = countryFromPhone(r.phone) || flag
       const key = flag
-      if (!map[key]) map[key] = { flag, name: flag, count: 0 }
+      if (!map[key]) map[key] = { flag, name: country, count: 0 }
       map[key].count++
     }
     return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 6)
@@ -263,6 +284,7 @@ function NatList({ reservations }: { reservations: CsvReservation[] }) {
           <div className="flex items-center justify-between text-[12.5px]">
             <span className="flex items-center gap-1.5">
               <span className="text-[14px]">{n.flag}</span>
+              <span className="text-foreground/80">{n.name}</span>
             </span>
             <span className="font-semibold text-muted-foreground">{n.count}</span>
           </div>
@@ -302,7 +324,7 @@ function BookingSource({ reservations }: { reservations: CsvReservation[] }) {
       map[src] = (map[src] ?? 0) + 1
     }
     return Object.entries(map)
-      .map(([key, count]) => ({ key, label: SRC_LABELS[key] ?? key, count, color: SRC_COLORS[key] ?? "#9a6f2e" }))
+      .map(([key, count]) => ({ key, label: SRC_LABELS[key] ?? key, count, color: SRC_COLORS[key] ?? "#c74c3c" }))
       .sort((a, b) => b.count - a.count)
   }, [reservations])
 
@@ -389,6 +411,9 @@ export function ReservationOverview() {
 
   const { data: allReservations = [], isLoading } = useWebFormReservations()
   const { data: declinedRows = [] } = useDeclinedReservations()
+  const { data: conversations = [] } = useConversations()
+
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
   const todayReservations = allReservations.filter((r) => r.dateOfReservation === todayIso)
   const pending = todayReservations.filter((r) => r.bookingStatus === "pending")
@@ -411,7 +436,7 @@ export function ReservationOverview() {
           const active = activeTab === t.id
           const pill =
             t.id === "overview" && pending.length > 0 ? pending.length :
-            t.id === "inbox" ? 4 : null
+            t.id === "inbox" && totalUnread > 0 ? totalUnread : null
           return (
             <button
               key={t.id}
@@ -526,6 +551,15 @@ export function ReservationOverview() {
                 <Widget
                   title="Nationality Breakdown"
                   icon={<Globe className="h-4 w-4" />}
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("guests")}
+                      className="text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      View all
+                    </button>
+                  }
                 >
                   <NatList reservations={todayReservations} />
                 </Widget>
@@ -565,31 +599,13 @@ export function ReservationOverview() {
       )}
 
       {/* ── Capacity tab ── */}
-      {activeTab === "capacity" && (
-        <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm">
-          <h2 className="mb-1 text-lg font-bold">Capacity by Time Slot</h2>
-          <p className="mb-5 text-sm text-muted-foreground">
-            Live booked vs. available seats per time slot · Today
-          </p>
-          <CapacityWidget />
-        </div>
-      )}
+      {activeTab === "capacity" && <CapacityFullView />}
 
-      {/* ── AI Inbox tab (placeholder) ── */}
-      {activeTab === "inbox" && (
-        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-muted-foreground">
-          <MessageCircle className="h-10 w-10 opacity-20" />
-          <p className="text-sm">AI Inbox — coming soon</p>
-        </div>
-      )}
+      {/* ── AI Inbox tab ── */}
+      {activeTab === "inbox" && <AIInbox />}
 
-      {/* ── Guests tab (placeholder) ── */}
-      {activeTab === "guests" && (
-        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center text-muted-foreground">
-          <Users className="h-10 w-10 opacity-20" />
-          <p className="text-sm">Guest CRM — coming soon</p>
-        </div>
-      )}
+      {/* ── Guests tab ── */}
+      {activeTab === "guests" && <GuestCRM />}
 
       {/* Responder modal — global, outside tab */}
       <ResponderModal

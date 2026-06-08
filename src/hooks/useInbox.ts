@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reservationClient } from '@/lib/reservationClient'
 
 export interface Conversation {
   id: string
   chat_id: string
-  channel: string
+  channel: 'whatsapp' | 'instagram' | 'facebook' | 'email' | string
   guest_name: string | null
   phone: string | null
-  status: string
+  email: string | null
+  subject: string | null
+  last_message_body: string | null
+  last_sender: string | null
+  status: 'open' | 'resolved'
   escalated: boolean
   unread_count: number
   last_message_at: string
@@ -23,77 +27,95 @@ export interface Message {
 }
 
 export function useConversations() {
-  const [conversations, setConversations] = useState<Conversation[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!reservationClient) { setLoading(false); return }
-
-    async function load() {
-      const { data } = await reservationClient!
+  return useQuery({
+    queryKey: ['inbox-conversations'],
+    queryFn: async (): Promise<Conversation[]> => {
+      if (!reservationClient) return []
+      const { data, error } = await reservationClient
         .from('conversations')
         .select('*')
         .order('last_message_at', { ascending: false })
-        .limit(100)
-      setConversations((data as Conversation[]) || [])
-      setLoading(false)
-    }
-
-    load()
-
-    const channel = reservationClient
-      .channel('conversations-watch')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => load())
-      .subscribe()
-
-    return () => { reservationClient!.removeChannel(channel) }
-  }, [])
-
-  return { conversations, loading }
+      if (error) { console.error('[useConversations]', error); return [] }
+      return data ?? []
+    },
+    refetchInterval: 15000,
+    staleTime: 10000,
+  })
 }
 
 export function useMessages(conversationId: string | null) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (!conversationId || !reservationClient) { setMessages([]); return }
-    setLoading(true)
-
-    async function load() {
-      const { data } = await reservationClient!
+  return useQuery({
+    queryKey: ['inbox-messages', conversationId],
+    queryFn: async (): Promise<Message[]> => {
+      if (!reservationClient || !conversationId) return []
+      const { data, error } = await reservationClient
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
-      setMessages((data as Message[]) || [])
-      setLoading(false)
-    }
-
-    load()
-
-    const channel = reservationClient
-      .channel(`messages-${conversationId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`,
-      }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as Message])
-      })
-      .subscribe()
-
-    return () => { reservationClient!.removeChannel(channel) }
-  }, [conversationId])
-
-  return { messages, loading }
+      if (error) { console.error('[useMessages]', error); return [] }
+      return data ?? []
+    },
+    enabled: !!conversationId,
+    refetchInterval: 8000,
+    staleTime: 5000,
+  })
 }
 
-export async function sendStaffMessage(conversationId: string, phone: string, body: string): Promise<void> {
-  if (!reservationClient) throw new Error('Reservation client not configured')
-  const { error } = await reservationClient.functions.invoke('send-whatsapp', {
-    body: { conversation_id: conversationId, to: phone, message: body },
+export function useGuestReservations(phone: string | null, email: string | null = null) {
+  return useQuery({
+    queryKey: ['guest-reservations', phone, email],
+    queryFn: async () => {
+      if (!reservationClient || (!phone && !email)) return []
+      let query = reservationClient
+        .from('reservations')
+        .select('id, name, requested_date, requested_time, party_size, status, package')
+        .order('requested_date', { ascending: false })
+        .limit(10)
+      if (phone && email) {
+        query = query.or(`phone.eq.${phone},email.eq.${email}`)
+      } else if (phone) {
+        query = query.eq('phone', phone)
+      } else {
+        query = query.eq('email', email!)
+      }
+      const { data, error } = await query
+      if (error) { console.error('[useGuestReservations]', error); return [] }
+      return data ?? []
+    },
+    enabled: !!(phone || email),
+    staleTime: 60000,
   })
-  if (error) throw new Error(error.message || 'Failed to send message')
+}
+
+export function useSendInboxMessage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ conversation_id, body }: { conversation_id: string; body: string }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+      const { error } = await reservationClient.functions.invoke('send-inbox-message', {
+        body: { conversation_id, body },
+      })
+      if (error) throw error
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['inbox-messages', variables.conversation_id] })
+      queryClient.invalidateQueries({ queryKey: ['inbox-conversations'] })
+    },
+  })
+}
+
+export function useResolveConversation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!reservationClient) throw new Error('No client')
+      const { error } = await reservationClient
+        .from('conversations')
+        .update({ status: 'resolved', unread_count: 0 })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['inbox-conversations'] }),
+  })
 }

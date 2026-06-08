@@ -460,9 +460,19 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     return d.toISOString().slice(0, 10)
   })()
 
+<<<<<<< HEAD
   const { data: webFormAll = [], isLoading: webFormLoading } = useWebFormReservations()
+=======
+  const { data: supabaseAll = [], isLoading: csvLoading } = useWebFormReservations()
+>>>>>>> 8d847bc (feat(venue): Meta/email inbox, Capacity & Guest CRM tabs, design system alignment)
   const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
   const { data: dbAll = [], isLoading: dbLoading } = useReservations(todayIso, nextMonthIso)
+  const csvAll = [...supabaseAll, ...sheetAll.filter(
+    (s) => !supabaseAll.some(
+      (w) => `${(w.name ?? "").toLowerCase()}|${w.dateOfReservation}|${w.time ?? ""}` ===
+             `${(s.name ?? "").toLowerCase()}|${s.dateOfReservation}|${s.time ?? ""}`
+    )
+  )]
 
   const [search, setSearch] = useState("")
   const [formOpen, setFormOpen] = useState(false)
@@ -547,7 +557,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
 
   const todayPax = todayList.reduce((s, r) => s + r.numberOfGuests, 0)
   const upcomingPax = upcomingList.reduce((s, r) => s + r.numberOfGuests, 0)
-  const isLoading = csvLoading || dbLoading
+  const isLoading = csvLoading || dbLoading || sheetLoading
 
   function handleEdit(r: CsvReservation) {
     setEditingReservation({

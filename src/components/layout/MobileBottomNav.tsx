@@ -106,7 +106,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Run The Venue',
       items: [
-        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
+        { title: 'Reservation Overview',        url: '/venue',                  icon: MapPin },
         { title: 'Team Overview',        url: '/owner/team-directory',   icon: Users },
         { title: 'Schedule',             url: '/owner/schedule',         icon: Calendar },
       ],
@@ -136,7 +136,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Management',
       items: [
-        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
+        { title: 'Reservation Overview',        url: '/venue',                  icon: MapPin },
         { title: 'Floor Issues',         url: '/manager/floor-issues',   icon: AlertTriangle },
       ],
     },
@@ -165,7 +165,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Management',
       items: [
-        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
+        { title: 'Reservation Overview',        url: '/venue',                  icon: MapPin },
         { title: 'Floor Issues',         url: '/manager/floor-issues',   icon: AlertTriangle },
       ],
     },
@@ -194,7 +194,7 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     {
       label: 'Management',
       items: [
-        { title: 'Venue Manager',        url: '/venue',                  icon: MapPin },
+        { title: 'Reservation Overview',        url: '/venue',                  icon: MapPin },
         { title: 'Floor Issues',         url: '/manager/floor-issues',   icon: AlertTriangle },
       ],
     },
