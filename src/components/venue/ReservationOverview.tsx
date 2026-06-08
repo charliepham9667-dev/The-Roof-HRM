@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useDeclinedReservations } from "@/hooks/useWebFormReservations"
+import { useWebFormReservations, useDeclinedReservations, useSendGuestMessage } from "@/hooks/useWebFormReservations"
 import { useConversations } from "@/hooks/useInbox"
 import { DeclinedLostLog } from "@/components/venue/DeclinedLostLog"
 import { CapacityFullView } from "@/components/venue/CapacityFullView"
@@ -13,7 +13,7 @@ import { useAuthStore } from "@/stores/authStore"
 import { AIInbox } from "@/components/venue/AIInbox"
 import {
   Calendar, Clock, Users, MessageCircle, ChevronRight, CheckCircle,
-  Globe, BarChart2, Ban, Loader2, RotateCcw,
+  Globe, BarChart2, Ban, Loader2, RotateCcw, Phone, CheckCircle2,
 } from "lucide-react"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -341,11 +341,24 @@ const SRC_LABELS: Record<string, string> = {
   walk_in: "Walk-in", phone: "Phone", instagram: "Instagram", staff: "Staff",
 }
 
+// Smart source detection — mirrors sourceBadge() in ReservationsListView
+function getBookingSource(r: CsvReservation): string {
+  // Web form entries: occasion holds the booking channel ('website', 'phone', 'whatsapp', etc.)
+  if (r.occasion && SRC_LABELS[r.occasion]) return r.occasion
+  // Legacy hint from phone field
+  const phone = r.phone ?? ""
+  if (phone.toLowerCase().includes("zalo") || phone.toLowerCase().includes("wa")) return "whatsapp"
+  // No reservationSystemId = manually entered (CSV / phone booking)
+  if (!r.reservationSystemId) return "phone"
+  // Web form entry with no recognised source
+  return "website"
+}
+
 function BookingSource({ reservations }: { reservations: CsvReservation[] }) {
   const sources = useMemo(() => {
     const map: Record<string, number> = {}
     for (const r of reservations) {
-      const src = r.occasion ?? "website"
+      const src = getBookingSource(r)
       map[src] = (map[src] ?? 0) + 1
     }
     return Object.entries(map)
@@ -397,6 +410,126 @@ function BookingSource({ reservations }: { reservations: CsvReservation[] }) {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ─── Quick replies (in discussion) ───────────────────────────────────────────
+
+const QUICK_REPLIES_OV = [
+  {
+    id: "no_seaview",
+    label: "No seaview tables",
+    getMessage: (first: string) =>
+      `Hi ${first}!\n\nUnfortunately we don't have any seaview tables left for your date. Would you like us to book a standard table instead?\n\nWith Love,\nThe Roof Da Nang`,
+  },
+  {
+    id: "no_children",
+    label: "No children after 7PM",
+    getMessage: (first: string) =>
+      `Hi ${first}!\n\nJust to let you know — we're unable to accommodate children after 7PM. Would an earlier time work for you, or would you like to adjust?\n\nWith Love,\nThe Roof Da Nang`,
+  },
+  {
+    id: "bar_table",
+    label: "Bar table only",
+    getMessage: (first: string) =>
+      `Hi ${first}!\n\nWe're fully booked on regular tables, but we have a great spot at the bar available. Would you be happy with a bar table? 🍹\n\nWith Love,\nThe Roof Da Nang`,
+  },
+] as const
+
+function DiscussionCard({ r }: { r: CsvReservation }) {
+  const [sentId, setSentId] = useState<string | null>(null)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const sendMessage = useSendGuestMessage()
+  const firstName = (r.name ?? "there").split(/\s+/)[0]
+  const hasPhone = !!r.phone
+  const channel: "whatsapp" | "email" = hasPhone ? "whatsapp" : "email"
+  const canSend = !!r.reservationSystemId && !!r.reservationSystemToken && (hasPhone || !!r.email)
+
+  async function handleQuickReply(qr: (typeof QUICK_REPLIES_OV)[number]) {
+    if (!canSend) return
+    setLoadingId(qr.id)
+    try {
+      await sendMessage.mutateAsync({
+        id: r.reservationSystemId!,
+        token: r.reservationSystemToken!,
+        body: qr.getMessage(firstName),
+        channel,
+      })
+      setSentId(qr.id)
+      setTimeout(() => setSentId(null), 4000)
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-2.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[13px] font-semibold text-foreground truncate max-w-[160px]">{r.name}</span>
+        {r.dateOfReservation && (
+          <span className="text-[11.5px] text-muted-foreground flex items-center gap-0.5">
+            <Calendar className="h-2.5 w-2.5" />
+            {new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+          </span>
+        )}
+        <span className="text-[11.5px] text-muted-foreground flex items-center gap-0.5">
+          <Clock className="h-2.5 w-2.5" />{r.time ?? "—"}
+        </span>
+        <span className="text-[11.5px] text-muted-foreground flex items-center gap-0.5">
+          <Users className="h-2.5 w-2.5" />{r.numberOfGuests} pax
+        </span>
+        {r.phone && (
+          <a href={`tel:${r.phone}`} className="text-[11.5px] text-muted-foreground hover:text-foreground flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+            <Phone className="h-2.5 w-2.5" />{r.phone}
+          </a>
+        )}
+      </div>
+      {canSend ? (
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_REPLIES_OV.map((qr) => {
+            const isSent = sentId === qr.id
+            const isLoading = loadingId === qr.id
+            return (
+              <button
+                key={qr.id}
+                type="button"
+                disabled={!!loadingId || isSent}
+                onClick={() => handleQuickReply(qr)}
+                className={cn(
+                  "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors disabled:cursor-default",
+                  isSent
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-60",
+                )}
+              >
+                {isLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : isSent ? <CheckCircle2 className="h-2.5 w-2.5" /> : null}
+                {isSent ? "Sent" : qr.label}
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="text-[11px] italic text-muted-foreground">No contact info — reply manually</p>
+      )}
+    </div>
+  )
+}
+
+function DiscussionQueue({ discussionList }: { discussionList: CsvReservation[] }) {
+  if (discussionList.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-1.5 py-6 text-center text-muted-foreground">
+        <MessageCircle className="h-5 w-5 text-blue-400" />
+        <p className="text-[13px]">No open discussions.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {discussionList.map((r) => (
+        <DiscussionCard key={r.reservationSystemId ?? r.name} r={r} />
+      ))}
     </div>
   )
 }
@@ -494,6 +627,14 @@ export function ReservationOverview() {
     .filter((r) => !["declined", "cancelled", "noshow"].includes(r.bookingStatus ?? ""))
     .reduce((a, r) => a + r.numberOfGuests, 0)
   const notResponded = pending.filter((r) => !r.respondedAt).length
+
+  // "In Discussion" = pending with a follow-up already sent, awaiting guest reply
+  const discussionList = useMemo(
+    () => allReservations.filter(
+      (r) => r.bookingStatus === "pending" && r.responseType === "followup" && r.respondedAt
+    ),
+    [allReservations],
+  )
 
   // Analytics range filter (for Nationality + Booking Source widgets)
   const analyticsReservations = useMemo(() => {
@@ -596,6 +737,21 @@ export function ReservationOverview() {
             <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'flex-start' }}>
               {/* Left column — 70% */}
               <div className="flex flex-col gap-4" style={{ flex: 7, minWidth: 0 }}>
+                {/* In Discussion */}
+                {discussionList.length > 0 && (
+                  <Widget
+                    title="In Discussion"
+                    icon={<MessageCircle className="h-4 w-4" />}
+                    action={
+                      <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600">
+                        {discussionList.length} open
+                      </span>
+                    }
+                  >
+                    <DiscussionQueue discussionList={discussionList} />
+                  </Widget>
+                )}
+
                 {/* Pending Approvals */}
                 <Widget
                   title="Pending Approvals"
