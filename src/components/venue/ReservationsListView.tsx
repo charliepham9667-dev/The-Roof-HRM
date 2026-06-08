@@ -159,34 +159,39 @@ function ReservationRow({
               <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none", badge.cls)}>
                 {badge.label}
               </span>
-              {isWebForm && r.bookingStatus === 'pending' && !hasResponded && (
+              {r.bookingStatus === 'pending' && !hasResponded && (
                 <span
                   className="shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none"
                   style={{ border: "1px dashed #d8c08a", color: "#a06820", background: "transparent" }}
                 >
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c9a23f" }} />
-                  Not responded
+                  Pending
                 </span>
               )}
-              {isWebForm && r.bookingStatus === 'pending' && hasResponded && (
+              {r.bookingStatus === 'pending' && hasResponded && (
                 <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-blue-600">
                   <Clock className="h-2 w-2" />
                   Responded
                 </span>
               )}
-              {isWebForm && r.bookingStatus === 'pending' && (
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-amber-50 text-amber-700 border border-amber-200">
-                  Pending
-                </span>
-              )}
-              {isWebForm && r.bookingStatus === 'accepted' && (
+              {r.bookingStatus === 'accepted' && (
                 <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Confirmed
+                  ✓ Confirmed
                 </span>
               )}
-              {isWebForm && r.bookingStatus === 'declined' && (
+              {r.bookingStatus === 'declined' && (
                 <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-red-50 text-red-600 border border-red-200">
                   Declined
+                </span>
+              )}
+              {r.bookingStatus === 'cancelled' && (
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-zinc-100 text-zinc-500 border border-zinc-200">
+                  Cancelled
+                </span>
+              )}
+              {r.bookingStatus === 'noshow' && (
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-red-50 text-red-400 border border-red-200">
+                  No Show
                 </span>
               )}
             </div>
@@ -450,6 +455,30 @@ function DateGroupHeader({ iso, todayIso }: { iso: string; todayIso: string }) {
   )
 }
 
+// ─── Past section header ───────────────────────────────────────────────────────
+
+function PastDivider({ count }: { count: number }) {
+  return (
+    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-zinc-50 px-3 py-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Past (30 days)</span>
+      <span className="rounded-full bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">
+        {count}
+      </span>
+    </div>
+  )
+}
+
+// ─── Status filter type ────────────────────────────────────────────────────────
+
+type StatusFilter = "all" | "pending" | "accepted" | "declined"
+
+const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "all",      label: "All" },
+  { id: "pending",  label: "Pending" },
+  { id: "accepted", label: "Confirmed" },
+  { id: "declined", label: "Declined" },
+]
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
@@ -464,6 +493,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
   const { data: dbAll = [], isLoading: dbLoading } = useReservations(todayIso, nextMonthIso)
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [formOpen, setFormOpen] = useState(false)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
   const [responderRes, setResponderRes] = useState<CsvReservation | null>(null)
@@ -472,13 +502,12 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const csvLoading = webFormLoading || sheetLoading
 
   const allReservations = useMemo<CsvReservation[]>(() => {
-    // Start with web-form reservations (today + upcoming only)
-    const merged = webFormAll.filter((r) => r.status === "today" || r.status === "upcoming")
+    // Start with ALL web-form reservations (today + upcoming + past 30 days)
+    const merged = [...webFormAll]
     const seenKeys = new Set(merged.map((r) => `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`))
 
-    // Add Google Sheets CSV reservations (today + upcoming), de-duped by name+date+time
+    // Add Google Sheets CSV reservations (all dates), de-duped by name+date+time
     for (const r of sheetAll) {
-      if (r.status !== "today" && r.status !== "upcoming") continue
       const key = `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`
       if (!seenKeys.has(key)) {
         seenKeys.add(key)
@@ -486,7 +515,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
       }
     }
 
-    // Add database reservations, de-duped
+    // Add database reservations (today + upcoming), de-duped
     for (const r of dbAll) {
       const key = `${r.customerName.toLowerCase()}|${r.reservationDate}|${r.reservationTime.slice(0, 5)}`
       if (!seenKeys.has(key)) {
@@ -511,28 +540,40 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
       }
     }
 
-    merged.sort((a, b) => {
-      const dc = (a.dateOfReservation ?? "").localeCompare(b.dateOfReservation ?? "")
-      if (dc !== 0) return dc
-      return (a.time ?? "").localeCompare(b.time ?? "")
-    })
-
     return merged
   }, [webFormAll, sheetAll, dbAll, todayIso])
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return allReservations
-    const q = search.toLowerCase()
-    return allReservations.filter((r) =>
-      (r.name ?? "").toLowerCase().includes(q) ||
-      (r.phone ?? "").toLowerCase().includes(q) ||
-      (r.email ?? "").toLowerCase().includes(q) ||
-      (r.specialRequests ?? "").toLowerCase().includes(q)
-    )
-  }, [allReservations, search])
+    let list = allReservations
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter((r) =>
+        (r.name ?? "").toLowerCase().includes(q) ||
+        (r.phone ?? "").toLowerCase().includes(q) ||
+        (r.email ?? "").toLowerCase().includes(q) ||
+        (r.specialRequests ?? "").toLowerCase().includes(q)
+      )
+    }
+    if (statusFilter !== "all") {
+      list = list.filter((r) => r.bookingStatus === statusFilter)
+    }
+    return list
+  }, [allReservations, search, statusFilter])
 
   const todayList = filtered.filter((r) => r.dateOfReservation === todayIso)
-  const upcomingList = filtered.filter((r) => r.dateOfReservation !== todayIso)
+  const upcomingList = filtered.filter((r) => (r.dateOfReservation ?? "") > todayIso)
+    .sort((a, b) => {
+      const dc = (a.dateOfReservation ?? "").localeCompare(b.dateOfReservation ?? "")
+      if (dc !== 0) return dc
+      return (a.time ?? "").localeCompare(b.time ?? "")
+    })
+  const pastList = filtered.filter((r) => (r.dateOfReservation ?? "") < todayIso)
+    .sort((a, b) => {
+      // Most recent past first
+      const dc = (b.dateOfReservation ?? "").localeCompare(a.dateOfReservation ?? "")
+      if (dc !== 0) return dc
+      return (b.time ?? "").localeCompare(a.time ?? "")
+    })
 
   const upcomingByDate = useMemo(() => {
     const map = new Map<string, CsvReservation[]>()
@@ -571,7 +612,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
-      {/* Toolbar — compact single row */}
+      {/* Toolbar — search + add */}
       <div className="shrink-0 flex items-center gap-2 border-b border-border bg-muted/10 px-3 py-2">
         <div className="relative flex-1 min-w-0">
           <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
@@ -584,7 +625,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
           />
         </div>
         <p className="hidden shrink-0 text-[11px] text-muted-foreground sm:block">
-          {filtered.length} · {todayPax + upcomingPax} guests
+          {filtered.length} total
         </p>
         {canEdit && (
           <button
@@ -597,11 +638,41 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
           </button>
         )}
       </div>
-      {/* Count row — visible on mobile only */}
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-border/50 bg-muted/5 px-3 py-1 sm:hidden">
-        <span className="text-[11px] text-muted-foreground">{filtered.length} reservations</span>
-        <span className="text-border">·</span>
-        <span className="text-[11px] text-muted-foreground">{todayPax + upcomingPax} total guests</span>
+      {/* Status filter chips */}
+      <div className="shrink-0 flex items-center gap-1.5 border-b border-border/50 bg-muted/5 px-3 py-1.5 overflow-x-auto">
+        {STATUS_FILTERS.map((f) => {
+          const active = statusFilter === f.id
+          // Count per filter
+          const count =
+            f.id === "all" ? allReservations.length :
+            allReservations.filter((r) => r.bookingStatus === f.id).length
+          const colorActive =
+            f.id === "pending"  ? "bg-amber-100 text-amber-800 border-amber-300" :
+            f.id === "accepted" ? "bg-emerald-100 text-emerald-800 border-emerald-300" :
+            f.id === "declined" ? "bg-red-100 text-red-700 border-red-300" :
+            "bg-primary text-primary-foreground border-primary"
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setStatusFilter(f.id)}
+              className={cn(
+                "flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+                active
+                  ? colorActive
+                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              {f.label}
+              <span className={cn(
+                "rounded-full px-1 text-[9px] font-bold",
+                active ? "bg-white/30" : "bg-muted text-muted-foreground",
+              )}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Scrollable list */}
@@ -614,7 +685,9 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
             <Calendar className="h-7 w-7 opacity-30" />
-            <p className="text-sm">{search ? "No matches" : "No upcoming reservations"}</p>
+            <p className="text-sm">
+              {search ? "No matches" : statusFilter !== "all" ? `No ${statusFilter === "accepted" ? "confirmed" : statusFilter} reservations` : "No reservations"}
+            </p>
           </div>
         ) : (
           <>
@@ -637,6 +710,15 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
                       <ReservationRow key={`u-${date}-${i}`} r={r} canEdit={canEdit} onEdit={handleEdit} onRespond={setResponderRes} />
                     ))}
                   </div>
+                ))}
+              </section>
+            )}
+
+            {pastList.length > 0 && (
+              <section>
+                <PastDivider count={pastList.length} />
+                {pastList.map((r, i) => (
+                  <ReservationRow key={`p-${i}`} r={r} canEdit={canEdit} onEdit={handleEdit} onRespond={setResponderRes} />
                 ))}
               </section>
             )}
