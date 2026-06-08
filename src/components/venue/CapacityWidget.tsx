@@ -57,7 +57,7 @@ function SlotBar({ s }: { s: SlotAllocation }) {
       {/* Seaview sub-meter */}
       <span
         className={cn(
-          "flex w-[46px] shrink-0 items-center justify-center gap-0.5 font-mono text-[10px] font-semibold",
+          "flex w-[42px] shrink-0 items-center justify-center gap-0.5 font-mono text-[10px] font-semibold",
           seaviewFull ? "text-amber-600" : "text-sky-600",
         )}
         title="seaview reserved / cap (2 — rest held for walk-ins)"
@@ -66,13 +66,13 @@ function SlotBar({ s }: { s: SlotAllocation }) {
         {s.seaviewReserved}/{SEAVIEW_CAP_PER_SLOT}
       </span>
 
-      {/* Count */}
-      <span className="w-[42px] shrink-0 text-right font-mono text-[11px] text-muted-foreground">
+      {/* Count — hidden on small screens to save space */}
+      <span className="hidden w-[42px] shrink-0 text-right font-mono text-[11px] text-muted-foreground sm:block">
         {filled}/{GREEN_TABLES_PER_SLOT}
       </span>
 
-      {/* Zone badge */}
-      <span className={cn("w-[56px] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[9.5px] font-bold", z.chip)}>
+      {/* Zone badge — hidden on small screens */}
+      <span className={cn("hidden w-[52px] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[9.5px] font-bold sm:block", z.chip)}>
         {z.label}
       </span>
     </div>

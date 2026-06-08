@@ -156,7 +156,7 @@ function PendingQueue({
           <div
             key={r.reservationSystemId ?? r.name}
             className={cn(
-              "flex items-center gap-3 rounded-xl border p-2.5",
+              "flex flex-col gap-2.5 rounded-xl border p-2.5 sm:flex-row sm:items-center",
               isReturning
                 ? "border-amber-200 bg-amber-50/60"
                 : "border-border/60 bg-card",
@@ -221,7 +221,7 @@ function PendingQueue({
               type="button"
               onClick={() => onRespond(r)}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                "flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors sm:w-auto sm:shrink-0 sm:py-1.5",
                 responded
                   ? "border border-border bg-card text-foreground hover:bg-muted"
                   : "bg-primary text-white hover:bg-primary/90",
@@ -732,9 +732,9 @@ export function ReservationOverview() {
               <span className="text-sm">Loading…</span>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'flex-start' }}>
-              {/* Left column — 70% */}
-              <div className="flex flex-col gap-4" style={{ flex: 7, minWidth: 0 }}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+              {/* Left column — full on mobile, 70% on desktop */}
+              <div className="flex min-w-0 flex-col gap-4 lg:flex-[7]">
                 {/* Pending Approvals */}
                 <Widget
                   title="Pending Approvals"
@@ -764,17 +764,17 @@ export function ReservationOverview() {
                 </Widget>
               </div>
 
-              {/* Right column — 30% */}
-              <div className="flex flex-col gap-4" style={{ flex: 3, minWidth: 0 }}>
+              {/* Right column — full on mobile, 30% on desktop */}
+              <div className="flex min-w-0 flex-col gap-4 lg:flex-[3]">
                 {/* Analytics range toggle */}
-                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5 self-start">
+                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5 self-start w-full sm:w-auto">
                   {RANGE_LABELS.map(({ id, label }) => (
                     <button
                       key={id}
                       type="button"
                       onClick={() => setAnalyticsRange(id)}
                       className={cn(
-                        "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                        "flex-1 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors sm:flex-none",
                         analyticsRange === id
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
