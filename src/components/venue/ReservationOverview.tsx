@@ -593,7 +593,7 @@ export function ReservationOverview() {
               <span className="text-sm">Loading…</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_1fr]">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_2fr]">
               {/* Left column */}
               <div className="flex flex-col gap-4">
                 {/* Pending Approvals */}
