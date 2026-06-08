@@ -7,7 +7,7 @@ import {
   SEAVIEW_CAP_PER_SLOT,
   type SlotAllocation,
 } from "@/lib/capacityModel"
-import { AlertTriangle, Loader2, Waves } from "lucide-react"
+import { AlertTriangle, Loader2, Waves, Sparkles, CheckCircle2, Ban } from "lucide-react"
 
 const ZONE = {
   green:      { bar: "var(--primary)", chip: "bg-emerald-100 text-emerald-700", label: "Open" },
@@ -63,8 +63,15 @@ function SlotBar({ s }: { s: SlotAllocation }) {
   )
 }
 
+const REC_BANNER = {
+  green: { wrap: "border-emerald-200 bg-emerald-50", text: "text-emerald-800", icon: "text-emerald-600", Icon: CheckCircle2 },
+  amber: { wrap: "border-amber-200 bg-amber-50",     text: "text-amber-800",   icon: "text-amber-600",   Icon: AlertTriangle },
+  red:   { wrap: "border-red-200 bg-red-50",         text: "text-red-800",     icon: "text-red-600",     Icon: Ban },
+} as const
+
 export function CapacityWidget() {
-  const { slots, isLoading, peakSlot, discussionSlots, fullSlots, seaviewOverflowSlots } = useTableCapacity()
+  const { slots, isLoading, peakSlot, discussionSlots, fullSlots, seaviewOverflowSlots, recommendation } =
+    useTableCapacity()
   const [view, setView] = useState<"slots" | "stats">("slots")
 
   if (isLoading) {
@@ -82,6 +89,7 @@ export function CapacityWidget() {
 
   const peak = peakSlot?.tablesReserved ?? 0
   const util = Math.round((peak / GREEN_TABLES_PER_SLOT) * 100)
+  const rb = REC_BANNER[recommendation.tone]
 
   const stats = [
     { label: "Green capacity", value: `${peak}/${GREEN_TABLES_PER_SLOT}`, sub: peakSlot ? `peak ${peakSlot.time}` : "—", danger: peak > GREEN_TABLES_PER_SLOT },
@@ -104,6 +112,15 @@ export function CapacityWidget() {
             {peakSlot.time} {peakSlot.zone === "full" ? "full" : "needs discussion"}
           </span>
         )}
+      </div>
+
+      {/* AI recommendation */}
+      <div className={cn("mb-4 flex items-start gap-2 rounded-lg border px-3 py-2", rb.wrap)}>
+        <Sparkles className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", rb.icon)} />
+        <div className="min-w-0">
+          <p className={cn("text-[12.5px] font-bold leading-snug", rb.text)}>{recommendation.headline}</p>
+          <p className="text-[11px] text-muted-foreground leading-snug">{recommendation.detail}</p>
+        </div>
       </div>
 
       {/* View toggle */}

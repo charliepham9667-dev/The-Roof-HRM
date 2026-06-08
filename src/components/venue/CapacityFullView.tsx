@@ -4,96 +4,137 @@ import {
   GREEN_TABLES_PER_SLOT,
   MAX_TABLES_PER_SLOT,
   SEAVIEW_CAP_PER_SLOT,
+  SOFA_CAP_PER_SLOT,
+  BAR_CAP_PER_SLOT,
   VENUE_CAPACITY,
   type SlotAllocation,
+  type DayRecommendation,
 } from "@/lib/capacityModel"
-import { AlertTriangle, Loader2, Flag, Users, Waves, Armchair, MessageCircle } from "lucide-react"
+import { Loader2, Waves, Armchair, Wine, Sparkles, CheckCircle2, AlertTriangle, Ban } from "lucide-react"
 
-function StatChip({ label, value, sub, icon, tone = "default" }: {
-  label: string; value: string | number; sub: string; icon: React.ReactNode
-  tone?: "default" | "warning" | "error" | "ocean"
-}) {
-  const toneMap = {
-    default: { icon: "text-muted-foreground", bg: "bg-muted/60" },
-    warning: { icon: "text-amber-600", bg: "bg-amber-50" },
-    error:   { icon: "text-red-600",   bg: "bg-red-50" },
-    ocean:   { icon: "text-sky-600",   bg: "bg-sky-50" },
-  }
-  const t = toneMap[tone]
+// ─── Day recommendation banner ─────────────────────────────────────────────
+
+const REC_STYLE = {
+  green: { wrap: "border-emerald-200 bg-emerald-50", icon: "text-emerald-600", head: "text-emerald-800", Icon: CheckCircle2 },
+  amber: { wrap: "border-amber-200 bg-amber-50",     icon: "text-amber-600",   head: "text-amber-800",   Icon: AlertTriangle },
+  red:   { wrap: "border-red-200 bg-red-50",         icon: "text-red-600",     head: "text-red-800",     Icon: Ban },
+} as const
+
+function RecommendationBanner({ rec }: { rec: DayRecommendation }) {
+  const s = REC_STYLE[rec.tone]
   return (
-    <div className="flex flex-1 flex-col gap-2 rounded-xl border border-border/60 bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
-        <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", t.bg, t.icon)}>{icon}</span>
+    <div className={cn("flex items-start gap-3 rounded-xl border px-5 py-4 shadow-sm", s.wrap)}>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Sparkles className={cn("h-4 w-4", s.icon)} />
+        <s.Icon className={cn("h-5 w-5", s.icon)} />
       </div>
-      <div className="text-[32px] font-bold leading-none tracking-tight">{value}</div>
-      <div className="text-[12px] text-muted-foreground">{sub}</div>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Recommendation</span>
+        </div>
+        <p className={cn("text-[15px] font-bold leading-snug", s.head)}>{rec.headline}</p>
+        <p className="mt-0.5 text-[12.5px] text-muted-foreground">{rec.detail}</p>
+      </div>
     </div>
   )
 }
 
-const ZONE_STYLE = {
-  green:      { bar: "var(--primary)", chip: "bg-emerald-100 text-emerald-700", label: "Open" },
-  discussion: { bar: "#a06820",        chip: "bg-amber-100 text-amber-700",   label: "Discuss" },
-  full:       { bar: "#b83232",        chip: "bg-red-100 text-red-600",       label: "Full" },
+// ─── Category pill (seaview / sofa / bar) ──────────────────────────────────
+
+function CatPill({
+  icon, label, reserved, cap, tone,
+}: {
+  icon: React.ReactNode; label: string; reserved: number; cap: number
+  tone: "ocean" | "violet" | "amber"
+}) {
+  const full = reserved >= cap
+  const palette = {
+    ocean:  { base: "border-sky-200 bg-sky-50 text-sky-700",       fill: "bg-sky-500" },
+    violet: { base: "border-violet-200 bg-violet-50 text-violet-700", fill: "bg-violet-500" },
+    amber:  { base: "border-amber-200 bg-amber-50 text-amber-700",  fill: "bg-amber-500" },
+  }[tone]
+  const pct = cap > 0 ? Math.min((reserved / cap) * 100, 100) : 0
+  return (
+    <div
+      className={cn(
+        "flex min-w-[96px] flex-1 flex-col gap-1 rounded-lg border px-2.5 py-1.5",
+        full ? "border-red-200 bg-red-50 text-red-700" : palette.base,
+      )}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="flex items-center gap-1 text-[10.5px] font-semibold">
+          {icon}
+          {label}
+        </span>
+        <span className="font-mono text-[11px] font-bold">
+          {reserved}/{cap}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-white/70">
+        <div className={cn("h-full rounded-full transition-all", full ? "bg-red-500" : palette.fill)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Slot card ─────────────────────────────────────────────────────────────
+
+const SLOT_REC_CHIP = {
+  green: "bg-emerald-100 text-emerald-700",
+  amber: "bg-amber-100 text-amber-700",
+  red:   "bg-red-100 text-red-600",
 } as const
 
-function SlotRow({ s }: { s: SlotAllocation }) {
-  const z = ZONE_STYLE[s.zone]
-  // Bar fills against the hard cap so the green→overflow band is visible.
-  const pct = Math.min((s.tablesReserved / MAX_TABLES_PER_SLOT) * 100, 100)
-  const greenLinePct = (GREEN_TABLES_PER_SLOT / MAX_TABLES_PER_SLOT) * 100
-  const seaviewFull = s.seaviewReserved >= SEAVIEW_CAP_PER_SLOT
-
+function SlotCard({ s }: { s: SlotAllocation }) {
+  const rec = s.recommendation
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-[42px] shrink-0 font-mono text-[12.5px] font-semibold text-foreground">{s.time}</span>
-
-      {/* Table utilisation bar */}
-      <div className="relative flex-1 h-5 overflow-hidden rounded-md bg-muted/60">
-        {/* Green-capacity line (comfortable reservable tables) */}
-        <div
-          className="pointer-events-none absolute top-0 bottom-0 z-10 border-r border-dashed border-emerald-500/50"
-          style={{ left: `${greenLinePct}%` }}
-        />
-        <div
-          className="h-full rounded-md transition-all duration-500"
-          style={{ width: `${pct}%`, background: z.bar }}
-        />
-      </div>
-
-      {/* Seaview sub-meter */}
-      <div
-        className={cn(
-          "flex w-[78px] shrink-0 items-center justify-center gap-1 rounded-md border px-2 py-0.5 text-[10.5px] font-semibold",
-          seaviewFull
-            ? "border-amber-200 bg-amber-50 text-amber-700"
-            : "border-sky-200 bg-sky-50 text-sky-700",
-        )}
-        title="Seaview tables reserved this slot (cap 2 — rest held for walk-ins)"
-      >
-        <Waves className="h-3 w-3" />
-        {s.seaviewReserved}/{SEAVIEW_CAP_PER_SLOT}
-      </div>
-
-      {/* Tables count + zone badge */}
-      <div className="flex w-[150px] shrink-0 items-center justify-end gap-1.5">
+    <div className="flex flex-col gap-2.5 border-b border-border/40 px-5 py-3.5 last:border-0">
+      {/* Top line: time + totals + recommendation */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="w-[52px] shrink-0 font-mono text-[15px] font-bold text-foreground">{s.time}</span>
         <span className="font-mono text-[12px] text-muted-foreground">
-          {s.tablesReserved}/{GREEN_TABLES_PER_SLOT}
-          {s.tablesPending > 0 && (
-            <span className="text-amber-600"> ({s.tablesPending}p)</span>
-          )}
-          {" · "}{s.pax}pax
+          {s.tablesReserved}/{GREEN_TABLES_PER_SLOT} tables
+          {s.tablesPending > 0 && <span className="text-amber-600"> · {s.tablesPending} pending</span>}
+          {" · "}{s.pax} pax
         </span>
-        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", z.chip)}>{z.label}</span>
+        <span className={cn("ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-bold", SLOT_REC_CHIP[rec.tone])}>
+          {rec.headline}
+        </span>
       </div>
+
+      {/* Three categories */}
+      <div className="flex flex-wrap gap-2">
+        <CatPill icon={<Waves className="h-3 w-3" />} label="Seaview" reserved={s.seaviewReserved} cap={s.seaviewCap} tone="ocean" />
+        <CatPill icon={<Armchair className="h-3 w-3" />} label="Sofa" reserved={s.sofaReserved} cap={s.sofaCap} tone="violet" />
+        <CatPill icon={<Wine className="h-3 w-3" />} label="Bar" reserved={s.barReserved} cap={s.barCap} tone="amber" />
+      </div>
+
+      {/* Recommendation detail */}
+      <p className="text-[12px] text-muted-foreground">{rec.detail}</p>
+    </div>
+  )
+}
+
+// ─── Legend / inventory cards ──────────────────────────────────────────────
+
+function InvCard({ icon, label, total, rule, tone }: {
+  icon: React.ReactNode; label: string; total: number; rule: string; tone: "ocean" | "violet" | "amber"
+}) {
+  const t = { ocean: "text-sky-600 bg-sky-50", violet: "text-violet-600 bg-violet-50", amber: "text-amber-600 bg-amber-50" }[tone]
+  return (
+    <div className="flex flex-1 flex-col gap-2 rounded-xl border border-border/60 bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", t)}>{icon}</span>
+      </div>
+      <div className="text-[28px] font-bold leading-none tracking-tight">{total}</div>
+      <div className="text-[12px] text-muted-foreground">{rule}</div>
     </div>
   )
 }
 
 export function CapacityFullView() {
-  const { slots, isLoading, peakSlot, discussionSlots, fullSlots, seaviewOverflowSlots, totalTables, totalPax } =
-    useTableCapacity()
+  const { slots, isLoading, totalTables, totalPax, peakSlot, recommendation } = useTableCapacity()
 
   if (isLoading) {
     return (
@@ -106,111 +147,65 @@ export function CapacityFullView() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Stat cards */}
+      {/* AI recommendation */}
+      <RecommendationBanner rec={recommendation} />
+
+      {/* Inventory cards */}
       <div className="flex flex-wrap gap-3">
-        <StatChip
-          label="Green capacity"
-          value={GREEN_TABLES_PER_SLOT}
-          sub="tables/slot — 2 seaview + 9 sofa"
-          icon={<Users className="h-4 w-4" />}
-        />
-        <StatChip
-          label="Seaview cap"
-          value={`${SEAVIEW_CAP_PER_SLOT}/slot`}
-          sub={`${VENUE_CAPACITY.seating.seaview.total} total · 9 held for walk-ins`}
+        <InvCard
           icon={<Waves className="h-4 w-4" />}
+          label="Seaview"
+          total={VENUE_CAPACITY.seating.seaview.total}
+          rule={`${SEAVIEW_CAP_PER_SLOT} reservable/slot · 9 walk-in`}
           tone="ocean"
         />
-        <StatChip
-          label="Overflow buffer"
-          value={`+${VENUE_CAPACITY.seating.standing.total}`}
-          sub="non-seaview standing — needs discussion"
-          icon={<MessageCircle className="h-4 w-4" />}
-          tone="warning"
+        <InvCard
+          icon={<Armchair className="h-4 w-4" />}
+          label="Sofa"
+          total={VENUE_CAPACITY.seating.sofa.total}
+          rule={`${SOFA_CAP_PER_SLOT}/slot · min ${VENUE_CAPACITY.seating.sofa.minPax} pax (2 slow hrs)`}
+          tone="violet"
         />
-        <StatChip
-          label="Hard max"
-          value={MAX_TABLES_PER_SLOT}
-          sub="tables/slot — then decline / waitlist"
-          icon={<Flag className="h-4 w-4" />}
-          tone="error"
+        <InvCard
+          icon={<Wine className="h-4 w-4" />}
+          label="Bar (overflow)"
+          total={VENUE_CAPACITY.seating.bar.total}
+          rule={`${BAR_CAP_PER_SLOT}/slot · offer only after discussion`}
+          tone="amber"
         />
       </div>
 
-      {/* Today rollup */}
+      {/* Tonight rollup */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card px-5 py-3 text-[12.5px] shadow-sm">
         <span className="font-semibold text-foreground">Tonight:</span>
-        <span className="text-muted-foreground">{totalTables} tables · {totalPax} pax across all slots</span>
+        <span className="text-muted-foreground">
+          {totalTables} tables · {totalPax} pax · green cap {GREEN_TABLES_PER_SLOT}/slot, hard max {MAX_TABLES_PER_SLOT}
+        </span>
         {peakSlot && (
           <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium text-muted-foreground">
             Peak {peakSlot.time} · {peakSlot.tablesReserved} tables
           </span>
         )}
-        {seaviewOverflowSlots > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-2.5 py-0.5 font-semibold text-sky-700">
-            <Waves className="h-3 w-3" />
-            {seaviewOverflowSlots} slot{seaviewOverflowSlots !== 1 ? "s" : ""} over seaview cap
-          </span>
-        )}
-        {discussionSlots > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 font-semibold text-amber-700">
-            <MessageCircle className="h-3 w-3" />
-            {discussionSlots} need discussion
-          </span>
-        )}
-        {fullSlots > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 font-semibold text-red-600">
-            <AlertTriangle className="h-3 w-3" />
-            {fullSlots} full
-          </span>
-        )}
       </div>
 
-      {/* Utilization by time slot */}
+      {/* Per-slot breakdown + recommendation */}
       <div className="rounded-xl border border-border/60 bg-card shadow-sm">
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
-          <span className="text-[13.5px] font-semibold text-foreground">Utilization by time slot</span>
-          <span className="text-[11px] text-muted-foreground">tables reserved · seaview sub-cap</span>
+          <span className="text-[13.5px] font-semibold text-foreground">Utilization &amp; allocation by time slot</span>
+          <span className="text-[11px] text-muted-foreground">seaview · sofa · bar — what to accept</span>
         </div>
-        <div className="flex flex-col gap-2.5 px-5 py-4">
+        <div className="flex flex-col">
           {slots.map((s) => (
-            <SlotRow key={s.time} s={s} />
+            <SlotCard key={s.time} s={s} />
           ))}
-        </div>
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 border-t border-border/60 px-5 py-3 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: "var(--primary)" }} />
-            Open (≤{GREEN_TABLES_PER_SLOT})
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#a06820" }} />
-            Discussion (seaview cap / overflow)
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#b83232" }} />
-            Full (&gt;{MAX_TABLES_PER_SLOT})
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Waves className="h-3 w-3 text-sky-600" />
-            Seaview reserved / cap
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="text-amber-600 font-mono font-bold">(np)</span>
-            pending tables
-          </span>
         </div>
       </div>
 
-      {/* Sofa rule note */}
-      <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 px-5 py-3.5 text-[12.5px] text-muted-foreground">
-        <Armchair className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-        <p>
-          <span className="font-semibold text-foreground">9 sofa tables</span> seat a minimum of {VENUE_CAPACITY.seating.sofa.minPax} pax —
-          relaxed to {VENUE_CAPACITY.seating.sofa.slowHourMinPax} pax during slow hours (14:00–18:00).
-          Reservations stop after {VENUE_CAPACITY.lastSlotHour}:00 — later arrivals are walk-in only.
-        </p>
-      </div>
+      {/* Footnote */}
+      <p className="px-1 text-[11.5px] text-muted-foreground">
+        Reservations stop after {VENUE_CAPACITY.lastSlotHour}:00 — later arrivals are walk-in only. Seating type is
+        inferred from each guest's table preference; seaview is the binding cap ({SEAVIEW_CAP_PER_SLOT}/slot).
+      </p>
     </div>
   )
 }
