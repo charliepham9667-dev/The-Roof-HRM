@@ -593,9 +593,9 @@ export function ReservationOverview() {
               <span className="text-sm">Loading…</span>
             </div>
           ) : (
-            <div className="flex flex-col gap-4 lg:flex-row">
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'flex-start' }}>
               {/* Left column — 70% */}
-              <div className="flex flex-col gap-4 w-full" style={{ flex: '7' }}>
+              <div className="flex flex-col gap-4" style={{ flex: 7, minWidth: 0 }}>
                 {/* Pending Approvals */}
                 <Widget
                   title="Pending Approvals"
@@ -634,7 +634,7 @@ export function ReservationOverview() {
               </div>
 
               {/* Right column — 30% */}
-              <div className="flex flex-col gap-4 w-full" style={{ flex: '3' }}>
+              <div className="flex flex-col gap-4" style={{ flex: 3, minWidth: 0 }}>
                 {/* Analytics range toggle */}
                 <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5 self-start">
                   {RANGE_LABELS.map(({ id, label }) => (
