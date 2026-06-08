@@ -270,12 +270,16 @@ export function StaffReservations() {
     refetchDeclined()
   }
 
-  // Merge CSV + Supabase, dedupe, keep only accepted/pending
+  // Merge CSV + Supabase, dedupe — confirmed only (no pending shown to staff)
   const allActive = useMemo(() => {
-    const accepted = supabaseData.filter(
-      (r) => r.bookingStatus === 'accepted' || r.bookingStatus === 'pending',
+    const confirmedSupabase = supabaseData.filter(
+      (r) => r.bookingStatus === 'accepted' || !r.bookingStatus,
     )
-    return dedupeReservations(csvData, accepted)
+    // CSV entries are all accepted (manually entered = confirmed)
+    const confirmedCsv = csvData.filter(
+      (r) => r.bookingStatus === 'accepted' || !r.bookingStatus,
+    )
+    return dedupeReservations(confirmedCsv, confirmedSupabase)
   }, [csvData, supabaseData])
 
   // Today's reservations sorted by time
