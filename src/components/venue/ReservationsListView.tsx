@@ -174,7 +174,7 @@ function ReservationRow({
                   Responded
                 </span>
               )}
-              {r.bookingStatus === 'accepted' && (
+              {(r.bookingStatus === 'accepted' || !r.bookingStatus) && (
                 <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-emerald-50 text-emerald-700 border border-emerald-200">
                   ✓ Confirmed
                 </span>
