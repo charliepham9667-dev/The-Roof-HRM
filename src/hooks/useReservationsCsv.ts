@@ -152,7 +152,7 @@ function parseReservationsCsv(csvText: string): CsvReservation[] {
       occasion: row["occasion"] || "website",
       mustHaves: row["must_haves"] || null,
       status,
-      bookingStatus: "pending" as const,
+      bookingStatus: "accepted" as const,  // Sheet = confirmed reservations (form submission = accepted)
     })
   }
 
