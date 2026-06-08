@@ -82,7 +82,7 @@ function GuestRow({ r }: { r: CsvReservation }) {
 // ─── Slot bar row with expandable guest list ───────────────────────────────
 
 function SlotBar({ s, reservations }: { s: SlotAllocation; reservations: CsvReservation[] }) {
-  const [open, setOpen] = useState(reservations.length > 0)
+  const [open, setOpen] = useState(false)
   const z = ZONE[s.zone]
   const blue   = s.seaviewReserved
   const green  = s.sofaReserved
