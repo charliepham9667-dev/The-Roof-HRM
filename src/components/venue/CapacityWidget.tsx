@@ -1,10 +1,41 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { useCapacityData } from "@/hooks/useCapacityData"
+import { useReservationsCsv } from "@/hooks/useReservationsCsv"
 import { AlertTriangle, Loader2 } from "lucide-react"
 
+function getIctTodayIso() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).formatToParts(new Date())
+  const map = new Map(parts.map((p) => [p.type, p.value]))
+  return `${map.get("year")}-${map.get("month")}-${map.get("day")}`
+}
+
 export function CapacityWidget() {
-  const { data, isLoading } = useCapacityData()
+  const { data, isLoading: capacityLoading } = useCapacityData()
+  const { data: csvAll = [], isLoading: csvLoading } = useReservationsCsv()
+  const todayIso = getIctTodayIso()
+  const isLoading = capacityLoading || csvLoading
+
+  // Merge CSV today bookings into slot booked counts
+  const mergedData = useMemo(() => {
+    if (!data) return null
+
+    // Extra pax from CSV for today (phone/manually entered — not in Supabase)
+    const csvTodayByHour: Record<number, number> = {}
+    for (const r of csvAll) {
+      if (r.dateOfReservation === todayIso && r.time) {
+        const hour = parseInt(r.time.slice(0, 2), 10)
+        csvTodayByHour[hour] = (csvTodayByHour[hour] ?? 0) + r.numberOfGuests
+      }
+    }
+
+    const mergedSlots = data.slots.map((s) => ({
+      ...s,
+      booked: s.booked + (csvTodayByHour[s.hour] ?? 0),
+    }))
+
+    return { ...data, slots: mergedSlots }
+  }, [data, csvAll, todayIso])
   const [view, setView] = useState<"stats" | "tight">("stats")
 
   if (isLoading) {
@@ -16,7 +47,7 @@ export function CapacityWidget() {
     )
   }
 
-  if (!data || data.slots.length === 0) {
+  if (!mergedData || mergedData.slots.length === 0) {
     return (
       <div className="py-6 text-center text-sm text-muted-foreground">
         No capacity data — configure time slot caps in Supabase.
@@ -24,7 +55,7 @@ export function CapacityWidget() {
     )
   }
 
-  const { slots, config } = data
+  const { slots, config } = mergedData
   const { warningThreshold, hardLimit } = config
 
   // Total max pax across all slots (use max single slot for the chart scale)

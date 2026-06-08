@@ -536,6 +536,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
           occasion: r.source ?? null,
           mustHaves: r.id,
           status: r.reservationDate === todayIso ? "today" : "upcoming",
+          bookingStatus: 'accepted' as const, // Manually entered = confirmed by definition
         })
       }
     }
