@@ -41,7 +41,7 @@ const REPLY_TYPES: ReplyType[] = [
     blurb: "Approve the booking and let the guest know.",
     icon: <Check className="h-3.5 w-3.5" />,
     template: (r) =>
-      `Hi ${firstName(r.name)}, great news — your reservation at The Roof for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"} is confirmed. We look forward to hosting you. — The Roof, 3F`,
+      `Hi ${firstName(r.name)}, great news — your reservation at The Roof for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"} is confirmed. We look forward to hosting you.\n\n— The Roof Da Nang`,
   },
   {
     id: "followup",
@@ -50,7 +50,7 @@ const REPLY_TYPES: ReplyType[] = [
     blurb: "Ask a question — e.g. a request you can't confirm yet.",
     icon: <MessageSquare className="h-3.5 w-3.5" />,
     template: (r) =>
-      `Hi ${firstName(r.name)}, thank you for your reservation request for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}.${r.specialRequests ? ` Regarding your request — "${r.specialRequests}" — we can't guarantee it for that time slot.` : ""} Could we offer you an alternative? Reply here and we'll hold your table. — The Roof, 3F`,
+      `Hi ${firstName(r.name)}, thank you for your reservation request for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}.${r.specialRequests ? ` Regarding your request — "${r.specialRequests}" — we can't guarantee it for that time slot.` : ""} Could we offer you an alternative? Reply here and we'll hold your table.\n\n— The Roof Da Nang`,
   },
   {
     id: "decline",
@@ -59,7 +59,7 @@ const REPLY_TYPES: ReplyType[] = [
     blurb: "Decline the booking with a short reason.",
     icon: <Ban className="h-3.5 w-3.5" />,
     template: (r, reason) =>
-      `Hi ${firstName(r.name)}, thank you for thinking of The Roof. Unfortunately we're unable to accommodate your reservation for ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}${reason ? ` — ${reason}` : ""}. We're sorry to miss you and hope to welcome you another time. — The Roof, 3F`,
+      `Hi ${firstName(r.name)}, thank you for thinking of The Roof.\n\nUnfortunately we're unable to accommodate your reservation for ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}. ${reason ? `${reason}. ` : ""}We're sorry to miss you and hope to welcome you another time.\n\n— The Roof Da Nang`,
   },
 ]
 
