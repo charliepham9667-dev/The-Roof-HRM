@@ -42,15 +42,18 @@ const PHONE_FLAGS: [string, string, string][] = [
 ]
 function flagFromPhone(phone: string | null): string {
   if (!phone) return ""
+  const normalised = phone.startsWith("+") ? phone : "+" + phone
   for (const [prefix, flag] of PHONE_FLAGS) {
-    if (phone.startsWith(prefix)) return flag
+    if (normalised.startsWith(prefix)) return flag
   }
   return ""
 }
 function countryFromPhone(phone: string | null): string {
   if (!phone) return ""
+  // Normalise: ensure leading "+" so "84xxx" matches "+84"
+  const normalised = phone.startsWith("+") ? phone : "+" + phone
   for (const [prefix, , country] of PHONE_FLAGS) {
-    if (phone.startsWith(prefix)) return country
+    if (normalised.startsWith(prefix)) return country
   }
   return ""
 }
@@ -447,7 +450,7 @@ export function ReservationOverview() {
   const pending = todayReservations.filter((r) => r.bookingStatus === "pending")
   const accepted = todayReservations.filter((r) => r.bookingStatus === "accepted")
   const guestsToday = todayReservations
-    .filter((r) => ["pending", "accepted"].includes(r.bookingStatus ?? ""))
+    .filter((r) => !["declined", "cancelled", "noshow"].includes(r.bookingStatus ?? ""))
     .reduce((a, r) => a + r.numberOfGuests, 0)
   const notResponded = pending.filter((r) => !r.respondedAt).length
 

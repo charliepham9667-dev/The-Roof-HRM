@@ -19,8 +19,10 @@ function getDateStatus(dateIso: string): ReservationStatus {
   return 'past'
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function mapSourceToOccasion(source: string | null): string {
-  if (!source) return 'website'
+  if (!source || UUID_RE.test(source)) return 'website'
   if (source === 'social_media') return 'whatsapp'
   return source
 }

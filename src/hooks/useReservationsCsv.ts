@@ -149,9 +149,10 @@ function parseReservationsCsv(csvText: string): CsvReservation[] {
       numberOfGuests: parseInt(row["number_of_guests"] || "0", 10) || 0,
       specialRequests: row["special_requests"] || null,
       specialPackages: row["special_packages"] || null,
-      occasion: row["occasion"] || null,
+      occasion: row["occasion"] || "website",
       mustHaves: row["must_haves"] || null,
       status,
+      bookingStatus: "pending" as const,
     })
   }
 
