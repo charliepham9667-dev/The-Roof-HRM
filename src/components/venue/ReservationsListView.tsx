@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useAcceptReservation, useDeclineReservation, useSendReminder, useSendGuestMessage } from "@/hooks/useWebFormReservations"
+import { useWebFormReservations, useSendReminder, useSendGuestMessage } from "@/hooks/useWebFormReservations"
 import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { InlineComment } from "@/components/venue/ReservationPanel"
@@ -460,20 +460,9 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     return d.toISOString().slice(0, 10)
   })()
 
-<<<<<<< HEAD
   const { data: webFormAll = [], isLoading: webFormLoading } = useWebFormReservations()
-=======
-  const { data: supabaseAll = [], isLoading: csvLoading } = useWebFormReservations()
->>>>>>> 8d847bc (feat(venue): Meta/email inbox, Capacity & Guest CRM tabs, design system alignment)
   const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
   const { data: dbAll = [], isLoading: dbLoading } = useReservations(todayIso, nextMonthIso)
-  const csvAll = [...supabaseAll, ...sheetAll.filter(
-    (s) => !supabaseAll.some(
-      (w) => `${(w.name ?? "").toLowerCase()}|${w.dateOfReservation}|${w.time ?? ""}` ===
-             `${(s.name ?? "").toLowerCase()}|${s.dateOfReservation}|${s.time ?? ""}`
-    )
-  )]
-
   const [search, setSearch] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
