@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
-import type { CsvReservation } from "@/hooks/useReservationsCsv"
+import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
 import { useWebFormReservations, useDeclinedReservations } from "@/hooks/useWebFormReservations"
 import { useConversations } from "@/hooks/useInbox"
 import { DeclinedLostLog } from "@/components/venue/DeclinedLostLog"
@@ -400,6 +400,14 @@ function canEditReservations(profile: any): boolean {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
+type AnalyticsRange = "tonight" | "week" | "month"
+
+const RANGE_LABELS: { id: AnalyticsRange; label: string }[] = [
+  { id: "tonight", label: "Tonight" },
+  { id: "week", label: "7 days" },
+  { id: "month", label: "30 days" },
+]
+
 export function ReservationOverview() {
   const profile = useAuthStore((s) => s.profile)
   const canEdit = canEditReservations(profile)
@@ -408,10 +416,30 @@ export function ReservationOverview() {
   const [activeTab, setActiveTab] = useState<TabId>("overview")
   const [responderRes, setResponderRes] = useState<CsvReservation | null>(null)
   const [showDeclinedLog, setShowDeclinedLog] = useState(false)
+  const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>("tonight")
 
-  const { data: allReservations = [], isLoading } = useWebFormReservations()
+  const { data: webFormAll = [], isLoading: webLoading } = useWebFormReservations()
+  const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
   const { data: declinedRows = [] } = useDeclinedReservations()
   const { data: conversations = [] } = useConversations()
+
+  const isLoading = webLoading || sheetLoading
+
+  // Merge Supabase + Google Sheets, deduplicated by name+date+time
+  const allReservations = useMemo<CsvReservation[]>(() => {
+    const merged = [...webFormAll]
+    const seenKeys = new Set(
+      merged.map((r) => `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`)
+    )
+    for (const r of sheetAll) {
+      const key = `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        merged.push(r)
+      }
+    }
+    return merged
+  }, [webFormAll, sheetAll])
 
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
@@ -422,6 +450,16 @@ export function ReservationOverview() {
     .filter((r) => ["pending", "accepted"].includes(r.bookingStatus ?? ""))
     .reduce((a, r) => a + r.numberOfGuests, 0)
   const notResponded = pending.filter((r) => !r.respondedAt).length
+
+  // Analytics range filter (for Nationality + Booking Source widgets)
+  const analyticsReservations = useMemo(() => {
+    if (analyticsRange === "tonight") return todayReservations
+    const days = analyticsRange === "week" ? 7 : 30
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - days)
+    const cutoffIso = cutoff.toISOString().slice(0, 10)
+    return allReservations.filter((r) => (r.dateOfReservation ?? "") >= cutoffIso)
+  }, [analyticsRange, todayReservations, allReservations])
 
   // ── Declined log view ──
   if (showDeclinedLog) {
@@ -547,6 +585,25 @@ export function ReservationOverview() {
 
               {/* Right column */}
               <div className="flex flex-col gap-4">
+                {/* Analytics range toggle */}
+                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5 self-start">
+                  {RANGE_LABELS.map(({ id, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setAnalyticsRange(id)}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                        analyticsRange === id
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Nationality Breakdown */}
                 <Widget
                   title="Nationality Breakdown"
@@ -561,7 +618,7 @@ export function ReservationOverview() {
                     </button>
                   }
                 >
-                  <NatList reservations={todayReservations} />
+                  <NatList reservations={analyticsReservations} />
                 </Widget>
 
                 {/* Booking Source */}
@@ -569,7 +626,7 @@ export function ReservationOverview() {
                   title="Booking Source"
                   icon={<BarChart2 className="h-4 w-4" />}
                 >
-                  <BookingSource reservations={allReservations} />
+                  <BookingSource reservations={analyticsReservations} />
                 </Widget>
 
                 {/* Declined & Lost */}
