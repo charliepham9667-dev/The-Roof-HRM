@@ -462,14 +462,25 @@ function DateGroupHeader({ iso, todayIso }: { iso: string; todayIso: string }) {
 
 // ─── Past section header ───────────────────────────────────────────────────────
 
-function PastDivider({ count }: { count: number }) {
+function PastDivider({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
   return (
-    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-zinc-50 px-3 py-1.5">
+    <button
+      type="button"
+      onClick={onToggle}
+      className="sticky top-0 z-20 flex w-full items-center gap-2 border-b border-border/60 bg-zinc-50 px-3 py-1.5 text-left transition-colors hover:bg-zinc-100"
+    >
       <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Past (30 days)</span>
       <span className="rounded-full bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">
         {count}
       </span>
-    </div>
+      <span className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-zinc-400">
+        {open ? (
+          <>Hide <ChevronUp className="h-3 w-3" /></>
+        ) : (
+          <>Show <ChevronDown className="h-3 w-3" /></>
+        )}
+      </span>
+    </button>
   )
 }
 
@@ -627,6 +638,7 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
   const [responderRes, setResponderRes] = useState<CsvReservation | null>(null)
+  const [pastOpen, setPastOpen] = useState(false)
 
   // isLoading covers all three sources
   const csvLoading = webFormLoading || sheetLoading
@@ -867,8 +879,8 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
 
             {pastList.length > 0 && (
               <section>
-                <PastDivider count={pastList.length} />
-                {pastList.map((r, i) => (
+                <PastDivider count={pastList.length} open={pastOpen} onToggle={() => setPastOpen((v) => !v)} />
+                {pastOpen && pastList.map((r, i) => (
                   <ReservationRow key={`p-${i}`} r={r} canEdit={canEdit} onEdit={handleEdit} onRespond={setResponderRes} />
                 ))}
               </section>
