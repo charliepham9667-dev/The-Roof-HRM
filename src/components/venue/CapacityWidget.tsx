@@ -36,6 +36,7 @@ export function CapacityWidget() {
 
     return { ...data, slots: mergedSlots }
   }, [data, csvAll, todayIso])
+  const CHART_HEIGHT = 160 // px — fixed so bar height: px resolves correctly
   const [view, setView] = useState<"stats" | "tight">("stats")
 
   if (isLoading) {
@@ -123,34 +124,40 @@ export function CapacityWidget() {
         </span>
       </div>
 
-      {/* Bar chart — flexes to fill height */}
-      <div className="relative flex min-h-[150px] flex-1 items-stretch gap-1 pr-7">
+      {/* Bar chart — fixed px height so percentage bars resolve correctly */}
+      <div className="relative flex items-end gap-1 pr-7" style={{ height: CHART_HEIGHT }}>
         {/* Threshold lines */}
         {[
           { pct: warnPct, val: warningThreshold, color: "var(--warning, #a06820)" },
           { pct: limitPct, val: hardLimit,        color: "var(--error, #b83232)" },
-        ].map(({ pct, val, color }) => (
-          <div
-            key={val}
-            className="pointer-events-none absolute left-0 right-7"
-            style={{
-              bottom: `calc(${pct}% + 16px)`,
-              borderTop: `1px dashed ${color}`,
-              opacity: 0.55,
-            }}
-          >
-            <span
-              className="absolute -right-7 -top-2.5 font-mono text-[9px] font-bold"
-              style={{ color }}
+        ].map(({ pct, val, color }) => {
+          const bottomPx = Math.round((pct / 100) * CHART_HEIGHT)
+          return (
+            <div
+              key={val}
+              className="pointer-events-none absolute left-0 right-7"
+              style={{
+                bottom: bottomPx,
+                borderTop: `1px dashed ${color}`,
+                opacity: 0.55,
+              }}
             >
-              {val}
-            </span>
-          </div>
-        ))}
+              <span
+                className="absolute -right-7 font-mono text-[9px] font-bold"
+                style={{ color, top: -10 }}
+              >
+                {val}
+              </span>
+            </div>
+          )
+        })}
 
-        {/* Bars */}
+        {/* Bars — items-end container aligns all bars at the bottom */}
         {slots.map((s) => {
-          const pct = s.maxPax > 0 ? (s.booked / s.maxPax) * 100 : 0
+          const barPx = Math.max(
+            s.maxPax > 0 ? Math.round((s.booked / s.maxPax) * CHART_HEIGHT) : 0,
+            s.booked > 0 ? 4 : 0,
+          )
           const color = colorFor(s.booked, s.maxPax)
           return (
             <div
@@ -158,26 +165,34 @@ export function CapacityWidget() {
               className="flex flex-1 flex-col items-center justify-end gap-0.5"
               title={`${s.time} · ${s.booked} guests`}
             >
-              <div className="flex w-full flex-1 flex-col items-center justify-end gap-0.5">
+              {s.booked > 0 && (
                 <span className="font-mono text-[8.5px] font-bold text-muted-foreground">
                   {s.booked}
                 </span>
-                <div
-                  className="w-full rounded-t"
-                  style={{
-                    height: `${pct}%`,
-                    minHeight: s.booked > 0 ? 4 : 0,
-                    background: color,
-                    opacity: 0.92,
-                    borderRadius: "4px 4px 0 0",
-                    transition: "height .5s",
-                  }}
-                />
-              </div>
-              <span className="font-mono text-[9px] text-muted-foreground">{s.time.slice(0, 2)}</span>
+              )}
+              <div
+                style={{
+                  width: "100%",
+                  height: barPx,
+                  background: color,
+                  opacity: 0.92,
+                  borderRadius: "4px 4px 0 0",
+                  transition: "height .5s",
+                  minHeight: s.booked > 0 ? 4 : 0,
+                }}
+              />
             </div>
           )
         })}
+      </div>
+
+      {/* Time labels row — separate so all labels stay on the same baseline */}
+      <div className="flex gap-1 pr-7 mt-1">
+        {slots.map((s) => (
+          <span key={s.time} className="flex-1 text-center font-mono text-[9px] text-muted-foreground">
+            {s.time.slice(0, 2)}
+          </span>
+        ))}
       </div>
 
       {/* Legend */}
