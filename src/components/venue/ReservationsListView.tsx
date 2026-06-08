@@ -57,10 +57,15 @@ function daysBetween(isoA: string, isoB: string): number {
 }
 
 function sourceBadge(r: CsvReservation) {
-  const src = r.occasion && SOURCE_BADGE[r.occasion] ? r.occasion : "website"
+  // Web form / DB entries: occasion holds the booking channel ('website', 'phone', 'whatsapp', etc.)
+  if (r.occasion && SOURCE_BADGE[r.occasion]) return SOURCE_BADGE[r.occasion]
+  // Legacy hint: phone field contains 'zalo' or 'wa'
   const phone = r.phone ?? ""
   if (phone.toLowerCase().includes("zalo") || phone.toLowerCase().includes("wa")) return SOURCE_BADGE.whatsapp
-  return SOURCE_BADGE[src] ?? SOURCE_BADGE.website
+  // No reservationSystemId = manually entered (CSV / phone booking) → Phone
+  if (!r.reservationSystemId) return SOURCE_BADGE.phone
+  // Web form entry with no recognised source → Website
+  return SOURCE_BADGE.website
 }
 
 // ─── Row ─────────────────────────────────────────────────────────────────────
