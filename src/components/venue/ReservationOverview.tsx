@@ -182,6 +182,12 @@ function PendingQueue({
                 )}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-[11.5px] text-muted-foreground">
+                {r.dateOfReservation && (
+                  <span className="flex items-center gap-0.5 font-medium text-foreground/70">
+                    <Calendar className="h-2.5 w-2.5" />
+                    {new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  </span>
+                )}
                 <span className="flex items-center gap-0.5">
                   <Clock className="h-2.5 w-2.5" />{r.time ?? "—"}
                 </span>
@@ -447,7 +453,14 @@ export function ReservationOverview() {
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0)
 
   const todayReservations = allReservations.filter((r) => r.dateOfReservation === todayIso)
-  const pending = todayReservations.filter((r) => r.bookingStatus === "pending")
+  // All pending = today + future (anything not yet responded to, excluding past)
+  const pending = allReservations.filter(
+    (r) => r.bookingStatus === "pending" && (r.dateOfReservation ?? "") >= todayIso
+  ).sort((a, b) => {
+    const dc = (a.dateOfReservation ?? "").localeCompare(b.dateOfReservation ?? "")
+    if (dc !== 0) return dc
+    return (a.time ?? "").localeCompare(b.time ?? "")
+  })
   const accepted = todayReservations.filter((r) => r.bookingStatus === "accepted")
   const guestsToday = todayReservations
     .filter((r) => !["declined", "cancelled", "noshow"].includes(r.bookingStatus ?? ""))
@@ -524,7 +537,7 @@ export function ReservationOverview() {
             <KpiCard
               label="Pending Approval"
               value={pending.length}
-              sub={notResponded > 0 ? `${notResponded} not yet responded` : "All replied · awaiting guests"}
+              sub={notResponded > 0 ? `${notResponded} need a response` : pending.length > 0 ? "All replied · awaiting guests" : "All clear"}
               icon={<Clock className="h-4 w-4" />}
               tone="warning"
               onClick={() => setActiveTab("reservations")}
@@ -557,12 +570,18 @@ export function ReservationOverview() {
               <div className="flex flex-col gap-4">
                 {/* Pending Approvals */}
                 <Widget
-                  title="Pending Approvals"
+                  title="Incoming Reservations"
                   icon={<Clock className="h-4 w-4" />}
                   action={
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
-                      {pending.length} waiting
-                    </span>
+                    pending.length > 0 ? (
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                        {pending.length} need response
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        All clear
+                      </span>
+                    )
                   }
                 >
                   <PendingQueue pending={pending} onRespond={setResponderRes} />
