@@ -19,6 +19,7 @@ const EXCLUDED_STATUSES = new Set(["declined", "cancelled", "noshow"])
 export interface UseTableCapacityResult extends DayCapacitySummary {
   isLoading: boolean
   dateIso: string
+  dayRows: CsvReservation[]
 }
 
 /**
@@ -58,7 +59,7 @@ export function useTableCapacity(dateIso?: string): UseTableCapacityResult {
         bookingStatus: r.bookingStatus,
       })),
     )
-    return summarizeDay(slots)
+    return { ...summarizeDay(slots), dayRows }
   }, [webFormAll, sheetAll, targetIso])
 
   return {
