@@ -46,12 +46,15 @@ function dedupeReservations(a: CsvReservation[], b: CsvReservation[]): CsvReserv
   const seen = new Set<string>()
   const result: CsvReservation[] = []
   for (const r of [...a, ...b]) {
-    const key = [
-      r.reservationSystemId ?? '',
-      (r.phone ?? '').replace(/\D/g, '').slice(-9),
-      r.dateOfReservation ?? '',
-      r.time ?? '',
-    ].join('|')
+    // Dedup by name + date + time — consistent across CSV and Supabase sources
+    const nameKey = (r.name ?? '').toLowerCase().trim()
+    const phoneKey = (r.phone ?? '').replace(/\D/g, '').slice(-9)
+    const timeKey = (r.time ?? '').slice(0, 5)
+    const dateKey = r.dateOfReservation ?? ''
+    // Use phone if available (more reliable), fall back to name
+    const key = phoneKey.length >= 7
+      ? `${phoneKey}|${dateKey}|${timeKey}`
+      : `${nameKey}|${dateKey}|${timeKey}`
     if (!seen.has(key)) {
       seen.add(key)
       result.push(r)
