@@ -38,8 +38,13 @@ function stripTableTag(specialRequests: string | null): string | null {
   return specialRequests.replace(/\[Table preference:[^\]]*\]/i, '').trim() || null
 }
 
+// NOTE: the `reservations` table has NO `source` column. Including it makes the
+// Supabase REST select error out, which silently returns [] for BOTH the active
+// and declined queries — wiping Pending Approvals and Declined & Lost. Web form
+// entries are website bookings by definition; phone/CSV entries are detected
+// client-side via getBookingSource(). Do not add `source` here.
 const FULL_SELECT =
-  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, status, source, token, created_at, response_type, response_message, response_channels, responded_at'
+  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, status, token, created_at, response_type, response_message, response_channels, responded_at'
 
 function mapRow(row: any): CsvReservation {
   const dateIso = row.requested_date ?? ''
