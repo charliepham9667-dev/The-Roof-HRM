@@ -542,6 +542,12 @@ const navigationGroups: NavGroup[] = [
         roles: ['staff'],
       },
       {
+        title: 'Reservations',
+        url: '/staff/reservations',
+        icon: Calendar,
+        roles: ['staff'],
+      },
+      {
         title: 'My Tasks',
         url: '/staff/tasks',
         icon: CheckSquare,

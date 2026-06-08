@@ -92,7 +92,7 @@ const TAB_CONFIG: Record<NavRole, TabDef[]> = {
   ],
   staff: [
     { to: '/staff/dashboard',           icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/staff/calendar',            icon: Calendar,        label: 'Briefing' },
+    { to: '/staff/reservations',        icon: Calendar,        label: 'Reservations' },
     { to: '/staff/check-in',            icon: Clock,           label: 'Check In', primary: true },
     { to: '/staff/tasks',               icon: CheckSquare,     label: 'Tasks' },
     { to: '__more__',                   icon: MoreHorizontal,  label: 'More' },
@@ -237,6 +237,12 @@ const DRAWER_CONFIG: Partial<Record<NavRole, DrawerSection[]>> = {
     },
   ],
   staff: [
+    {
+      label: 'Venue',
+      items: [
+        { title: 'Venue Briefing',       url: '/staff/calendar',          icon: Calendar },
+      ],
+    },
     {
       label: 'My Work',
       items: [

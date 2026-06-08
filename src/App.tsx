@@ -41,6 +41,7 @@ import { Reservations, LeaveApproval } from './pages/manager';
 const ScheduleBuilder = lazy(() => import('./pages/manager/ScheduleBuilder').then((m) => ({ default: m.ScheduleBuilder })));
 import { ManagerMyTasks } from './pages/manager/MyTasks';
 const StaffMyTasks = lazy(() => import('./pages/staff/MyTasks').then((m) => ({ default: m.StaffMyTasks })));
+const StaffReservations = lazy(() => import('./pages/staff/Reservations').then((m) => ({ default: m.StaffReservations })));
 import { FloorIssues } from './pages/manager/FloorIssues';
 import { ManagerCalendar } from './pages/manager/Calendar';
 import { StaffCalendar } from './pages/staff/Calendar';
@@ -322,6 +323,7 @@ export default function App() {
           {/* STAFF ROUTES (All authenticated users) */}
           {/* ============================================ */}
           <Route path="staff/dashboard" element={<StaffDashboard />} />
+          <Route path="staff/reservations" element={<StaffReservations />} />
           <Route path="staff/check-in" element={<CheckIn />} />
           <Route path="check-in" element={<Navigate to="/staff/check-in" replace />} />
           <Route path="staff/my-shifts" element={<MyShifts />} />
