@@ -737,21 +737,6 @@ export function ReservationOverview() {
             <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', alignItems: 'flex-start' }}>
               {/* Left column — 70% */}
               <div className="flex flex-col gap-4" style={{ flex: 7, minWidth: 0 }}>
-                {/* In Discussion */}
-                {discussionList.length > 0 && (
-                  <Widget
-                    title="In Discussion"
-                    icon={<MessageCircle className="h-4 w-4" />}
-                    action={
-                      <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600">
-                        {discussionList.length} open
-                      </span>
-                    }
-                  >
-                    <DiscussionQueue discussionList={discussionList} />
-                  </Widget>
-                )}
-
                 {/* Pending Approvals */}
                 <Widget
                   title="Pending Approvals"
@@ -847,6 +832,25 @@ export function ReservationOverview() {
                   onHeaderClick={() => setShowDeclinedLog(true)}
                 >
                   <DeclinedMini rows={declinedRows} />
+                </Widget>
+
+                {/* In Discussion */}
+                <Widget
+                  title="In Discussion"
+                  icon={<MessageCircle className="h-4 w-4" />}
+                  action={
+                    discussionList.length > 0 ? (
+                      <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600">
+                        {discussionList.length} open
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        0 open
+                      </span>
+                    )
+                  }
+                >
+                  <DiscussionQueue discussionList={discussionList} />
                 </Widget>
               </div>
             </div>
