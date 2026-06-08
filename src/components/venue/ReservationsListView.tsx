@@ -561,7 +561,9 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     return list
   }, [allReservations, search, statusFilter])
 
-  const todayList = filtered.filter((r) => r.dateOfReservation === todayIso)
+  const todayList = filtered
+    .filter((r) => r.dateOfReservation === todayIso)
+    .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))
   const upcomingList = filtered.filter((r) => (r.dateOfReservation ?? "") > todayIso)
     .sort((a, b) => {
       const dc = (a.dateOfReservation ?? "").localeCompare(b.dateOfReservation ?? "")
