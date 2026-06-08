@@ -36,7 +36,7 @@ export function CapacityWidget() {
 
     return { ...data, slots: mergedSlots }
   }, [data, csvAll, todayIso])
-  const CHART_HEIGHT = 160 // px — fixed so bar height: px resolves correctly
+  const CHART_HEIGHT = 180 // px — fixed so bar height: px resolves correctly
   const [view, setView] = useState<"stats" | "tight">("stats")
 
   if (isLoading) {
@@ -130,7 +130,7 @@ export function CapacityWidget() {
       </div>
 
       {/* Bar chart — fixed px height so percentage bars resolve correctly */}
-      <div className="relative flex items-end gap-1 pr-7" style={{ height: CHART_HEIGHT }}>
+      <div className="relative flex items-end gap-2 pr-7" style={{ height: CHART_HEIGHT }}>
         {/* Threshold lines */}
         {[
           { pct: warnPct, val: warningThreshold, color: C_WARNING },
@@ -177,7 +177,7 @@ export function CapacityWidget() {
               )}
               <div
                 style={{
-                  width: "100%",
+                  width: "60%",
                   height: barPx,
                   background: color,
                   opacity: 0.92,
@@ -192,7 +192,7 @@ export function CapacityWidget() {
       </div>
 
       {/* Time labels row — separate so all labels stay on the same baseline */}
-      <div className="flex gap-1 pr-7 mt-1">
+      <div className="flex gap-2 pr-7 mt-1">
         {slots.map((s) => (
           <span key={s.time} className="flex-1 text-center font-mono text-[9px] text-muted-foreground">
             {s.time.slice(0, 2)}
