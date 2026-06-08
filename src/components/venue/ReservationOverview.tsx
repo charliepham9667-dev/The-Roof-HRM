@@ -570,12 +570,12 @@ export function ReservationOverview() {
               <div className="flex flex-col gap-4">
                 {/* Pending Approvals */}
                 <Widget
-                  title="Incoming Reservations"
+                  title="Pending Approvals"
                   icon={<Clock className="h-4 w-4" />}
                   action={
                     pending.length > 0 ? (
                       <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
-                        {pending.length} need response
+                        {pending.length} waiting
                       </span>
                     ) : (
                       <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
