@@ -537,7 +537,7 @@ export function ReservationOverview() {
             <KpiCard
               label="Pending Approval"
               value={pending.length}
-              sub={notResponded > 0 ? `${notResponded} need a response` : pending.length > 0 ? "All replied · awaiting guests" : "All clear"}
+              sub={notResponded > 0 ? `${notResponded} not yet responded` : pending.length > 0 ? "All replied · awaiting guests" : "All clear"}
               icon={<Clock className="h-4 w-4" />}
               tone="warning"
               onClick={() => setActiveTab("reservations")}
