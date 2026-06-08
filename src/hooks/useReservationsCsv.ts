@@ -60,6 +60,14 @@ function parseCsvLine(line: string): string[] {
   return out.map((s) => s.trim())
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function normaliseOccasion(raw: string | undefined): string {
+  if (!raw || UUID_RE.test(raw)) return "website"
+  if (raw === "social_media") return "whatsapp"
+  return raw
+}
+
 /**
  * Parses date strings like "17-Feb-2026", "17/02/2026", "2026-02-17", "17-Feb-2025"
  * Returns "YYYY-MM-DD" or null.
@@ -149,7 +157,7 @@ function parseReservationsCsv(csvText: string): CsvReservation[] {
       numberOfGuests: parseInt(row["number_of_guests"] || "0", 10) || 0,
       specialRequests: row["special_requests"] || null,
       specialPackages: row["special_packages"] || null,
-      occasion: row["occasion"] || "website",
+      occasion: normaliseOccasion(row["occasion"]),
       mustHaves: row["must_haves"] || null,
       status,
       bookingStatus: "accepted" as const,  // Sheet = confirmed reservations (form submission = accepted)

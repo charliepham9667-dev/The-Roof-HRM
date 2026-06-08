@@ -39,7 +39,7 @@ function stripTableTag(specialRequests: string | null): string | null {
 }
 
 const FULL_SELECT =
-  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, status, token, source, created_at, response_type, response_message, response_channels, responded_at'
+  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, status, token, created_at, response_type, response_message, response_channels, responded_at'
 
 function mapRow(row: any): CsvReservation {
   const dateIso = row.requested_date ?? ''
