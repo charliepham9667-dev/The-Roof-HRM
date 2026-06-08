@@ -2,9 +2,8 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useTableCapacity } from "@/hooks/useTableCapacity"
 import {
-  GREEN_TABLES_PER_SLOT,
+  TOTAL_TABLES,
   MAX_TABLES_PER_SLOT,
-  SEAVIEW_CAP_PER_SLOT,
   type SlotAllocation,
 } from "@/lib/capacityModel"
 import { AlertTriangle, Loader2, Waves, Sparkles, CheckCircle2, Ban } from "lucide-react"
@@ -15,60 +14,70 @@ const ZONE = {
   full:       { chip: "bg-red-100 text-red-600",         label: "Full" },
 } as const
 
-const SEAVIEW_BLUE = "#2c5f9e"
-const TABLE_GREEN = "#2e7a52"
+// Table type colors
+const SEAVIEW_BLUE    = "#2c5f9e"  // Blue  — seaview
+const SOFA_GREEN      = "#2e7a52"  // Green — sofa
+const STANDING_YELLOW = "#b8862e"  // Yellow/amber — standing tables
 
 /**
- * Segmented bar — one block per booked table.
- *   Blue  = seaview table
- *   Green = bar table or sofa
- *   Empty = remaining green-cap headroom (11 tables/slot)
+ * Segmented bar — one discrete block per booked table.
+ *   Blue   = seaview table
+ *   Green  = sofa table
+ *   Yellow = standing table
+ *   Grey   = open / unreserved
  */
 function SlotBar({ s }: { s: SlotAllocation }) {
   const z = ZONE[s.zone]
-  const blue = s.seaviewReserved
-  const green = s.sofaReserved + s.barReserved
-  const filled = blue + green
-  const seaviewFull = s.seaviewReserved >= SEAVIEW_CAP_PER_SLOT
-  // Always show at least the green-cap (11) cells; extend if a slot overflows.
-  const cellCount = Math.max(GREEN_TABLES_PER_SLOT, filled)
+  const blue   = s.seaviewReserved
+  const green  = s.sofaReserved
+  const yellow = s.barReserved
+  const filled = blue + green + yellow
+  const seaviewFull = s.seaviewReserved >= s.seaviewCap
+  // Always render TOTAL_TABLES cells; extend if somehow overbooked.
+  const cellCount = Math.max(TOTAL_TABLES, filled)
 
   return (
     <div className="flex items-center gap-2.5">
       <span className="w-[40px] shrink-0 font-mono text-[11.5px] font-semibold text-foreground">{s.time}</span>
 
       {/* Segmented table blocks */}
-      <div className="flex flex-1 gap-[3px]">
+      <div className="flex flex-1 gap-[2px]">
         {Array.from({ length: cellCount }).map((_, i) => {
-          const color = i < blue ? SEAVIEW_BLUE : i < filled ? TABLE_GREEN : null
+          let color: string | null = null
+          let title = "Open"
+          if (i < blue) {
+            color = SEAVIEW_BLUE; title = "Seaview table"
+          } else if (i < blue + green) {
+            color = SOFA_GREEN; title = "Sofa table"
+          } else if (i < filled) {
+            color = STANDING_YELLOW; title = "Standing table"
+          }
           return (
             <div
               key={i}
               className={cn("h-5 flex-1 rounded-sm", color ? "" : "bg-muted/70")}
               style={color ? { background: color } : undefined}
-              title={
-                color === SEAVIEW_BLUE ? "Seaview table" : color === TABLE_GREEN ? "Bar / sofa table" : "Open"
-              }
+              title={title}
             />
           )
         })}
       </div>
 
-      {/* Seaview sub-meter */}
+      {/* Seaview sub-meter — shows per-slot cap */}
       <span
         className={cn(
           "flex w-[42px] shrink-0 items-center justify-center gap-0.5 font-mono text-[10px] font-semibold",
           seaviewFull ? "text-amber-600" : "text-sky-600",
         )}
-        title="seaview reserved / cap (2 — rest held for walk-ins)"
+        title={`seaview reserved / cap for this slot (${s.seaviewCap})`}
       >
         <Waves className="h-2.5 w-2.5" />
-        {s.seaviewReserved}/{SEAVIEW_CAP_PER_SLOT}
+        {s.seaviewReserved}/{s.seaviewCap}
       </span>
 
-      {/* Count — hidden on small screens to save space */}
+      {/* Total count — hidden on small screens */}
       <span className="hidden w-[42px] shrink-0 text-right font-mono text-[11px] text-muted-foreground sm:block">
-        {filled}/{GREEN_TABLES_PER_SLOT}
+        {filled}/{TOTAL_TABLES}
       </span>
 
       {/* Zone badge — hidden on small screens */}
@@ -104,14 +113,14 @@ export function CapacityWidget() {
   }
 
   const peak = peakSlot?.tablesReserved ?? 0
-  const util = Math.round((peak / GREEN_TABLES_PER_SLOT) * 100)
+  const util = Math.round((peak / TOTAL_TABLES) * 100)
   const rb = REC_BANNER[recommendation.tone]
 
   const stats = [
-    { label: "Green capacity", value: `${peak}/${GREEN_TABLES_PER_SLOT}`, sub: peakSlot ? `peak ${peakSlot.time}` : "—", danger: peak > GREEN_TABLES_PER_SLOT },
-    { label: "Seaview pressure", value: `${seaviewOverflowSlots} slot${seaviewOverflowSlots !== 1 ? "s" : ""}`, sub: `over ${SEAVIEW_CAP_PER_SLOT}/slot cap`, danger: seaviewOverflowSlots > 0 },
-    { label: "Need discussion", value: discussionSlots, sub: "offer non-seaview / bar", danger: discussionSlots > 0 },
-    { label: "Full slots", value: fullSlots, sub: `> ${MAX_TABLES_PER_SLOT} tables`, danger: fullSlots > 0 },
+    { label: "Peak fill", value: `${peak}/${TOTAL_TABLES}`, sub: peakSlot ? `at ${peakSlot.time}` : "—", danger: peak >= TOTAL_TABLES },
+    { label: "Seaview pressure", value: `${seaviewOverflowSlots} slot${seaviewOverflowSlots !== 1 ? "s" : ""}`, sub: "seaview cap reached", danger: seaviewOverflowSlots > 0 },
+    { label: "Need discussion", value: discussionSlots, sub: "steer to sofa / standing", danger: discussionSlots > 0 },
+    { label: "Full slots", value: fullSlots, sub: `all ${MAX_TABLES_PER_SLOT} tables gone`, danger: fullSlots > 0 },
   ]
 
   return (
@@ -120,7 +129,7 @@ export function CapacityWidget() {
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
           <div className="text-[30px] font-bold leading-none tracking-tight">{util}%</div>
-          <div className="mt-1 text-[12px] text-muted-foreground">peak fill · {peak}/{GREEN_TABLES_PER_SLOT} tables</div>
+          <div className="mt-1 text-[12px] text-muted-foreground">peak fill · {peak}/{TOTAL_TABLES} tables</div>
         </div>
         {peakSlot && peakSlot.zone !== "green" && (
           <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
@@ -171,16 +180,19 @@ export function CapacityWidget() {
           {/* Legend */}
           <div className="mt-3 flex flex-wrap gap-3.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SEAVIEW_BLUE }} /> Seaview table
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SEAVIEW_BLUE }} /> Seaview (11)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: TABLE_GREEN }} /> Bar &amp; sofa table
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SOFA_GREEN }} /> Sofa (9)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-muted/70" /> Open seat
+              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: STANDING_YELLOW }} /> Standing (7)
             </span>
             <span className="flex items-center gap-1.5">
-              <Waves className="h-3 w-3 text-sky-600" /> seaview cap {SEAVIEW_CAP_PER_SLOT}/slot · green cap {GREEN_TABLES_PER_SLOT}
+              <span className="h-2.5 w-2.5 rounded-sm bg-muted/70" /> Open
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Waves className="h-3 w-3 text-sky-600" /> 🌊 cap: 11→8→7→4→2→2→2
             </span>
           </div>
         </>

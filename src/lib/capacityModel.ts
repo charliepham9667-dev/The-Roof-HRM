@@ -5,38 +5,35 @@
 // the front-of-house allocation rules, and produces accept/decline
 // recommendations per time slot.
 //
-//   Inventory (28 tables total) — three reservable categories:
-//     • SEAVIEW (11) — high demand. Only 2 reservable per hour
-//                      (intake cap); the other 9 held for walk-ins.
-//     • SOFA    (9)  — min 4 pax (2 in slow hours 14–18). All reservable.
-//     • BAR     (8)  — non-seaview standing. Overflow buffer: offered to
-//                      reservations only once seaview is full AND the guest
-//                      is told (this is the "In Discussion" flow).
+//   Inventory (27 tables total) — three reservable categories:
+//     • SEAVIEW  (11) — high demand. Cap varies by hour (see SEAVIEW_CAP_BY_HOUR).
+//     • SOFA     (9)  — min 4 pax (2 in slow hours 14–18). All 9 reservable.
+//     • STANDING (7)  — non-seaview standing tables. Overflow buffer.
+//
+//   Seaview intake caps per hour (earlier = more capacity):
+//     14:00 → 11 · 15:00 → 8 · 16:00 → 7 · 17:00 → 4
+//     18:00, 19:00, 20:00 → 2
 //
 //   Window: 14:00 → 20:00 slots. After 20:00 = walk-in only.
 //
-//   Capacity tiers per slot:
-//     GREEN      ≤ 11 tables (2 seaview + 9 sofa) → accept freely
-//     DISCUSSION seaview full / into the bar overflow → must communicate
-//     FULL       all 19 reservable tables gone → decline / waitlist
+//   Zone per slot:
+//     GREEN      seaview still available → accept freely
+//     DISCUSSION seaview cap hit → steer to sofa/standing, must communicate
+//     FULL       all 27 tables gone → decline / waitlist
 // ============================================================
 
 export type SeatingType = "seaview" | "sofa" | "bar"
 export type CapacityZone = "green" | "discussion" | "full"
 
 export const VENUE_CAPACITY = {
-  // Reservation window (ICT). After lastSlotHour = walk-in only.
   firstSlotHour: 14,
   lastSlotHour: 20,
-
-  // Average dwell time — informational (intake-cap model doesn't use overlap).
   avgStayHours: 3,
-
   seating: {
     seaview: {
       label: "Seaview",
       total: 11,
-      reservablePerSlot: 2, // intake cap; rest held for walk-ins
+      reservablePerSlot: 2, // evening minimum — actual caps vary by hour
     },
     sofa: {
       label: "Sofa",
@@ -47,33 +44,55 @@ export const VENUE_CAPACITY = {
       slowHours: [14, 15, 16, 17, 18],
     },
     bar: {
-      label: "Bar",
-      total: 8,
-      reservablePerSlot: 8, // overflow only — engaged via "In Discussion"
+      label: "Standing",
+      total: 7,
+      reservablePerSlot: 7,
     },
   },
 } as const
 
-export const SEAVIEW_CAP_PER_SLOT = VENUE_CAPACITY.seating.seaview.reservablePerSlot // 2
-export const SOFA_CAP_PER_SLOT = VENUE_CAPACITY.seating.sofa.reservablePerSlot // 9
-export const BAR_CAP_PER_SLOT = VENUE_CAPACITY.seating.bar.reservablePerSlot // 8
+// ─── Time-based seaview caps ───────────────────────────────────────────────
+// Earlier slots can absorb more seaview reservations (guests leave by peak time).
+export const SEAVIEW_CAP_BY_HOUR: Record<number, number> = {
+  14: 11,
+  15: 8,
+  16: 7,
+  17: 4,
+  18: 2,
+  19: 2,
+  20: 2,
+}
 
-// Comfortable reservable tables per slot — no awkward conversations.
-export const GREEN_TABLES_PER_SLOT = SEAVIEW_CAP_PER_SLOT + SOFA_CAP_PER_SLOT // 11
+export function seaviewCapForHour(hour: number): number {
+  return SEAVIEW_CAP_BY_HOUR[hour] ?? 2
+}
 
-// Absolute max reservable per slot (9 seaview always held for walk-ins).
-export const MAX_TABLES_PER_SLOT = GREEN_TABLES_PER_SLOT + BAR_CAP_PER_SLOT // 19
+export const SOFA_CAP_PER_SLOT = VENUE_CAPACITY.seating.sofa.reservablePerSlot       // 9
+export const BAR_CAP_PER_SLOT = VENUE_CAPACITY.seating.bar.reservablePerSlot          // 7
+export const STANDING_CAP_PER_SLOT = BAR_CAP_PER_SLOT                                 // alias
 
-// All reservable slot hours, e.g. [14,15,16,17,18,19,20]
+// Evening minimum (peak hours 18–20). Full seaview is 11.
+export const SEAVIEW_CAP_PER_SLOT = VENUE_CAPACITY.seating.seaview.reservablePerSlot  // 2
+
+// Total tables in venue
+export const TOTAL_TABLES =
+  VENUE_CAPACITY.seating.seaview.total +
+  VENUE_CAPACITY.seating.sofa.total +
+  VENUE_CAPACITY.seating.bar.total // 27
+
+// Kept for backward compat (widgets that reference it); now equals TOTAL_TABLES.
+export const MAX_TABLES_PER_SLOT = TOTAL_TABLES // 27
+
+// Legacy alias — was "2 seaview + 9 sofa = 11". Now unused in logic.
+export const GREEN_TABLES_PER_SLOT = TOTAL_TABLES // 27 (updated to full table count)
+
+// All reservable slot hours: [14,15,16,17,18,19,20]
 export const SLOT_HOURS: number[] = Array.from(
   { length: VENUE_CAPACITY.lastSlotHour - VENUE_CAPACITY.firstSlotHour + 1 },
   (_, i) => VENUE_CAPACITY.firstSlotHour + i,
 )
 
 // ─── Seating classification ────────────────────────────────────────────────
-// We only have party size + an optional free-text table preference, so this is
-// best-effort. Seaview is the binding constraint, so we detect seaview intent
-// from both the table-preference and special-requests text.
 
 const SEAVIEW_HINTS = [
   "sea view", "seaview", "sea", "ocean", "view",
@@ -85,11 +104,10 @@ const BAR_HINTS = ["bar", "counter", "standing", "high table", "stool"]
 /**
  * Seating classification based on party size + optional text hints.
  *
- * Rules (per Charlie's booking logic):
- *   < 4 pax  → seaview (if seaview cap hit at runtime, staff follow up via In Discussion)
+ *   < 4 pax  → seaview (staff follow up if seaview cap hit → In Discussion)
  *   ≥ 4 pax  → sofa
  *
- * Text hints override the size rule in case a guest explicitly requests a type.
+ * Text hints override the size rule.
  */
 export function classifySeating(input: {
   table?: string | null
@@ -97,11 +115,9 @@ export function classifySeating(input: {
   numberOfGuests?: number | null
 }): SeatingType {
   const text = `${input.table ?? ""} ${input.specialRequests ?? ""}`.toLowerCase()
-  // Explicit text overrides take priority
   if (SEAVIEW_HINTS.some((h) => text.includes(h))) return "seaview"
   if (SOFA_HINTS.some((h) => text.includes(h))) return "sofa"
   if (BAR_HINTS.some((h) => text.includes(h))) return "bar"
-  // Party-size rule: 4+ pax → sofa, otherwise seaview (staff follow-up if full)
   if ((input.numberOfGuests ?? 0) >= 4) return "sofa"
   return "seaview"
 }
@@ -123,14 +139,14 @@ export function recommendSlot(a: {
   barLeft: number
   tablesReserved: number
 }): SlotRecommendation {
-  const totalLeft = Math.max(0, MAX_TABLES_PER_SLOT - a.tablesReserved)
+  const totalLeft = Math.max(0, TOTAL_TABLES - a.tablesReserved)
 
   if (totalLeft <= 0) {
     return {
       action: "full",
       tone: "red",
       headline: "Stop — slot full",
-      detail: `All ${MAX_TABLES_PER_SLOT} reservable tables booked. Decline or waitlist.`,
+      detail: `All ${TOTAL_TABLES} tables booked. Decline or waitlist.`,
     }
   }
 
@@ -139,17 +155,16 @@ export function recommendSlot(a: {
       action: "accept",
       tone: "green",
       headline: `Accept · ${a.seaviewLeft} seaview left`,
-      detail: `Seaview ${a.seaviewLeft} · Sofa ${a.sofaLeft} · Bar ${a.barLeft} open.`,
+      detail: `Seaview ${a.seaviewLeft} · Sofa ${a.sofaLeft} · Standing ${a.barLeft} open.`,
     }
   }
 
-  // Seaview cap hit
   if (a.sofaLeft > 0) {
     return {
       action: "offer-sofa",
       tone: "green",
-      headline: "Accept · sofa / bar only",
-      detail: `Seaview full — no seaview promises. Offer sofa (${a.sofaLeft}) or bar (${a.barLeft}).`,
+      headline: "Accept · sofa / standing only",
+      detail: `Seaview cap reached — no seaview promises. Offer sofa (${a.sofaLeft}) or standing (${a.barLeft}).`,
     }
   }
 
@@ -157,8 +172,8 @@ export function recommendSlot(a: {
     return {
       action: "discuss-bar",
       tone: "amber",
-      headline: "Discuss · bar tables only",
-      detail: `Seaview & sofa gone. Only ${a.barLeft} bar/standing left — confirm the guest accepts before approving.`,
+      headline: "Discuss · standing tables only",
+      detail: `Seaview & sofa gone. Only ${a.barLeft} standing tables left — confirm guest accepts before approving.`,
     }
   }
 
@@ -174,10 +189,9 @@ export function recommendSlot(a: {
 
 export interface SlotAllocation {
   hour: number
-  time: string // "19:00"
-  // Per-category reserved + caps + remaining
+  time: string
   seaviewReserved: number
-  seaviewCap: number
+  seaviewCap: number      // varies by hour
   seaviewLeft: number
   sofaReserved: number
   sofaCap: number
@@ -185,12 +199,11 @@ export interface SlotAllocation {
   barReserved: number
   barCap: number
   barLeft: number
-  // Totals
   tablesConfirmed: number
   tablesPending: number
   tablesReserved: number
-  greenCap: number // 11
-  hardCap: number // 19
+  greenCap: number        // seaviewCap + sofaCap for this slot
+  hardCap: number         // TOTAL_TABLES = 27
   pax: number
   zone: CapacityZone
   recommendation: SlotRecommendation
@@ -204,24 +217,21 @@ export interface ReservationLike {
   bookingStatus?: string | null
 }
 
-/** Sofa minimum pax for a given slot hour (relaxed in slow hours). */
 export function sofaMinPax(hour: number): number {
   const s = VENUE_CAPACITY.seating.sofa
   return (s.slowHours as readonly number[]).includes(hour) ? s.slowHourMinPax : s.minPax
 }
 
-function zoneFor(tablesReserved: number, seaviewReserved: number): CapacityZone {
-  if (tablesReserved > MAX_TABLES_PER_SLOT) return "full"
-  if (tablesReserved > GREEN_TABLES_PER_SLOT || seaviewReserved > SEAVIEW_CAP_PER_SLOT) return "discussion"
+function zoneFor(
+  tablesReserved: number,
+  seaviewReserved: number,
+  seaviewCap: number,
+): CapacityZone {
+  if (tablesReserved >= TOTAL_TABLES) return "full"
+  if (seaviewReserved >= seaviewCap) return "discussion"
   return "green"
 }
 
-/**
- * Build per-slot allocation for a day's reservations.
- * Intake-based: each booking is bucketed by its start hour (matches the
- * per-slot seaview intake cap the FOH team enforces). 1 booking = 1 table.
- * Declined / cancelled / no-show are excluded by the caller.
- */
 export function computeSlotAllocations(reservations: ReservationLike[]): SlotAllocation[] {
   const byHour = new Map<number, ReservationLike[]>()
   for (const h of SLOT_HOURS) byHour.set(h, [])
@@ -229,12 +239,14 @@ export function computeSlotAllocations(reservations: ReservationLike[]): SlotAll
   for (const r of reservations) {
     if (!r.time) continue
     const hour = parseInt(r.time.slice(0, 2), 10)
-    if (!byHour.has(hour)) continue // outside the reservable window
+    if (!byHour.has(hour)) continue
     byHour.get(hour)!.push(r)
   }
 
   return SLOT_HOURS.map((hour) => {
     const rows = byHour.get(hour)!
+    const seaviewCap = seaviewCapForHour(hour)
+
     let seaviewReserved = 0
     let sofaReserved = 0
     let barReserved = 0
@@ -255,7 +267,7 @@ export function computeSlotAllocations(reservations: ReservationLike[]): SlotAll
     }
 
     const tablesReserved = tablesConfirmed + tablesPending
-    const seaviewLeft = Math.max(0, SEAVIEW_CAP_PER_SLOT - seaviewReserved)
+    const seaviewLeft = Math.max(0, seaviewCap - seaviewReserved)
     const sofaLeft = Math.max(0, SOFA_CAP_PER_SLOT - sofaReserved)
     const barLeft = Math.max(0, BAR_CAP_PER_SLOT - barReserved)
 
@@ -263,7 +275,7 @@ export function computeSlotAllocations(reservations: ReservationLike[]): SlotAll
       hour,
       time: `${String(hour).padStart(2, "0")}:00`,
       seaviewReserved,
-      seaviewCap: SEAVIEW_CAP_PER_SLOT,
+      seaviewCap,
       seaviewLeft,
       sofaReserved,
       sofaCap: SOFA_CAP_PER_SLOT,
@@ -274,10 +286,10 @@ export function computeSlotAllocations(reservations: ReservationLike[]): SlotAll
       tablesConfirmed,
       tablesPending,
       tablesReserved,
-      greenCap: GREEN_TABLES_PER_SLOT,
-      hardCap: MAX_TABLES_PER_SLOT,
+      greenCap: seaviewCap + SOFA_CAP_PER_SLOT,
+      hardCap: TOTAL_TABLES,
       pax,
-      zone: zoneFor(tablesReserved, seaviewReserved),
+      zone: zoneFor(tablesReserved, seaviewReserved, seaviewCap),
       recommendation: recommendSlot({ seaviewLeft, sofaLeft, barLeft, tablesReserved }),
     }
   })
@@ -304,9 +316,8 @@ export interface DayCapacitySummary {
 
 function recommendDay(slots: SlotAllocation[]): DayRecommendation {
   const full = slots.filter((s) => s.recommendation.action === "full")
-  const barOnly = slots.filter((s) => s.recommendation.action === "discuss-bar")
+  const standingOnly = slots.filter((s) => s.recommendation.action === "discuss-bar")
   const sofaOnly = slots.filter((s) => s.recommendation.action === "offer-sofa")
-
   const list = (arr: SlotAllocation[]) => arr.map((s) => s.time).join(", ")
 
   if (full.length > 0) {
@@ -316,24 +327,24 @@ function recommendDay(slots: SlotAllocation[]): DayRecommendation {
       detail: `${full.length} slot${full.length !== 1 ? "s" : ""} fully booked. Decline or waitlist — keep walk-in tables free.`,
     }
   }
-  if (barOnly.length > 0) {
+  if (standingOnly.length > 0) {
     return {
       tone: "amber",
-      headline: `Bar tables only at ${list(barOnly)}`,
-      detail: `Seaview and sofa are gone at these slots. Only confirm bar/standing after the guest agrees (use In Discussion).`,
+      headline: `Standing tables only at ${list(standingOnly)}`,
+      detail: `Seaview and sofa are gone. Only confirm standing after the guest agrees (use In Discussion).`,
     }
   }
   if (sofaOnly.length > 0) {
     return {
       tone: "amber",
       headline: `Seaview full at ${list(sofaOnly)} — steer to sofa`,
-      detail: `Keep accepting, but no seaview promises at these slots. Offer sofa or bar instead.`,
+      detail: `Keep accepting, but no seaview promises at these slots. Offer sofa or standing instead.`,
     }
   }
   return {
     tone: "green",
     headline: "Plenty of room — accept freely",
-    detail: `Seaview is the scarce one (${SEAVIEW_CAP_PER_SLOT}/slot). All slots have seaview availability tonight.`,
+    detail: `Seaview caps vary by slot (11→2 from 14:00 to 18:00). All slots have seaview availability.`,
   }
 }
 
@@ -349,7 +360,7 @@ export function summarizeDay(slots: SlotAllocation[]): DayCapacitySummary {
     peakSlot,
     discussionSlots: slots.filter((s) => s.zone === "discussion").length,
     fullSlots: slots.filter((s) => s.zone === "full").length,
-    seaviewOverflowSlots: slots.filter((s) => s.seaviewReserved > SEAVIEW_CAP_PER_SLOT).length,
+    seaviewOverflowSlots: slots.filter((s) => s.seaviewReserved >= s.seaviewCap).length,
     recommendation: recommendDay(slots),
   }
 }
