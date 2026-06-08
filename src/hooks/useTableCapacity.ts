@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useWebFormReservations } from "@/hooks/useWebFormReservations"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
+import { useReservations } from "@/hooks/useReservations"
 import {
   computeSlotAllocations,
   summarizeDay,
@@ -12,6 +13,26 @@ function getTodayIso() {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: ICT_TZ }).formatToParts(new Date())
   const map = new Map(parts.map((p) => [p.type, p.value]))
   return `${map.get("year")}-${map.get("month")}-${map.get("day")}`
+}
+
+function offsetIso(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00Z")
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+// Map HRM status values to CsvReservation bookingStatus
+function mapHrmStatus(status: string | undefined): CsvReservation["bookingStatus"] {
+  switch (status) {
+    case "confirmed":
+    case "seated": return "accepted"
+    case "pending":   return "pending"
+    case "cancelled": return "cancelled"
+    case "declined":  return "declined"
+    case "noshow":
+    case "no_show":   return "noshow"
+    default:          return "accepted"
+  }
 }
 
 const EXCLUDED_STATUSES = new Set(["declined", "cancelled", "noshow"])
@@ -32,8 +53,14 @@ export function useTableCapacity(dateIso?: string): UseTableCapacityResult {
   const { data: sheetAll = [], isLoading: sheetLoading } = useReservationsCsv()
   const targetIso = dateIso ?? getTodayIso()
 
+  // Pull HRM-entered reservations (phone bookings added via the "+" button).
+  // Query a 60-day window centred on today so we always cover `targetIso`.
+  const rangeStart = offsetIso(targetIso, -30)
+  const rangeEnd   = offsetIso(targetIso,  30)
+  const { data: hrmAll = [], isLoading: hrmLoading } = useReservations(rangeStart, rangeEnd)
+
   const summary = useMemo(() => {
-    // Merge both sources, de-dupe by name+date+time
+    // Merge all three sources, de-dupe by name+date+time (lower-cased)
     const merged: CsvReservation[] = [...webFormAll]
     const seen = new Set(
       merged.map((r) => `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`),
@@ -43,6 +70,34 @@ export function useTableCapacity(dateIso?: string): UseTableCapacityResult {
       if (!seen.has(key)) {
         seen.add(key)
         merged.push(r)
+      }
+    }
+    // Normalise HRM Reservation → CsvReservation and merge
+    for (const r of hrmAll) {
+      const dateIsoValue = r.reservationDate ?? null           // already YYYY-MM-DD
+      const timeValue    = (r.reservationTime ?? "").slice(0, 5) // HH:MM
+      const key = `${(r.customerName ?? "").toLowerCase()}|${dateIsoValue}|${timeValue}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        merged.push({
+          submittedAt:    r.createdAt ?? null,
+          email:          r.customerEmail ?? null,
+          phone:          r.customerPhone ?? null,
+          name:           r.customerName ?? null,
+          table:          r.tablePreference ?? null,
+          notes:          r.notes ?? null,
+          dateOfReservation: dateIsoValue,
+          dateRaw:        dateIsoValue,
+          time:           r.reservationTime ?? null,
+          numberOfGuests: r.partySize ?? 0,
+          specialRequests: r.specialRequests ?? null,
+          specialPackages: null,
+          occasion:       null,
+          mustHaves:      null,
+          status:         dateIsoValue === targetIso ? "today" : (dateIsoValue && dateIsoValue < targetIso ? "past" : "upcoming"),
+          bookingStatus:  mapHrmStatus(r.status),
+          reservationSystemId: r.id,
+        })
       }
     }
 
@@ -60,11 +115,11 @@ export function useTableCapacity(dateIso?: string): UseTableCapacityResult {
       })),
     )
     return { ...summarizeDay(slots), dayRows }
-  }, [webFormAll, sheetAll, targetIso])
+  }, [webFormAll, sheetAll, hrmAll, targetIso])
 
   return {
     ...summary,
-    isLoading: webLoading || sheetLoading,
+    isLoading: webLoading || sheetLoading || hrmLoading,
     dateIso: targetIso,
   }
 }
