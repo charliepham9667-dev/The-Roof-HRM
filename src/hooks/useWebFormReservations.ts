@@ -44,7 +44,7 @@ function stripTableTag(specialRequests: string | null): string | null {
 // entries are website bookings by definition; phone/CSV entries are detected
 // client-side via getBookingSource(). Do not add `source` here.
 const FULL_SELECT =
-  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, status, token, created_at, response_type, response_message, response_channels, responded_at'
+  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, package_paid, status, token, created_at, response_type, response_message, response_channels, responded_at'
 
 function mapRow(row: any): CsvReservation {
   const dateIso = row.requested_date ?? ''
@@ -72,6 +72,7 @@ function mapRow(row: any): CsvReservation {
     responseMessage: row.response_message ?? null,
     responseChannels: row.response_channels ?? null,
     respondedAt: row.responded_at ?? null,
+    packagePaid: row.package_paid ?? false,
   }
 }
 
@@ -225,5 +226,22 @@ export function useSendGuestMessage() {
       })
       if (error) throw error
     },
+  })
+}
+
+// ─── Mark package payment received ───────────────────────────────────────────
+
+export function useMarkPackagePaid() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, paid }: { id: string; paid: boolean }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+      const { error } = await reservationClient
+        .from('reservations')
+        .update({ package_paid: paid })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['webform-reservations'] }),
   })
 }

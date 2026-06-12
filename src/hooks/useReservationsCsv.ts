@@ -30,6 +30,7 @@ export interface CsvReservation {
   responseMessage?: string | null
   responseChannels?: string[] | null
   respondedAt?: string | null
+  packagePaid?: boolean
 }
 
 function parseCsvLine(line: string): string[] {

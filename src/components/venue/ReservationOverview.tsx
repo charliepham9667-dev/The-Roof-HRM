@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useDeclinedReservations, useSendGuestMessage } from "@/hooks/useWebFormReservations"
+import { useWebFormReservations, useDeclinedReservations, useSendGuestMessage, useMarkPackagePaid } from "@/hooks/useWebFormReservations"
 import { useConversations } from "@/hooks/useInbox"
 import { DeclinedLostLog } from "@/components/venue/DeclinedLostLog"
 import { CapacityWidget } from "@/components/venue/CapacityWidget"
@@ -12,7 +12,7 @@ import { useAuthStore } from "@/stores/authStore"
 import { AIInbox } from "@/components/venue/AIInbox"
 import {
   Calendar, Clock, Users, MessageCircle, ChevronRight, CheckCircle,
-  Globe, BarChart2, Ban, Loader2, RotateCcw, Phone, CheckCircle2,
+  Globe, BarChart2, Ban, Loader2, RotateCcw, Phone, CheckCircle2, Gift,
 } from "lucide-react"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -129,6 +129,46 @@ function Widget({
 
 // ─── Pending approvals queue ──────────────────────────────────────────────────
 
+function PackageBadge({ r }: { r: CsvReservation }) {
+  const markPaid = useMarkPackagePaid()
+  const pkg = r.specialPackages
+  if (!pkg) return null
+  const label = pkg === "just_cake" ? "🎂 Cake" : "💐 Flowers"
+  const isPaid = r.packagePaid ?? false
+
+  return (
+    <div className="mt-2 flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50/60 px-2.5 py-1.5">
+      <Gift className="h-3.5 w-3.5 shrink-0 text-purple-600" />
+      <span className="text-[12px] font-semibold text-purple-700">{label} · 300,000 ₫</span>
+      <span className="mx-1 text-purple-300">·</span>
+      {isPaid ? (
+        <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+          <CheckCircle2 className="h-3 w-3" /> Paid
+        </span>
+      ) : (
+        <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-600">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Unpaid — check Revolut/TCB
+        </span>
+      )}
+      {r.reservationSystemId && (
+        <button
+          type="button"
+          disabled={markPaid.isPending}
+          onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
+          className={cn(
+            "ml-auto rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
+            isPaid
+              ? "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+          )}
+        >
+          {markPaid.isPending ? "…" : isPaid ? "Undo" : "Mark paid"}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function PendingQueue({
   pending,
   onRespond,
@@ -157,7 +197,9 @@ function PendingQueue({
             key={r.reservationSystemId ?? r.name}
             className={cn(
               "flex flex-col gap-2.5 rounded-xl border p-2.5 sm:flex-row sm:items-center",
-              isReturning
+              r.specialPackages
+                ? "border-purple-200 bg-purple-50/30"
+                : isReturning
                 ? "border-amber-200 bg-amber-50/60"
                 : "border-border/60 bg-card",
             )}
@@ -215,6 +257,12 @@ function PendingQueue({
                   </span>
                 )}
               </div>
+              {r.specialRequests && (
+                <p className="mt-1.5 text-[11.5px] text-muted-foreground italic">
+                  &ldquo;{r.specialRequests}&rdquo;
+                </p>
+              )}
+              <PackageBadge r={r} />
             </div>
             {/* Respond button */}
             <button
@@ -272,6 +320,75 @@ function DeclinedMini({ rows }: { rows: CsvReservation[] }) {
             <span className={cn("rounded-full border px-2.5 py-0.5 text-[10px] font-semibold", st.cls)}>
               {st.label}
             </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Package orders tracker ───────────────────────────────────────────────────
+
+function PackageOrdersWidget({ reservations }: { reservations: CsvReservation[] }) {
+  const markPaid = useMarkPackagePaid()
+  const todayIso = getTodayIso()
+
+  const pkgRows = reservations
+    .filter((r) => r.specialPackages && (r.dateOfReservation ?? "") >= todayIso)
+    .sort((a, b) => (a.dateOfReservation ?? "").localeCompare(b.dateOfReservation ?? ""))
+
+  if (pkgRows.length === 0) {
+    return <p className="text-[13px] text-muted-foreground">No upcoming package orders.</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {pkgRows.map((r) => {
+        const label = r.specialPackages === "just_cake" ? "🎂 Cake" : "💐 Flowers"
+        const isPaid = r.packagePaid ?? false
+        const dateLabel = r.dateOfReservation
+          ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+          : "—"
+        return (
+          <div
+            key={r.reservationSystemId ?? r.name}
+            className={cn(
+              "rounded-xl border p-2.5",
+              isPaid ? "border-emerald-200 bg-emerald-50/40" : "border-purple-200 bg-purple-50/40",
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[12.5px] font-semibold text-foreground truncate max-w-[120px]">{r.name}</span>
+                  <span className="text-[12px]">{label}</span>
+                </div>
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-0.5"><Calendar className="h-2.5 w-2.5" />{dateLabel}</span>
+                  <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{r.numberOfGuests} pax</span>
+                </div>
+              </div>
+              {r.reservationSystemId && (
+                <button
+                  type="button"
+                  disabled={markPaid.isPending}
+                  onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
+                  className={cn(
+                    "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
+                    isPaid
+                      ? "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+                  )}
+                >
+                  {markPaid.isPending ? "…" : isPaid ? "✓ Paid" : "Mark paid"}
+                </button>
+              )}
+            </div>
+            {!isPaid && (
+              <p className="mt-1.5 text-[10.5px] text-amber-700 font-medium">
+                ⚠ Verify payment in Revolut / TCB before ordering — 24h min lead time
+              </p>
+            )}
           </div>
         )
       })}
@@ -625,6 +742,10 @@ export function ReservationOverview() {
     .filter((r) => !["declined", "cancelled", "noshow"].includes(r.bookingStatus ?? ""))
     .reduce((a, r) => a + r.numberOfGuests, 0)
   const notResponded = pending.filter((r) => !r.respondedAt).length
+  const upcomingPackages = allReservations.filter(
+    (r) => r.specialPackages && (r.dateOfReservation ?? "") >= todayIso
+  )
+  const unpaidPackages = upcomingPackages.filter((r) => !r.packagePaid).length
 
   // "In Discussion" = pending with a follow-up already sent, awaiting guest reply
   const discussionList = useMemo(
@@ -827,6 +948,27 @@ export function ReservationOverview() {
                   icon={<BarChart2 className="h-4 w-4" />}
                 >
                   <BookingSource reservations={analyticsReservations} />
+                </Widget>
+
+                {/* Package Orders */}
+                <Widget
+                  title="Package Orders"
+                  icon={<Gift className="h-4 w-4" />}
+                  action={
+                    upcomingPackages.length > 0 ? (
+                      unpaidPackages > 0 ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                          {unpaidPackages} unpaid
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                          All paid
+                        </span>
+                      )
+                    ) : null
+                  }
+                >
+                  <PackageOrdersWidget reservations={allReservations} />
                 </Widget>
 
                 {/* Declined & Lost */}
