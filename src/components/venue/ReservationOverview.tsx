@@ -329,7 +329,13 @@ function DeclinedMini({ rows }: { rows: CsvReservation[] }) {
 
 // ─── Package orders tracker ───────────────────────────────────────────────────
 
-function PackageOrdersWidget({ reservations }: { reservations: CsvReservation[] }) {
+function PackageOrdersWidget({
+  reservations,
+  onRespond,
+}: {
+  reservations: CsvReservation[]
+  onRespond: (r: CsvReservation) => void
+}) {
   const markPaid = useMarkPackagePaid()
   const todayIso = getTodayIso()
 
@@ -349,6 +355,7 @@ function PackageOrdersWidget({ reservations }: { reservations: CsvReservation[] 
         const dateLabel = r.dateOfReservation
           ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
           : "—"
+        const hasContact = !!r.reservationSystemId && (!!r.phone || !!r.email)
         return (
           <div
             key={r.reservationSystemId ?? r.name}
@@ -358,31 +365,47 @@ function PackageOrdersWidget({ reservations }: { reservations: CsvReservation[] 
             )}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[12.5px] font-semibold text-foreground truncate max-w-[120px]">{r.name}</span>
+                  <span className="text-[12.5px] font-semibold text-foreground truncate max-w-[140px]">{r.name}</span>
                   <span className="text-[12px]">{label}</span>
+                  {flagFromPhone(r.phone) && (
+                    <span className="text-[12px]">{flagFromPhone(r.phone)}</span>
+                  )}
                 </div>
                 <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                   <span className="flex items-center gap-0.5"><Calendar className="h-2.5 w-2.5" />{dateLabel}</span>
+                  <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{r.time ?? "—"}</span>
                   <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{r.numberOfGuests} pax</span>
                 </div>
               </div>
-              {r.reservationSystemId && (
-                <button
-                  type="button"
-                  disabled={markPaid.isPending}
-                  onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
-                  className={cn(
-                    "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
-                    isPaid
-                      ? "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
-                      : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-                  )}
-                >
-                  {markPaid.isPending ? "…" : isPaid ? "✓ Paid" : "Mark paid"}
-                </button>
-              )}
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                {r.reservationSystemId && (
+                  <button
+                    type="button"
+                    disabled={markPaid.isPending}
+                    onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
+                      isPaid
+                        ? "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+                    )}
+                  >
+                    {markPaid.isPending ? "…" : isPaid ? "✓ Paid" : "Mark paid"}
+                  </button>
+                )}
+                {hasContact && (
+                  <button
+                    type="button"
+                    onClick={() => onRespond(r)}
+                    className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <MessageCircle className="h-2.5 w-2.5" />
+                    Contact
+                  </button>
+                )}
+              </div>
             </div>
             {!isPaid && (
               <p className="mt-1.5 text-[10.5px] text-amber-700 font-medium">
@@ -884,6 +907,27 @@ export function ReservationOverview() {
                   <CapacityWidget />
                 </Widget>
 
+                {/* Package Orders */}
+                <Widget
+                  title="Package Orders"
+                  icon={<Gift className="h-4 w-4" />}
+                  action={
+                    upcomingPackages.length > 0 ? (
+                      unpaidPackages > 0 ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                          {unpaidPackages} unpaid
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                          All paid
+                        </span>
+                      )
+                    ) : null
+                  }
+                >
+                  <PackageOrdersWidget reservations={allReservations} onRespond={setResponderRes} />
+                </Widget>
+
                 {/* In Discussion */}
                 <Widget
                   title="In Discussion"
@@ -948,27 +992,6 @@ export function ReservationOverview() {
                   icon={<BarChart2 className="h-4 w-4" />}
                 >
                   <BookingSource reservations={analyticsReservations} />
-                </Widget>
-
-                {/* Package Orders */}
-                <Widget
-                  title="Package Orders"
-                  icon={<Gift className="h-4 w-4" />}
-                  action={
-                    upcomingPackages.length > 0 ? (
-                      unpaidPackages > 0 ? (
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
-                          {unpaidPackages} unpaid
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-                          All paid
-                        </span>
-                      )
-                    ) : null
-                  }
-                >
-                  <PackageOrdersWidget reservations={allReservations} />
                 </Widget>
 
                 {/* Declined & Lost */}
