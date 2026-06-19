@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useDeclinedReservations, useSendGuestMessage, useMarkPackagePaid } from "@/hooks/useWebFormReservations"
+import { useWebFormReservations, useDeclinedReservations, useSendGuestMessage, useMarkPackagePaid, useCancelPackageOrder } from "@/hooks/useWebFormReservations"
 import { useConversations } from "@/hooks/useInbox"
 import { DeclinedLostLog } from "@/components/venue/DeclinedLostLog"
 import { CapacityWidget } from "@/components/venue/CapacityWidget"
@@ -329,6 +329,122 @@ function DeclinedMini({ rows }: { rows: CsvReservation[] }) {
 
 // ─── Package orders tracker ───────────────────────────────────────────────────
 
+function PackageOrderRow({
+  r,
+  onRespond,
+}: {
+  r: CsvReservation
+  onRespond: (r: CsvReservation) => void
+}) {
+  const markPaid = useMarkPackagePaid()
+  const cancelOrder = useCancelPackageOrder()
+  const [confirmCancel, setConfirmCancel] = useState(false)
+
+  const label = r.specialPackages === "just_cake" ? "🎂 Cake" : "💐 Flowers"
+  const isPaid = r.packagePaid ?? false
+  const dateLabel = r.dateOfReservation
+    ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+    : "—"
+  const hasContact = !!r.reservationSystemId && (!!r.phone || !!r.email)
+
+  function handleCancel() {
+    if (!r.reservationSystemId) return
+    cancelOrder.mutate({
+      id: r.reservationSystemId,
+      name: r.name,
+      label,
+      date: dateLabel,
+    })
+  }
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-2.5",
+        isPaid ? "border-emerald-200 bg-emerald-50/40" : "border-purple-200 bg-purple-50/40",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[12.5px] font-semibold text-foreground truncate max-w-[140px]">{r.name}</span>
+            <span className="text-[12px]">{label}</span>
+            {flagFromPhone(r.phone) && (
+              <span className="text-[12px]">{flagFromPhone(r.phone)}</span>
+            )}
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-0.5"><Calendar className="h-2.5 w-2.5" />{dateLabel}</span>
+            <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{r.time ?? "—"}</span>
+            <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{r.numberOfGuests} pax</span>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {r.reservationSystemId && (
+            <button
+              type="button"
+              disabled={markPaid.isPending}
+              onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
+                isPaid
+                  ? "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+              )}
+            >
+              {markPaid.isPending ? "…" : isPaid ? "✓ Paid" : "Mark paid"}
+            </button>
+          )}
+          {hasContact && (
+            <button
+              type="button"
+              onClick={() => onRespond(r)}
+              className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <MessageCircle className="h-2.5 w-2.5" />
+              Contact
+            </button>
+          )}
+          {r.reservationSystemId && (
+            confirmCancel ? (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={cancelOrder.isPending}
+                  onClick={handleCancel}
+                  className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                >
+                  {cancelOrder.isPending ? "…" : "Confirm"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmCancel(false)}
+                  className="text-[10px] font-medium text-muted-foreground underline hover:text-foreground"
+                >
+                  Keep
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmCancel(true)}
+                className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+              >
+                Cancel order
+              </button>
+            )
+          )}
+        </div>
+      </div>
+      {!isPaid && (
+        <p className="mt-1.5 text-[10.5px] text-amber-700 font-medium">
+          ⚠ Verify payment in Revolut / TCB before ordering — 24h min lead time
+        </p>
+      )}
+    </div>
+  )
+}
+
 function PackageOrdersWidget({
   reservations,
   onRespond,
@@ -336,7 +452,6 @@ function PackageOrdersWidget({
   reservations: CsvReservation[]
   onRespond: (r: CsvReservation) => void
 }) {
-  const markPaid = useMarkPackagePaid()
   const todayIso = getTodayIso()
 
   const pkgRows = reservations
@@ -349,72 +464,9 @@ function PackageOrdersWidget({
 
   return (
     <div className="flex flex-col gap-2">
-      {pkgRows.map((r) => {
-        const label = r.specialPackages === "just_cake" ? "🎂 Cake" : "💐 Flowers"
-        const isPaid = r.packagePaid ?? false
-        const dateLabel = r.dateOfReservation
-          ? new Date(r.dateOfReservation + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
-          : "—"
-        const hasContact = !!r.reservationSystemId && (!!r.phone || !!r.email)
-        return (
-          <div
-            key={r.reservationSystemId ?? r.name}
-            className={cn(
-              "rounded-xl border p-2.5",
-              isPaid ? "border-emerald-200 bg-emerald-50/40" : "border-purple-200 bg-purple-50/40",
-            )}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[12.5px] font-semibold text-foreground truncate max-w-[140px]">{r.name}</span>
-                  <span className="text-[12px]">{label}</span>
-                  {flagFromPhone(r.phone) && (
-                    <span className="text-[12px]">{flagFromPhone(r.phone)}</span>
-                  )}
-                </div>
-                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-0.5"><Calendar className="h-2.5 w-2.5" />{dateLabel}</span>
-                  <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{r.time ?? "—"}</span>
-                  <span className="flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{r.numberOfGuests} pax</span>
-                </div>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                {r.reservationSystemId && (
-                  <button
-                    type="button"
-                    disabled={markPaid.isPending}
-                    onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
-                      isPaid
-                        ? "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-                    )}
-                  >
-                    {markPaid.isPending ? "…" : isPaid ? "✓ Paid" : "Mark paid"}
-                  </button>
-                )}
-                {hasContact && (
-                  <button
-                    type="button"
-                    onClick={() => onRespond(r)}
-                    className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <MessageCircle className="h-2.5 w-2.5" />
-                    Contact
-                  </button>
-                )}
-              </div>
-            </div>
-            {!isPaid && (
-              <p className="mt-1.5 text-[10.5px] text-amber-700 font-medium">
-                ⚠ Verify payment in Revolut / TCB before ordering — 24h min lead time
-              </p>
-            )}
-          </div>
-        )
-      })}
+      {pkgRows.map((r) => (
+        <PackageOrderRow key={r.reservationSystemId ?? r.name} r={r} onRespond={onRespond} />
+      ))}
     </div>
   )
 }

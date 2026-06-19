@@ -203,6 +203,61 @@ export function useCancelReservation() {
   })
 }
 
+// ─── Cancel a package add-on (guest no longer wants cake/flowers) ────────────
+
+export function useCancelPackageOrder() {
+  const queryClient = useQueryClient()
+  const profile = useAuthStore((s) => s.profile)
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      label,
+      date,
+    }: {
+      id: string
+      name?: string | null
+      label?: string | null
+      date?: string | null
+    }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+
+      // Remove the package add-on only — the reservation itself stays intact.
+      const { error } = await reservationClient
+        .from('reservations')
+        .update({ package: null, package_paid: false })
+        .eq('id', id)
+      if (error) throw error
+
+      // Let owners + managers know so nobody orders a cancelled cake/flowers
+      try {
+        const { data: recipients } = await supabase
+          .from('profiles')
+          .select('id')
+          .in('role', ['owner', 'manager'])
+
+        if (recipients && recipients.length > 0) {
+          const by = profile?.fullName ? ` by ${profile.fullName}` : ''
+          await insertNotifications(
+            recipients.map((r) => ({
+              userId: r.id,
+              title: `Package order cancelled: ${name ?? 'Guest'}${by}`,
+              body: `${label ?? 'Package'}${date ? ` · ${date}` : ''} — guest no longer wants it. Do not order.`,
+              notificationType: 'general' as const,
+              relatedType: 'reservation',
+              relatedId: id,
+            })),
+          )
+        }
+      } catch (err) {
+        console.warn('[useCancelPackageOrder] notification fan-out failed:', err)
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['webform-reservations'] }),
+  })
+}
+
 // ─── Accept / Decline (simple, no message) ───────────────────────────────────
 
 export function useAcceptReservation() {
