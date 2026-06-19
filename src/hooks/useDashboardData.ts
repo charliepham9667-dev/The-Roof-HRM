@@ -452,10 +452,11 @@ export function useDeleteTarget() {
 
 export interface KPISummary {
   revenue: { value: number; trend: number; trendLabel: string };
+  ytdRevenue: { value: number; trend: number; trendLabel: string };
   pax: { value: number; trend: number; trendLabel: string };
   avgSpend: { value: number; trend: number; trendLabel: string };
   yoyGrowth: { value: number; trendLabel: string };
-  lastYear: { revenue: number; pax: number; avgSpend: number };
+  lastYear: { revenue: number; pax: number; avgSpend: number; ytdRevenue: number };
   targetMet: { percentage: number; isOnTrack: boolean };
 }
 
@@ -515,6 +516,26 @@ export function useKPISummary(selectedMonth?: MonthParam) {
         .gte('date', periodStart2025)
         .lte('date', periodEnd2025);
 
+      // YTD revenue: Jan 1 of selected year through the selected period end
+      const ytdStart2026 = `${viewYear}-01-01`;
+      const ytdStart2025 = `${viewYear - 1}-01-01`;
+      const ytdEnd2025 = periodEnd2025; // same calendar position one year prior
+
+      const { data: ytdCurrentData } = await supabase
+        .from('daily_metrics')
+        .select('revenue')
+        .gte('date', ytdStart2026)
+        .lte('date', periodEnd2026);
+
+      const { data: ytdLastYearData } = await supabase
+        .from('daily_metrics')
+        .select('revenue')
+        .gte('date', ytdStart2025)
+        .lte('date', ytdEnd2025);
+
+      const ytdRevenue = (ytdCurrentData || []).reduce((sum, row) => sum + (row.revenue || 0), 0);
+      const ytdRevenueLastYear = (ytdLastYearData || []).reduce((sum, row) => sum + (row.revenue || 0), 0);
+
       // Get monthly target — match by current month's period_start for accuracy
       const { data: targetData } = await supabase
         .from('targets')
@@ -562,6 +583,9 @@ export function useKPISummary(selectedMonth?: MonthParam) {
       const avgSpendTrend = lastYearPeriod.avgSpend > 0
         ? ((currentPeriod.avgSpend - lastYearPeriod.avgSpend) / lastYearPeriod.avgSpend) * 100
         : 0;
+      const ytdRevenueTrend = ytdRevenueLastYear > 0
+        ? ((ytdRevenue - ytdRevenueLastYear) / ytdRevenueLastYear) * 100
+        : 0;
 
       const targetPercentage = Math.round((currentPeriod.revenue / target) * 100);
       const expectedByNow = (target / daysInMonth) * endDay;
@@ -572,6 +596,11 @@ export function useKPISummary(selectedMonth?: MonthParam) {
           value: currentPeriod.revenue,
           trend: revenueTrend,
           trendLabel: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toFixed(1)}% YoY`,
+        },
+        ytdRevenue: {
+          value: ytdRevenue,
+          trend: ytdRevenueTrend,
+          trendLabel: `${ytdRevenueTrend >= 0 ? '+' : ''}${ytdRevenueTrend.toFixed(1)}% YoY`,
         },
         pax: {
           value: currentPeriod.pax,
@@ -591,6 +620,7 @@ export function useKPISummary(selectedMonth?: MonthParam) {
           revenue: lastYearPeriod.revenue,
           pax: lastYearPeriod.pax,
           avgSpend: Math.round(lastYearPeriod.avgSpend),
+          ytdRevenue: ytdRevenueLastYear,
         },
         targetMet: {
           percentage: Math.min(targetPercentage, 100),

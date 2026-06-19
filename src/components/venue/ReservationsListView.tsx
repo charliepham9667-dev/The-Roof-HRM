@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useSendReminder, useSendGuestMessage } from "@/hooks/useWebFormReservations"
+import { useWebFormReservations, useSendReminder, useSendGuestMessage, useCancelReservation } from "@/hooks/useWebFormReservations"
 import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { InlineComment } from "@/components/venue/ReservationPanel"
@@ -83,15 +83,20 @@ function ReservationRow({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showCancel, setShowCancel] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
   const [composeText, setComposeText] = useState("")
   const [composeChannel, setComposeChannel] = useState<'email' | 'whatsapp'>('email')
   const [reminderSent, setReminderSent] = useState(false)
   const [messageSent, setMessageSent] = useState(false)
   const deleteRes = useDeleteReservation()
+  const cancelRes = useCancelReservation()
   const sendReminder = useSendReminder()
   const sendMessage = useSendGuestMessage()
   const badge = sourceBadge(r)
   const dbId = r.mustHaves ?? null
+  const alreadyClosed = r.bookingStatus === 'cancelled' || r.bookingStatus === 'declined' || r.bookingStatus === 'noshow'
+  const canCancel = !!r.reservationSystemId && !alreadyClosed
   const isPending = r.bookingStatus === 'pending'
   const isConfirmed = r.bookingStatus === 'accepted'
   const isWebForm = !!r.reservationSystemId
@@ -125,6 +130,20 @@ function ReservationRow({
     if (!confirmDelete) { setConfirmDelete(true); return }
     await deleteRes.mutateAsync(dbId)
     setConfirmDelete(false)
+  }
+
+  async function handleCancel() {
+    if (!r.reservationSystemId || !cancelReason.trim()) return
+    await cancelRes.mutateAsync({
+      id: r.reservationSystemId,
+      reason: cancelReason.trim(),
+      name: r.name,
+      date: r.dateOfReservation,
+      time: r.time,
+      pax: r.numberOfGuests,
+    })
+    setCancelReason("")
+    setShowCancel(false)
   }
 
   const monthLabel = r.dateOfReservation
@@ -379,6 +398,59 @@ function ReservationRow({
                   Send
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Cancel reservation (web-form) — requires a reason, moves to Declined & Lost */}
+          {canEdit && canCancel && (
+            <div className="border-t border-border/40 pt-2">
+              {showCancel ? (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                    Cancel reservation
+                  </p>
+                  <textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Reason for cancelling (e.g. duplicate, guest cancelled by email)…"
+                    rows={2}
+                    autoFocus
+                    className="w-full rounded border border-destructive/40 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-destructive resize-none"
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    {cancelRes.isError && (
+                      <span className="mr-auto text-[11px] text-destructive">Failed — try again</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setShowCancel(false); setCancelReason("") }}
+                      className="text-xs text-muted-foreground hover:text-foreground underline"
+                    >
+                      Keep
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      disabled={cancelRes.isPending || !cancelReason.trim()}
+                      className="flex items-center gap-1 rounded px-2.5 py-1 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                    >
+                      {cancelRes.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                      Confirm cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowCancel(true)}
+                    className="flex items-center gap-1 rounded px-2.5 py-1 text-xs text-destructive border border-destructive/30 hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Cancel reservation
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

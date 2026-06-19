@@ -134,13 +134,19 @@ export function OwnerOverview() {
           </div>
         ) : (
           <>
-            {/* Row 1: Revenue · Pax · Avg Spend */}
-            <div className="grid grid-cols-3 gap-2 lg:gap-4">
+            {/* Row 1: Revenue MTD · Revenue YTD · Pax · Avg Spend */}
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
               <FinanceKpiTile
                 label="Total Revenue · MTD"
                 value={formatVND(kpi.revenue.value)}
                 trendPercent={kpi.revenue.trend}
                 comparisonLine={`vs ${formatVND(kpi.lastYear.revenue)} same period last year`}
+              />
+              <FinanceKpiTile
+                label={`Total Revenue · YTD ${selectedMonth.year}`}
+                value={formatVND(kpi.ytdRevenue.value)}
+                trendPercent={kpi.ytdRevenue.trend}
+                comparisonLine={`vs ${formatVND(kpi.lastYear.ytdRevenue)} same period last year`}
               />
               <FinanceKpiTile
                 label="Pax · MTD"

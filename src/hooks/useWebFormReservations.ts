@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reservationClient, RESERVATION_FUNC_URL } from '@/lib/reservationClient'
+import { supabase } from '@/lib/supabase'
+import { insertNotifications } from './useNotifications'
+import { useAuthStore } from '@/stores/authStore'
 import type { CsvReservation, ReservationStatus } from './useReservationsCsv'
 
 export type RespondType = 'confirm' | 'followup' | 'decline'
@@ -129,6 +132,74 @@ export function useDeclinedReservations() {
       return (data || []).map(mapRow)
     },
     staleTime: 30000,
+  })
+}
+
+// ─── Cancel a web-form reservation (with reason → Declined & Lost) ───────────
+
+export function useCancelReservation() {
+  const queryClient = useQueryClient()
+  const profile = useAuthStore((s) => s.profile)
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      reason,
+      name,
+      date,
+      time,
+      pax,
+    }: {
+      id: string
+      reason: string
+      name?: string | null
+      date?: string | null
+      time?: string | null
+      pax?: number
+    }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+
+      // Soft-cancel: keep the row so it surfaces in the Declined & Lost log,
+      // store the reason in response_message (same field the decline flow uses).
+      const { error } = await reservationClient
+        .from('reservations')
+        .update({
+          status: 'cancelled',
+          response_message: reason,
+          responded_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+      if (error) throw error
+
+      // Notify owners + managers so they can see why it was cancelled
+      try {
+        const { data: recipients } = await supabase
+          .from('profiles')
+          .select('id')
+          .in('role', ['owner', 'manager'])
+
+        if (recipients && recipients.length > 0) {
+          const by = profile?.fullName ? ` by ${profile.fullName}` : ''
+          const meta = [date, time, pax != null ? `${pax} pax` : null].filter(Boolean).join(' · ')
+          await insertNotifications(
+            recipients.map((r) => ({
+              userId: r.id,
+              title: `Reservation cancelled: ${name ?? 'Guest'}${by}`,
+              body: `${meta ? meta + ' — ' : ''}Reason: ${reason}`,
+              notificationType: 'general' as const,
+              relatedType: 'reservation',
+              relatedId: id,
+            })),
+          )
+        }
+      } catch (err) {
+        console.warn('[useCancelReservation] notification fan-out failed:', err)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webform-reservations'] })
+      queryClient.invalidateQueries({ queryKey: ['declined-reservations'] })
+    },
   })
 }
 
