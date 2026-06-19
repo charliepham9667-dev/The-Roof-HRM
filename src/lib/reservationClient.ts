@@ -1,4 +1,4 @@
-import { createClient, processLock } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
 // Secondary Supabase client pointing at the reservation system project
 // (separate from the HRM's own Supabase project)
@@ -8,7 +8,7 @@ const url = import.meta.env.VITE_RESERVATION_SUPABASE_URL as string | undefined
 const anonKey = import.meta.env.VITE_RESERVATION_SUPABASE_ANON_KEY as string | undefined
 
 export const reservationClient = url && anonKey
-  ? createClient(url, anonKey, { auth: { persistSession: false, lock: processLock } })
+  ? createClient(url, anonKey, { auth: { persistSession: false, lock: <R>(_n: string, _t: number, fn: () => Promise<R>) => fn() } })
   : null
 
 export const RESERVATION_FUNC_URL = url

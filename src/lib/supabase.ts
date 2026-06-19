@@ -1,4 +1,4 @@
-import { createClient, processLock } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -75,12 +75,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: createSafeStorage(),
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    // Use the in-memory processLock instead of the default navigatorLock.
-    // navigator.locks can leave an orphaned `lock:theroof-auth-token` Web Lock
-    // when a tab/PWA reloads mid-auth-call (e.g. during a service-worker update),
-    // after which every getSession() blocks and throws
-    // "AbortError: signal is aborted without reason". processLock is scoped to
-    // the page lifetime, so nothing persists to get stuck across reloads.
-    lock: processLock,
+    // No-op lock: run auth operations immediately without any queuing.
+    // navigatorLock orphans across SW reloads (AbortError). processLock
+    // serialises all auth calls — autoRefreshToken can hold it for seconds,
+    // blocking signIn indefinitely. This is a single-tab PWA; concurrent
+    // cross-tab auth races never happen, so we don't need a lock at all.
+    lock: <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>) => fn(),
   },
 });

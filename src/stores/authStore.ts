@@ -250,10 +250,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        15_000,
+        'signIn',
+      );
 
       if (error) {
         set({ isLoading: false, error: error.message });
