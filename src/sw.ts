@@ -7,6 +7,11 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Activate the new SW immediately when installed — don't wait for all tabs
+// to close. Combined with clientsClaim() below, new deploys take effect on
+// the next navigation without requiring the user to close and reopen.
+self.addEventListener('install', () => self.skipWaiting());
+
 clientsClaim();
 
 // Injected by vite-plugin-pwa — do not remove

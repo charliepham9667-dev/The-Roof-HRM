@@ -46,7 +46,6 @@ export function Login() {
   const signUp = useAuthStore((s) => s.signUp);
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
-  const profile = useAuthStore((s) => s.profile);
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -61,15 +60,12 @@ export function Login() {
   const handleTouchEnd = usePWAInputFix();
   useResetBodyStyles();
 
+  // Redirect as soon as auth succeeds — profile loads in background via ProtectedRoute.
   useEffect(() => {
-    if (user && profile) {
-      if (profile.status === 'pending' || profile.status === 'rejected') {
-        navigate('/pending-approval', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
+    if (user) {
+      navigate('/', { replace: true });
     }
-  }, [user, profile, navigate]);
+  }, [user, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

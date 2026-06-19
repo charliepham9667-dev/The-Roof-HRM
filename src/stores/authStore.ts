@@ -12,6 +12,7 @@ interface AuthState {
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
+  isFetchingProfile: boolean;
   initialized: boolean;
   error: string | null;
   
@@ -57,6 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: null,
   isLoading: false,
+  isFetchingProfile: false,
   initialized: false,
   error: null,
   viewAs: null,
@@ -154,12 +156,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!authListenerSet) {
       authListenerSet = true;
 
-      supabase.auth.onAuthStateChange(async (event, session) => {
+      supabase.auth.onAuthStateChange((event, session) => {
         console.log('Auth state changed:', event);
 
         if (event === 'SIGNED_IN' && session?.user) {
           set({ user: session.user, error: null });
-          await get().fetchProfile();
+          // Fire and forget — signIn() already kicked off fetchProfile().
+          // The dedup guard in fetchProfile() prevents double-fetching.
+          void get().fetchProfile();
         } else if (event === 'SIGNED_OUT') {
           set({ user: null, profile: null, viewAs: null, error: null });
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
@@ -168,7 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // in-memory state was dropped but the session is still valid).
           set({ user: session.user });
           if (!get().profile) {
-            await get().fetchProfile();
+            void get().fetchProfile();
           }
         } else if (event === 'USER_UPDATED' && session?.user) {
           set({ user: session.user });
@@ -180,9 +184,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   fetchProfile: async () => {
-    const { user } = get();
+    const { user, isFetchingProfile } = get();
     if (!user) return;
+    if (isFetchingProfile) return; // already in-flight, don't double-fetch
 
+    set({ isFetchingProfile: true });
     try {
       const { data, error } = await withTimeout(
         supabase.from('profiles').select('*').eq('id', user.id).single() as unknown as Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }>,
@@ -192,17 +198,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (error) {
         console.error('Fetch profile error:', error);
-        
+
         // In DEV mode, create a fallback profile for testing
         if (import.meta.env.DEV) {
           console.warn('DEV MODE: Using fallback profile');
           const fallbackProfile = createFallbackProfile(user);
-          set({ profile: fallbackProfile, isLoading: false });
+          set({ profile: fallbackProfile, isLoading: false, isFetchingProfile: false });
           return;
         }
-        
+
         // In production, set error but don't crash
-        set({ error: 'Failed to load profile. Please try again.', isLoading: false });
+        set({ error: 'Failed to load profile. Please try again.', isLoading: false, isFetchingProfile: false });
         return;
       }
 
@@ -226,23 +232,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           createdAt: row.created_at as string,
           updatedAt: row.updated_at as string | undefined,
         };
-        set({ profile, error: null, isLoading: false });
+        set({ profile, error: null, isLoading: false, isFetchingProfile: false });
       }
     } catch (error) {
       console.error('Fetch profile error:', error);
-      
+
       // In DEV mode, create a fallback profile
       if (import.meta.env.DEV) {
         console.warn('DEV MODE: Using fallback profile after error');
         const { user: u } = get();
         if (u) {
           const fallbackProfile = createFallbackProfile(u);
-          set({ profile: fallbackProfile, isLoading: false });
+          set({ profile: fallbackProfile, isLoading: false, isFetchingProfile: false });
         }
         return;
       }
-      
-      set({ error: 'Failed to load profile. Please try again.', isLoading: false });
+
+      set({ error: 'Failed to load profile. Please try again.', isLoading: false, isFetchingProfile: false });
     }
   },
 
@@ -262,11 +268,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       if (data.user) {
-        set({ user: data.user });
-        await get().fetchProfile();
+        set({ user: data.user, isLoading: false });
+        // Fire profile fetch in background — don't block sign-in on a slow DB call.
+        // ProtectedRoute shows a loading state while isFetchingProfile is true.
+        void get().fetchProfile();
+      } else {
+        set({ isLoading: false });
       }
-
-      set({ isLoading: false });
     } catch (error) {
       set({ isLoading: false });
       throw error;

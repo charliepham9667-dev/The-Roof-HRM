@@ -12,6 +12,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const profile = useAuthStore((s) => s.profile);
   const initialized = useAuthStore((s) => s.initialized);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const isFetchingProfile = useAuthStore((s) => s.isFetchingProfile);
   const error = useAuthStore((s) => s.error);
   const initialize = useAuthStore((s) => s.initialize);
   const retryAuth = useAuthStore((s) => s.retryAuth);
@@ -26,7 +27,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (user && !profile) {
-    // Profile fetch failed — show error state with retry instead of endless spinner
+    // Still fetching profile after sign-in — show loading instead of error
+    if (isFetchingProfile) {
+      return <AuthLoadingScreen message="Loading workspace..." />;
+    }
+
+    // Profile fetch finished and failed — show error state with retry
     const retryProfile = useAuthStore.getState().retryProfile;
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
