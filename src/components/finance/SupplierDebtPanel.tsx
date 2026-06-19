@@ -7,6 +7,7 @@ import {
   History as HistoryIcon,
   ImageUp,
   Loader2,
+  Pencil,
   Plus,
   Save,
   Trash2,
@@ -349,6 +350,10 @@ export function SupplierDebtPanel() {
                         </Button>
                       </>
                     )}
+                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => openAdd(d)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />
+                      Edit
+                    </Button>
                   </div>
                 </div>
                 {d.notes && (
@@ -497,9 +502,16 @@ export function SupplierDebtPanel() {
                             </Button>
                           </>
                         )}
-                        {d.status === "paid" && (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => openAdd(d)}
+                          title="Edit or delete"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
