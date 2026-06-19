@@ -153,8 +153,8 @@ function PackageBadge({ r }: { r: CsvReservation }) {
       {r.reservationSystemId && (
         <button
           type="button"
-          disabled={markPaid.isPending}
-          onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
+          disabled={markPaid.isPending || !r.reservationSystemToken}
+          onClick={() => markPaid.mutate({ id: r.reservationSystemId!, token: r.reservationSystemToken!, paid: !isPaid })}
           className={cn(
             "ml-auto rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors",
             isPaid
@@ -348,9 +348,10 @@ function PackageOrderRow({
   const hasContact = !!r.reservationSystemId && (!!r.phone || !!r.email)
 
   function handleCancel() {
-    if (!r.reservationSystemId) return
+    if (!r.reservationSystemId || !r.reservationSystemToken) return
     cancelOrder.mutate({
       id: r.reservationSystemId,
+      token: r.reservationSystemToken,
       name: r.name,
       label,
       date: dateLabel,
@@ -383,8 +384,8 @@ function PackageOrderRow({
           {r.reservationSystemId && (
             <button
               type="button"
-              disabled={markPaid.isPending}
-              onClick={() => markPaid.mutate({ id: r.reservationSystemId!, paid: !isPaid })}
+              disabled={markPaid.isPending || !r.reservationSystemToken}
+              onClick={() => markPaid.mutate({ id: r.reservationSystemId!, token: r.reservationSystemToken!, paid: !isPaid })}
               className={cn(
                 "rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
                 isPaid

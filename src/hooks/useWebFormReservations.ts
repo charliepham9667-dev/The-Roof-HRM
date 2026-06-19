@@ -212,11 +212,13 @@ export function useCancelPackageOrder() {
   return useMutation({
     mutationFn: async ({
       id,
+      token,
       name,
       label,
       date,
     }: {
       id: string
+      token: string
       name?: string | null
       label?: string | null
       date?: string | null
@@ -224,10 +226,12 @@ export function useCancelPackageOrder() {
       if (!reservationClient) throw new Error('Reservation client not configured')
 
       // Remove the package add-on only — the reservation itself stays intact.
-      const { error } = await reservationClient
-        .from('reservations')
-        .update({ package: null, package_paid: false })
-        .eq('id', id)
+      // Must go through the service-role edge function: the public anon key has
+      // SELECT but not UPDATE on `reservations`, so a direct client update
+      // silently affects 0 rows.
+      const { error } = await reservationClient.functions.invoke('package-action', {
+        body: { id, token, action: 'cancel' },
+      })
       if (error) throw error
 
       // Let owners + managers know so nobody orders a cancelled cake/flowers
@@ -360,12 +364,12 @@ export function useSendGuestMessage() {
 export function useMarkPackagePaid() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, paid }: { id: string; paid: boolean }) => {
+    mutationFn: async ({ id, token, paid }: { id: string; token: string; paid: boolean }) => {
       if (!reservationClient) throw new Error('Reservation client not configured')
-      const { error } = await reservationClient
-        .from('reservations')
-        .update({ package_paid: paid })
-        .eq('id', id)
+      // Service-role edge function — anon key can't UPDATE `reservations`.
+      const { error } = await reservationClient.functions.invoke('package-action', {
+        body: { id, token, action: paid ? 'mark_paid' : 'unmark_paid' },
+      })
       if (error) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['webform-reservations'] }),
