@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { createPortal } from "react-dom"
-import { ChevronLeft, ChevronRight, Plus, Loader2, Pencil } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Loader2, Pencil, ImageUp } from "lucide-react"
 import { toast } from "sonner"
 import {
   DndContext,
@@ -20,6 +20,7 @@ import { supabase } from "@/lib/supabase"
 import { isOnShiftNow } from "@/hooks/useShifts"
 import { cn } from "@/lib/utils"
 import { AddShiftModal } from "@/components/schedule/AddShiftModal"
+import { ScheduleImportDialog } from "@/components/schedule/ScheduleImportDialog"
 import {
   Avatar,
   AvatarFallback,
@@ -50,6 +51,7 @@ export function ScheduleBuilder() {
   const [publishing, setPublishing] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
   const [duplicateOpen, setDuplicateOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [shiftSchema, setShiftSchema] = useState<"new" | "old">("new")
   const [activeShiftId, setActiveShiftId] = useState<string | null>(null)
 
@@ -628,6 +630,16 @@ export function ScheduleBuilder() {
             <Button
               variant="outline"
               size="sm"
+              disabled={loading}
+              onClick={() => setImportOpen(true)}
+              className="h-9 w-full gap-1.5 text-xs sm:w-auto"
+            >
+              <ImageUp className="h-3.5 w-3.5" />
+              Import from screenshot
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               disabled={loading || duplicating}
               onClick={() => setDuplicateOpen(true)}
               className="h-9 w-full text-xs sm:w-auto"
@@ -1025,6 +1037,23 @@ export function ScheduleBuilder() {
         onDelete={async (id) => {
           const shift = shifts.find((s) => s.id === id)
           if (shift) await deleteShift(shift)
+        }}
+      />
+
+      <ScheduleImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        weekStart={weekStart}
+        employees={employees.map((e) => ({
+          id: e.id,
+          full_name: e.full_name,
+          job_role: e.job_role,
+          department: e.department,
+        }))}
+        onImported={() => {
+          queryClient.invalidateQueries({ queryKey: ["shifts"] })
+          queryClient.invalidateQueries({ queryKey: ["shifts-today"] })
+          reload(weekStart, true).catch((e) => setError((e as Error)?.message || "Failed to refresh schedule"))
         }}
       />
 

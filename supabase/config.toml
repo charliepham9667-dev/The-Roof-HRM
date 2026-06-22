@@ -386,6 +386,9 @@ verify_jwt = false
 [functions.parse-cash-position]
 verify_jwt = false
 
+[functions.parse-schedule]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
