@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useSendReminder, useSendGuestMessage, useCancelReservation, useUpdateWebFormReservation } from "@/hooks/useWebFormReservations"
-import { useReservations, useDeleteReservation, useUpdateReservation } from "@/hooks/useReservations"
+import { useWebFormReservations, useSendReminder, useSendGuestMessage, useCancelReservation } from "@/hooks/useWebFormReservations"
+import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { InlineComment } from "@/components/venue/ReservationPanel"
 import { ResponderModal } from "@/components/venue/ResponderModal"
@@ -93,8 +93,6 @@ function ReservationRow({
   const cancelRes = useCancelReservation()
   const sendReminder = useSendReminder()
   const sendMessage = useSendGuestMessage()
-  const updateWebForm = useUpdateWebFormReservation()
-  const updateDb = useUpdateReservation()
   const badge = sourceBadge(r)
   const dbId = r.dbId ?? null
   const alreadyClosed = r.bookingStatus === 'cancelled' || r.bookingStatus === 'declined' || r.bookingStatus === 'noshow'
@@ -146,24 +144,6 @@ function ReservationRow({
     })
     setCancelReason("")
     setShowCancel(false)
-  }
-
-  // Seaview is scarce (2 tables/slot). Small parties (<4 pax) are seaview-eligible;
-  // staff press to assign Seaview or Bar. Writes to whichever backend the row came from.
-  const seatingEligible = canEdit && r.numberOfGuests < 4 && !alreadyClosed && (!!r.reservationSystemId || !!dbId)
-  const seatingPending = updateWebForm.isPending || updateDb.isPending
-  const assignedZone = (r.table ?? "").trim().toLowerCase()
-
-  async function handleSetSeating(zone: "Seaview" | "Bar") {
-    if (r.reservationSystemId) {
-      await updateWebForm.mutateAsync({
-        id: r.reservationSystemId,
-        tablePreference: zone,
-        specialRequests: r.specialRequests ?? "",
-      })
-    } else if (dbId) {
-      await updateDb.mutateAsync({ id: dbId, tablePreference: zone })
-    }
   }
 
   const monthLabel = r.dateOfReservation
@@ -283,34 +263,6 @@ function ReservationRow({
               <p className="mt-0.5 line-clamp-1 text-[10px] italic text-muted-foreground">
                 {r.specialRequests ? `📝 ${r.specialRequests}` : `💬 ${r.notes}`}
               </p>
-            )}
-
-            {/* Seaview / Bar quick-assign — small parties only */}
-            {seatingEligible && (
-              <div className="mt-1.5 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                <span className="text-[10px] font-medium text-muted-foreground">Seaview?</span>
-                {(["Seaview", "Bar"] as const).map((zone) => {
-                  const active = assignedZone === zone.toLowerCase()
-                  return (
-                    <button
-                      key={zone}
-                      type="button"
-                      disabled={seatingPending}
-                      onClick={() => handleSetSeating(zone)}
-                      className={cn(
-                        "rounded border px-2 py-0.5 text-[10px] font-semibold transition-colors disabled:opacity-50",
-                        active
-                          ? zone === "Seaview"
-                            ? "border-sky-300 bg-sky-100 text-sky-700"
-                            : "border-amber-300 bg-amber-100 text-amber-700"
-                          : "border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      {zone === "Seaview" ? "🌊 Seaview" : "🍸 Bar"}
-                    </button>
-                  )
-                })}
-              </div>
             )}
           </div>
         </div>

@@ -9,8 +9,10 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ReplyType {
-  id: RespondType
+interface ReplyOption {
+  id: string
+  respondType: RespondType
+  table?: string            // optional seating assignment, e.g. "Seaview" | "Bar Area"
   label: string
   color: string
   blurb: string
@@ -33,9 +35,10 @@ const formatDateLong = (iso: string | null) => {
   })
 }
 
-const REPLY_TYPES: ReplyType[] = [
-  {
+const OPT: Record<string, ReplyOption> = {
+  confirm: {
     id: "confirm",
+    respondType: "confirm",
     label: "Confirm",
     color: "#2e7a52",
     blurb: "Approve the booking and let the guest know.",
@@ -43,8 +46,31 @@ const REPLY_TYPES: ReplyType[] = [
     template: (r) =>
       `Hi ${firstName(r.name)},\n\nGreat news! Your reservation at The Roof for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"} is confirmed. We look forward to hosting you.\n\nWith Love,\nThe Roof Da Nang`,
   },
-  {
+  confirm_seaview: {
+    id: "confirm_seaview",
+    respondType: "confirm",
+    table: "Seaview",
+    label: "Confirm · Seaview",
+    color: "#2e7a52",
+    blurb: "Confirm with a seaview table — best seat in the house.",
+    icon: <Check className="h-3.5 w-3.5" />,
+    template: (r) =>
+      `Hi ${firstName(r.name)},\n\nWonderful news — your table at The Roof is confirmed for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}, and we've saved you one of our seaview tables. The best seat in the house will be waiting for you.\n\nWe hold your table for 15 minutes from your reservation time. See you soon!\n\nWith Love,\nThe Roof Da Nang`,
+  },
+  confirm_bar: {
+    id: "confirm_bar",
+    respondType: "confirm",
+    table: "Bar Area",
+    label: "Confirm · Bar Area",
+    color: "#2c7a86",
+    blurb: "Seaview full — confirm a bar-area table instead.",
+    icon: <Check className="h-3.5 w-3.5" />,
+    template: (r) =>
+      `Hi ${firstName(r.name)},\n\nGreat news — your table at The Roof is confirmed for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}.\n\nOur seaview tables are fully booked for that time, so we've reserved you a spot in our bar area instead — high tables, a warm buzz, and lovely views of their own. We think you'll love it.\n\nWe hold your table for 15 minutes from your reservation time. See you soon!\n\nWith Love,\nThe Roof Da Nang`,
+  },
+  followup: {
     id: "followup",
+    respondType: "followup",
     label: "Follow up",
     color: "#2c5f9e",
     blurb: "Ask a question — e.g. a request you can't confirm yet.",
@@ -52,8 +78,9 @@ const REPLY_TYPES: ReplyType[] = [
     template: (r) =>
       `Hi ${firstName(r.name)},\n\nThank you for your reservation request for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}.${r.specialRequests ? ` Regarding your request: "${r.specialRequests}" — we can't guarantee it for that time slot.` : ""} Could we offer you an alternative? Reply here and we'll hold your table.\n\nWith Love,\nThe Roof Da Nang`,
   },
-  {
+  decline: {
     id: "decline",
+    respondType: "decline",
     label: "Decline",
     color: "#b83232",
     blurb: "Decline the booking with a short reason.",
@@ -61,9 +88,15 @@ const REPLY_TYPES: ReplyType[] = [
     template: (r, reason) =>
       `Hi ${firstName(r.name)},\n\nThank you for thinking of The Roof. Unfortunately we're unable to accommodate your reservation for ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}. ${reason ? `${reason}. ` : ""}We're sorry to miss you and hope to welcome you another time.\n\nWith Love,\nThe Roof Da Nang`,
   },
-]
+}
 
-const REPLY_BY_ID = Object.fromEntries(REPLY_TYPES.map((t) => [t.id, t]))
+// Small parties (<3 pax) are seaview-eligible → offer Seaview / Bar Area confirm.
+// Larger parties get the generic confirm.
+function optionsFor(r: CsvReservation): ReplyOption[] {
+  return r.numberOfGuests < 3
+    ? [OPT.confirm_seaview, OPT.confirm_bar, OPT.followup, OPT.decline]
+    : [OPT.confirm, OPT.followup, OPT.decline]
+}
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
@@ -152,7 +185,7 @@ interface ResponderModalProps {
 }
 
 export function ResponderModal({ reservation: r, onClose }: ResponderModalProps) {
-  const [type, setType] = useState<RespondType>("confirm")
+  const [selectedId, setSelectedId] = useState<string>("confirm")
   const [reason, setReason] = useState("")
   const [msg, setMsg] = useState("")
   const [waOn, setWaOn] = useState(true)
@@ -168,7 +201,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
   // Reset state when reservation changes
   useEffect(() => {
     if (r) {
-      setType("confirm")
+      setSelectedId(optionsFor(r)[0].id)
       setReason("")
       setSent(false)
       setWaOn(hasPhone)
@@ -179,11 +212,13 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
     }
   }, [r?.reservationSystemId])
 
-  // Regenerate template on type/reason change
+  // Regenerate template on option/reason change
   useEffect(() => {
     if (!r) return
-    setMsg(REPLY_BY_ID[type].template(r, reason))
-  }, [type, reason, r?.reservationSystemId])
+    const opts = optionsFor(r)
+    const o = opts.find((x) => x.id === selectedId) ?? opts[0]
+    setMsg(o.template(r, reason))
+  }, [selectedId, reason, r?.reservationSystemId])
 
   // Esc to close
   useEffect(() => {
@@ -194,8 +229,11 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
 
   if (!r) return null
 
+  const options = optionsFor(r)
+  const opt = options.find((o) => o.id === selectedId) ?? options[0]
+
   const selectedChannels = [waOn && "WhatsApp", emailOn && "Email"].filter(Boolean) as string[]
-  const needsReason = type === "decline"
+  const needsReason = opt.respondType === "decline"
   const canSend =
     selectedChannels.length > 0 &&
     msg.trim().length > 0 &&
@@ -206,7 +244,8 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
     await respondTo.mutateAsync({
       id: r.reservationSystemId,
       token: r.reservationSystemToken,
-      type,
+      type: opt.respondType,
+      table: opt.table,
       message: msg.trim(),
       reason: needsReason ? reason.trim() : undefined,
       channels: selectedChannels,
@@ -215,7 +254,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
     setTimeout(() => onClose(), 1300)
   }
 
-  const rt = REPLY_BY_ID[type]
+  const rt = opt
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
@@ -301,14 +340,14 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   How do you want to reply?
                 </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {REPLY_TYPES.map((t) => {
-                    const active = type === t.id
+                <div className={cn("grid gap-2", options.length >= 4 ? "grid-cols-2" : "grid-cols-3")}>
+                  {options.map((t) => {
+                    const active = opt.id === t.id
                     return (
                       <button
                         key={t.id}
                         type="button"
-                        onClick={() => setType(t.id)}
+                        onClick={() => setSelectedId(t.id)}
                         className="flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-colors"
                         style={{
                           border: `1.5px solid ${active ? t.color : "var(--border)"}`,
