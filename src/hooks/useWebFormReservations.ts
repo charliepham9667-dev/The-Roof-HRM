@@ -155,6 +155,7 @@ export function useUpdateWebFormReservation() {
   return useMutation({
     mutationFn: async (input: {
       id: string
+      token: string
       customerName?: string
       customerPhone?: string | null
       customerEmail?: string | null
@@ -167,30 +168,32 @@ export function useUpdateWebFormReservation() {
     }) => {
       if (!reservationClient) throw new Error('Reservation client not configured')
 
-      const update: Record<string, any> = {}
-      if (input.customerName !== undefined) update.name = input.customerName
-      if (input.customerPhone !== undefined) update.phone = input.customerPhone || null
-      if (input.customerEmail !== undefined) update.email = input.customerEmail || null
-      if (input.reservationDate !== undefined) update.requested_date = input.reservationDate
+      const patch: Record<string, any> = {}
+      if (input.customerName !== undefined) patch.name = input.customerName
+      if (input.customerPhone !== undefined) patch.phone = input.customerPhone || null
+      if (input.customerEmail !== undefined) patch.email = input.customerEmail || null
+      if (input.reservationDate !== undefined) patch.requested_date = input.reservationDate
       if (input.reservationTime !== undefined) {
         // Website column expects HH:MM:SS
-        update.requested_time = input.reservationTime.length === 5 ? `${input.reservationTime}:00` : input.reservationTime
+        patch.requested_time = input.reservationTime.length === 5 ? `${input.reservationTime}:00` : input.reservationTime
       }
-      if (input.partySize !== undefined) update.party_size = input.partySize
+      if (input.partySize !== undefined) patch.party_size = input.partySize
       // Table preference is stored inside special_requests as "[Table preference: X]"
       if (input.tablePreference !== undefined || input.specialRequests !== undefined) {
         const tag = input.tablePreference ? `[Table preference: ${input.tablePreference}] ` : ''
         const notes = input.specialRequests ?? ''
-        update.special_requests = `${tag}${notes}`.trim() || null
+        patch.special_requests = `${tag}${notes}`.trim() || null
       }
       if (input.status !== undefined && WEBFORM_STATUS_MAP[input.status]) {
-        update.status = WEBFORM_STATUS_MAP[input.status]
+        patch.status = WEBFORM_STATUS_MAP[input.status]
       }
 
-      const { error } = await reservationClient
-        .from('reservations')
-        .update(update)
-        .eq('id', input.id)
+      // Must go through the service-role edge function: the public anon key has
+      // SELECT but NOT UPDATE on `reservations`, so a direct client update returns
+      // 204 yet silently affects 0 rows (this is why changing a time did nothing).
+      const { error } = await reservationClient.functions.invoke('edit-reservation', {
+        body: { id: input.id, token: input.token, patch },
+      })
       if (error) throw error
     },
     onSuccess: () => {
@@ -209,6 +212,7 @@ export function useCancelReservation() {
   return useMutation({
     mutationFn: async ({
       id,
+      token,
       reason,
       name,
       date,
@@ -216,6 +220,7 @@ export function useCancelReservation() {
       pax,
     }: {
       id: string
+      token: string
       reason: string
       name?: string | null
       date?: string | null
@@ -226,14 +231,18 @@ export function useCancelReservation() {
 
       // Soft-cancel: keep the row so it surfaces in the Declined & Lost log,
       // store the reason in response_message (same field the decline flow uses).
-      const { error } = await reservationClient
-        .from('reservations')
-        .update({
-          status: 'cancelled',
-          response_message: reason,
-          responded_at: new Date().toISOString(),
-        })
-        .eq('id', id)
+      // Service-role edge function — anon key can't UPDATE `reservations`.
+      const { error } = await reservationClient.functions.invoke('edit-reservation', {
+        body: {
+          id,
+          token,
+          patch: {
+            status: 'cancelled',
+            response_message: reason,
+            responded_at: new Date().toISOString(),
+          },
+        },
+      })
       if (error) throw error
 
       // Notify owners + managers so they can see why it was cancelled

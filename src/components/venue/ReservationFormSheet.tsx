@@ -108,8 +108,13 @@ export function ReservationFormSheet({
     try {
       if (isEdit && reservation) {
         if (editOrigin === "website") {
-          // Website booking lives in the reservation-system DB — update it in place.
-          await updateWebForm.mutateAsync({ id: reservation.id, ...draft })
+          // Website booking lives in the reservation-system DB — update it in place
+          // via the service-role edge function (anon key can't UPDATE reservations).
+          if (!reservation.reservationToken) {
+            setError("Missing reservation token — cannot edit this website booking.")
+            return
+          }
+          await updateWebForm.mutateAsync({ id: reservation.id, token: reservation.reservationToken, ...draft })
         } else {
           await updateRes.mutateAsync({ id: reservation.id, ...draft, status: draft.status as any })
         }

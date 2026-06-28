@@ -133,9 +133,10 @@ function ReservationRow({
   }
 
   async function handleCancel() {
-    if (!r.reservationSystemId || !cancelReason.trim()) return
+    if (!r.reservationSystemId || !r.reservationSystemToken || !cancelReason.trim()) return
     await cancelRes.mutateAsync({
       id: r.reservationSystemId,
+      token: r.reservationSystemToken,
       reason: cancelReason.trim(),
       name: r.name,
       date: r.dateOfReservation,
