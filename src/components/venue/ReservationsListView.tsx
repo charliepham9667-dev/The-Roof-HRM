@@ -726,8 +726,21 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
     const merged = [...webFormAll]
     const seenKeys = new Set(merged.map((r) => `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`))
 
+    // Time-independent guard: the Google Sheet is a stale mirror of website
+    // bookings. When staff edit a booking's TIME, the live website row moves to
+    // the new time but the sheet still holds the old time — so a name+date+time
+    // dedupe lets the same booking appear twice (e.g. Amina 19:00 sheet + 19:30
+    // live). Track live website bookings by name+date and drop any sheet row that
+    // matches, regardless of time.
+    const liveNameDate = new Set(
+      webFormAll.map((r) => `${(r.name ?? "").toLowerCase().trim()}|${r.dateOfReservation}`)
+    )
+
     // Add Google Sheets CSV reservations (all dates), de-duped by name+date+time
+    // and by the time-independent name+date guard above.
     for (const r of sheetAll) {
+      const nameDate = `${(r.name ?? "").toLowerCase().trim()}|${r.dateOfReservation}`
+      if (liveNameDate.has(nameDate)) continue
       const key = `${(r.name ?? "").toLowerCase()}|${r.dateOfReservation}|${(r.time ?? "").slice(0, 5)}`
       if (!seenKeys.has(key)) {
         seenKeys.add(key)
