@@ -393,6 +393,11 @@ export interface Reservation {
   createdBy?: string;
   createdAt: string;
   updatedAt?: string;
+  // Client-side annotations (not stored): which backend this row came from, so the
+  // edit form knows where to write. 'hrm' = HRM reservations table, 'website' = the
+  // reservation-system project, 'csv' = legacy Google Sheet (read-only).
+  origin?: 'hrm' | 'website' | 'csv';
+  reservationToken?: string;
 }
 
 // =============================================

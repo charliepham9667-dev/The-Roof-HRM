@@ -472,6 +472,65 @@ function PackageOrdersWidget({
   )
 }
 
+// ─── Cancelled reservations (today + upcoming) ────────────────────────────────
+// Cancellations free up tables, so this sits next to the capacity view.
+
+function CancelledReservationsWidget({ declined }: { declined: CsvReservation[] }) {
+  const todayIso = getTodayIso()
+
+  const rows = useMemo(
+    () =>
+      declined
+        .filter((r) => r.bookingStatus === "cancelled" && (r.dateOfReservation ?? "") >= todayIso)
+        .sort((a, b) => {
+          const dc = (a.dateOfReservation ?? "").localeCompare(b.dateOfReservation ?? "")
+          return dc !== 0 ? dc : (a.time ?? "").localeCompare(b.time ?? "")
+        }),
+    [declined, todayIso],
+  )
+
+  if (rows.length === 0) {
+    return <p className="text-[13px] text-muted-foreground">No cancellations for today or upcoming dates.</p>
+  }
+
+  const freedPax = rows.reduce((s, r) => s + (r.numberOfGuests || 0), 0)
+
+  return (
+    <div className="flex flex-col gap-2">
+      {rows.map((r, i) => (
+        <div
+          key={r.reservationSystemId ?? `${r.name}-${i}`}
+          className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
+        >
+          <Ban className="h-3.5 w-3.5 shrink-0 text-red-400" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-medium text-foreground/80">{r.name || "Guest"}</div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-2.5 w-2.5 shrink-0" />
+                {r.dateOfReservation === todayIso ? "Today" : (r.dateOfReservation ?? "—")}
+              </span>
+              {r.time && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-2.5 w-2.5 shrink-0" />
+                  {r.time}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Users className="h-2.5 w-2.5 shrink-0" />
+                {r.numberOfGuests} pax
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        {rows.length} cancelled · {freedPax} pax freed up
+      </p>
+    </div>
+  )
+}
+
 // ─── Nationality bar list ─────────────────────────────────────────────────────
 
 function NatList({ reservations }: { reservations: CsvReservation[] }) {
@@ -831,6 +890,14 @@ export function ReservationOverview() {
     [allReservations],
   )
 
+  // Cancelled bookings for today + upcoming (shown next to capacity)
+  const cancelledUpcoming = useMemo(
+    () => declinedRows.filter(
+      (r) => r.bookingStatus === "cancelled" && (r.dateOfReservation ?? "") >= todayIso
+    ),
+    [declinedRows, todayIso],
+  )
+
   // Analytics range filter (for Nationality + Booking Source widgets)
   const analyticsReservations = useMemo(() => {
     if (analyticsRange === "tonight") return todayReservations
@@ -958,6 +1025,25 @@ export function ReservationOverview() {
                   action={null}
                 >
                   <CapacityWidget />
+                </Widget>
+
+                {/* Cancelled Reservations */}
+                <Widget
+                  title="Cancelled Reservations"
+                  icon={<Ban className="h-4 w-4" />}
+                  action={
+                    cancelledUpcoming.length > 0 ? (
+                      <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold text-red-600">
+                        {cancelledUpcoming.length} cancelled
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        None
+                      </span>
+                    )
+                  }
+                >
+                  <CancelledReservationsWidget declined={declinedRows} />
                 </Widget>
 
                 {/* Package Orders */}

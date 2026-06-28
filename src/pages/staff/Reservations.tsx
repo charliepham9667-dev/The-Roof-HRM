@@ -14,7 +14,33 @@ import {
 } from 'lucide-react'
 import { useReservationsCsv, type CsvReservation } from '@/hooks/useReservationsCsv'
 import { useWebFormReservations, useDeclinedReservations } from '@/hooks/useWebFormReservations'
+import { useReservations } from '@/hooks/useReservations'
+import type { Reservation } from '@/types'
 import { ReservationFormSheet } from '@/components/venue/ReservationFormSheet'
+
+// Manual reservations live in the HRM `reservations` table (entered via the form,
+// phone/walk-in bookings). Map them into the shared shape so staff can see them too.
+function dbReservationToCsv(r: Reservation, todayIso: string): CsvReservation {
+  return {
+    submittedAt: r.createdAt,
+    email: r.customerEmail ?? null,
+    phone: r.customerPhone ?? null,
+    name: r.customerName,
+    table: r.tablePreference ?? null,
+    notes: r.notes ?? null,
+    dateOfReservation: r.reservationDate,
+    dateRaw: r.reservationDate,
+    time: r.reservationTime.slice(0, 5),
+    numberOfGuests: r.partySize,
+    specialRequests: r.specialRequests ?? null,
+    specialPackages: null,
+    occasion: r.source ?? null,
+    mustHaves: null,
+    status: r.reservationDate === todayIso ? 'today' : 'upcoming',
+    bookingStatus: 'accepted' as const, // manually entered = confirmed
+    dbId: r.id,
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,6 +152,11 @@ function ReservationCard({
               <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 border border-amber-200 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
                 <Star className="h-2.5 w-2.5" />
                 {r.specialPackages}
+              </span>
+            )}
+            {r.responseType === 'confirm' && r.responseChannels?.includes('Guest self-confirm') && (
+              <span className="inline-flex items-center rounded-full bg-emerald-600 border border-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                ✓ Confirmed
               </span>
             )}
           </div>
@@ -264,19 +295,33 @@ export function StaffReservations() {
     refetch: refetchDeclined,
   } = useDeclinedReservations()
 
+  // Manual reservations from the HRM table (today → next 30 days)
+  const dbCutoffIso = useMemo(() => {
+    const d = new Date(todayIso + 'T00:00:00')
+    d.setDate(d.getDate() + 30)
+    return d.toISOString().slice(0, 10)
+  }, [todayIso])
+  const {
+    data: dbData = [],
+    isLoading: dbLoading,
+    refetch: refetchDb,
+    isFetching: dbFetching,
+  } = useReservations(todayIso, dbCutoffIso)
+
   const [declinedOpen, setDeclinedOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
 
-  const isLoading = csvLoading || supaLoading
-  const isFetching = csvFetching || supaFetching
+  const isLoading = csvLoading || supaLoading || dbLoading
+  const isFetching = csvFetching || supaFetching || dbFetching
 
   function refetchAll() {
     refetchCsv()
     refetchSupa()
     refetchDeclined()
+    refetchDb()
   }
 
-  // Merge CSV + Supabase, dedupe — confirmed only (no pending shown to staff)
+  // Merge CSV + website + manual (HRM) reservations, dedupe — confirmed only (no pending shown to staff)
   const allActive = useMemo(() => {
     const confirmedSupabase = supabaseData.filter(
       (r) => r.bookingStatus === 'accepted' || !r.bookingStatus,
@@ -285,8 +330,12 @@ export function StaffReservations() {
     const confirmedCsv = csvData.filter(
       (r) => r.bookingStatus === 'accepted' || !r.bookingStatus,
     )
-    return dedupeReservations(confirmedCsv, confirmedSupabase)
-  }, [csvData, supabaseData])
+    // Manual HRM reservations — drop cancelled / no-show / completed
+    const confirmedDb = dbData
+      .filter((r) => !['cancelled', 'no_show', 'completed'].includes(r.status))
+      .map((r) => dbReservationToCsv(r, todayIso))
+    return dedupeReservations(confirmedCsv, [...confirmedSupabase, ...confirmedDb])
+  }, [csvData, supabaseData, dbData, todayIso])
 
   // Today's reservations sorted by time
   const todayList = useMemo(

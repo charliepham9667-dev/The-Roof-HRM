@@ -196,8 +196,8 @@ function DraggableReservationCard({
   const deleteRes = useDeleteReservation()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  // DB-sourced cards store the reservation UUID in `mustHaves`
-  const dbId = reservation.mustHaves ?? null
+  // DB-sourced cards carry the reservation UUID in `dbId`
+  const dbId = reservation.dbId ?? null
 
   const badge = SOURCE_BADGE[sourceFromReservation(reservation)] ?? SOURCE_BADGE.phone
 
@@ -290,7 +290,7 @@ function MobileReservationListItem({
   const [expanded, setExpanded] = useState(false)
   const deleteRes = useDeleteReservation()
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const dbId = r.mustHaves ?? null
+  const dbId = r.dbId ?? null
   const badge = SOURCE_BADGE[sourceFromReservation(r)] ?? SOURCE_BADGE.website
 
   async function handleDelete(e: React.MouseEvent) {

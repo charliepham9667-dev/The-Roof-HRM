@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useReservationsCsv, type CsvReservation } from "@/hooks/useReservationsCsv"
-import { useWebFormReservations, useSendReminder, useSendGuestMessage, useCancelReservation } from "@/hooks/useWebFormReservations"
-import { useReservations, useDeleteReservation } from "@/hooks/useReservations"
+import { useWebFormReservations, useSendReminder, useSendGuestMessage, useCancelReservation, useUpdateWebFormReservation } from "@/hooks/useWebFormReservations"
+import { useReservations, useDeleteReservation, useUpdateReservation } from "@/hooks/useReservations"
 import { ReservationFormSheet } from "@/components/venue/ReservationFormSheet"
 import { InlineComment } from "@/components/venue/ReservationPanel"
 import { ResponderModal } from "@/components/venue/ResponderModal"
@@ -93,8 +93,10 @@ function ReservationRow({
   const cancelRes = useCancelReservation()
   const sendReminder = useSendReminder()
   const sendMessage = useSendGuestMessage()
+  const updateWebForm = useUpdateWebFormReservation()
+  const updateDb = useUpdateReservation()
   const badge = sourceBadge(r)
-  const dbId = r.mustHaves ?? null
+  const dbId = r.dbId ?? null
   const alreadyClosed = r.bookingStatus === 'cancelled' || r.bookingStatus === 'declined' || r.bookingStatus === 'noshow'
   const canCancel = !!r.reservationSystemId && !alreadyClosed
   const isPending = r.bookingStatus === 'pending'
@@ -144,6 +146,24 @@ function ReservationRow({
     })
     setCancelReason("")
     setShowCancel(false)
+  }
+
+  // Seaview is scarce (2 tables/slot). Small parties (<4 pax) are seaview-eligible;
+  // staff press to assign Seaview or Bar. Writes to whichever backend the row came from.
+  const seatingEligible = canEdit && r.numberOfGuests < 4 && !alreadyClosed && (!!r.reservationSystemId || !!dbId)
+  const seatingPending = updateWebForm.isPending || updateDb.isPending
+  const assignedZone = (r.table ?? "").trim().toLowerCase()
+
+  async function handleSetSeating(zone: "Seaview" | "Bar") {
+    if (r.reservationSystemId) {
+      await updateWebForm.mutateAsync({
+        id: r.reservationSystemId,
+        tablePreference: zone,
+        specialRequests: r.specialRequests ?? "",
+      })
+    } else if (dbId) {
+      await updateDb.mutateAsync({ id: dbId, tablePreference: zone })
+    }
   }
 
   const monthLabel = r.dateOfReservation
@@ -218,6 +238,11 @@ function ReservationRow({
                   No Show
                 </span>
               )}
+              {r.responseType === 'confirm' && r.responseChannels?.includes('Guest self-confirm') && (
+                <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none bg-emerald-600 text-white border border-emerald-700">
+                  ✓ Guest confirmed
+                </span>
+              )}
             </div>
             {/* Meta: time · pax · table · phone */}
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[11px] text-muted-foreground">
@@ -258,6 +283,34 @@ function ReservationRow({
               <p className="mt-0.5 line-clamp-1 text-[10px] italic text-muted-foreground">
                 {r.specialRequests ? `📝 ${r.specialRequests}` : `💬 ${r.notes}`}
               </p>
+            )}
+
+            {/* Seaview / Bar quick-assign — small parties only */}
+            {seatingEligible && (
+              <div className="mt-1.5 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[10px] font-medium text-muted-foreground">Seaview?</span>
+                {(["Seaview", "Bar"] as const).map((zone) => {
+                  const active = assignedZone === zone.toLowerCase()
+                  return (
+                    <button
+                      key={zone}
+                      type="button"
+                      disabled={seatingPending}
+                      onClick={() => handleSetSeating(zone)}
+                      className={cn(
+                        "rounded border px-2 py-0.5 text-[10px] font-semibold transition-colors disabled:opacity-50",
+                        active
+                          ? zone === "Seaview"
+                            ? "border-sky-300 bg-sky-100 text-sky-700"
+                            : "border-amber-300 bg-amber-100 text-amber-700"
+                          : "border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {zone === "Seaview" ? "🌊 Seaview" : "🍸 Bar"}
+                    </button>
+                  )
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -748,9 +801,10 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
           specialRequests: r.specialRequests ?? null,
           specialPackages: null,
           occasion: r.source ?? null,
-          mustHaves: r.id,
+          mustHaves: null,
           status: r.reservationDate === todayIso ? "today" : "upcoming",
           bookingStatus: 'accepted' as const, // Manually entered = confirmed by definition
+          dbId: r.id, // real HRM id — used to route edits back to the HRM table
         })
       }
     }
@@ -816,8 +870,23 @@ export function ReservationsListView({ canEdit }: { canEdit: boolean }) {
   const isLoading = csvLoading || dbLoading || sheetLoading
 
   function handleEdit(r: CsvReservation) {
+    // Route the edit to the backend the row actually came from, so changing a
+    // time updates that record in place instead of inserting a duplicate.
+    let origin: "hrm" | "website" | "csv"
+    let id: string
+    let reservationToken: string | undefined
+    if (r.dbId) {
+      origin = "hrm"; id = r.dbId
+    } else if (r.reservationSystemId) {
+      origin = "website"; id = r.reservationSystemId; reservationToken = r.reservationSystemToken
+    } else {
+      origin = "csv"; id = "" // legacy Google Sheet row — not editable here
+    }
+
     setEditingReservation({
-      id: r.mustHaves ?? "",
+      id,
+      origin,
+      reservationToken,
       customerName: r.name ?? "",
       customerPhone: r.phone ?? undefined,
       customerEmail: r.email ?? undefined,

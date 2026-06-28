@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useCreateReservation, useUpdateReservation } from "@/hooks/useReservations"
+import { useUpdateWebFormReservation } from "@/hooks/useWebFormReservations"
 import type { Reservation, CreateReservationInput, ReservationSource } from "@/types"
 
 // ─── Source normalizer ─────────────────────────────────────────────────────────
@@ -78,9 +79,11 @@ export function ReservationFormSheet({
   defaultSource?: string
 }) {
   const isEdit = !!reservation?.id
+  const editOrigin = reservation?.origin ?? "hrm"
   const isMobile = useIsMobile()
   const createRes = useCreateReservation()
   const updateRes = useUpdateReservation()
+  const updateWebForm = useUpdateWebFormReservation()
 
   const [draft, setDraft] = useState(() => defaultDraft(reservation))
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +98,7 @@ export function ReservationFormSheet({
     }
   }, [reservation?.id, open])
 
-  const isPending = createRes.isPending || updateRes.isPending
+  const isPending = createRes.isPending || updateRes.isPending || updateWebForm.isPending
 
   async function handleSubmit() {
     if (!draft.customerName.trim()) { setError("Guest name is required."); return }
@@ -104,7 +107,16 @@ export function ReservationFormSheet({
     setError(null)
     try {
       if (isEdit && reservation) {
-        await updateRes.mutateAsync({ id: reservation.id, ...draft, status: draft.status as any })
+        if (editOrigin === "website") {
+          // Website booking lives in the reservation-system DB — update it in place.
+          await updateWebForm.mutateAsync({ id: reservation.id, ...draft })
+        } else {
+          await updateRes.mutateAsync({ id: reservation.id, ...draft, status: draft.status as any })
+        }
+      } else if (reservation?.origin === "csv") {
+        // Legacy Google Sheet rows have no editable backend here.
+        setError("This is a legacy sheet booking. Edit it in the Google Sheet, or re-add it as a new reservation.")
+        return
       } else {
         await createRes.mutateAsync({ ...draft })
       }

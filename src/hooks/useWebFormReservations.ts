@@ -135,6 +135,71 @@ export function useDeclinedReservations() {
   })
 }
 
+// ─── Edit a web-form reservation in place (time / date / pax / details) ──────
+// Website bookings live in the SEPARATE reservation-system project (reservationClient),
+// NOT the HRM `reservations` table. Editing one must UPDATE that row in place — never
+// insert into the HRM table, which is what created duplicate cards when staff changed a time.
+
+const WEBFORM_STATUS_MAP: Record<string, string> = {
+  confirmed: 'accepted',
+  seated: 'accepted',
+  completed: 'accepted',
+  pending: 'pending',
+  no_show: 'noshow',
+  cancelled: 'cancelled',
+}
+
+export function useUpdateWebFormReservation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: {
+      id: string
+      customerName?: string
+      customerPhone?: string | null
+      customerEmail?: string | null
+      reservationDate?: string
+      reservationTime?: string
+      partySize?: number
+      tablePreference?: string | null
+      specialRequests?: string | null
+      status?: string
+    }) => {
+      if (!reservationClient) throw new Error('Reservation client not configured')
+
+      const update: Record<string, any> = {}
+      if (input.customerName !== undefined) update.name = input.customerName
+      if (input.customerPhone !== undefined) update.phone = input.customerPhone || null
+      if (input.customerEmail !== undefined) update.email = input.customerEmail || null
+      if (input.reservationDate !== undefined) update.requested_date = input.reservationDate
+      if (input.reservationTime !== undefined) {
+        // Website column expects HH:MM:SS
+        update.requested_time = input.reservationTime.length === 5 ? `${input.reservationTime}:00` : input.reservationTime
+      }
+      if (input.partySize !== undefined) update.party_size = input.partySize
+      // Table preference is stored inside special_requests as "[Table preference: X]"
+      if (input.tablePreference !== undefined || input.specialRequests !== undefined) {
+        const tag = input.tablePreference ? `[Table preference: ${input.tablePreference}] ` : ''
+        const notes = input.specialRequests ?? ''
+        update.special_requests = `${tag}${notes}`.trim() || null
+      }
+      if (input.status !== undefined && WEBFORM_STATUS_MAP[input.status]) {
+        update.status = WEBFORM_STATUS_MAP[input.status]
+      }
+
+      const { error } = await reservationClient
+        .from('reservations')
+        .update(update)
+        .eq('id', input.id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webform-reservations'] })
+      queryClient.invalidateQueries({ queryKey: ['declined-reservations'] })
+    },
+  })
+}
+
 // ─── Cancel a web-form reservation (with reason → Declined & Lost) ───────────
 
 export function useCancelReservation() {

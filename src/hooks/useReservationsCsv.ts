@@ -25,6 +25,9 @@ export interface CsvReservation {
   bookingStatus?: 'pending' | 'accepted' | 'declined' | 'cancelled' | 'noshow'
   reservationSystemId?: string
   reservationSystemToken?: string
+  // Set only for rows that originate from the HRM `reservations` table (manual entries).
+  // Used to route edits to the correct backend and to show manual bookings to staff.
+  dbId?: string
   // Response tracking (set when staff respond via the responder modal)
   responseType?: 'confirm' | 'followup' | 'decline' | null
   responseMessage?: string | null
