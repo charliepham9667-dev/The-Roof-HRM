@@ -39,6 +39,26 @@ function pctVsTarget(actual: number, target: number): { label: string; positive:
   return { label: `${pct >= 0 ? '+' : ''}${pct}% vs target`, positive: pct >= 0 };
 }
 
+// For the current (partial) month, comparing MTD revenue to the FULL-month target
+// always reads as a large negative (e.g. "-100% vs target" early in the month),
+// which is misleading. Compare against the target pro-rated to days elapsed instead.
+// Returns null until there is data, so a fresh month with no entries shows nothing.
+function pctVsPace(
+  actual: number,
+  target: number,
+  year: number,
+  monthIndex0: number,
+): { label: string; positive: boolean } | null {
+  if (target <= 0 || actual <= 0) return null;
+  const now = new Date();
+  const daysInMonth = new Date(year, monthIndex0 + 1, 0).getDate();
+  const dayNow = Math.min(now.getDate(), daysInMonth);
+  const proratedTarget = target * (dayNow / daysInMonth);
+  if (proratedTarget <= 0) return null;
+  const pct = Math.round(((actual - proratedTarget) / proratedTarget) * 100);
+  return { label: `${pct >= 0 ? '+' : ''}${pct}% vs pace`, positive: pct >= 0 };
+}
+
 // ── CSS bar chart ────────────────────────────────────────────────────────────
 
 const BAR_AREA_H = 260; // px — the bar/target drawing area
@@ -58,8 +78,11 @@ function MonthColumn({
     ? Math.min(100, (entry.targetRevenue / chartMax) * 100)
     : null;
 
-  const vs = pctVsTarget(entry.actualRevenue, entry.targetRevenue);
   const isPartial = entry.isPartialMonth;
+  // Partial (current) month is measured against pace-to-date, not the full target.
+  const vs = isPartial
+    ? pctVsPace(entry.actualRevenue, entry.targetRevenue, entry.year, entry.monthIndex)
+    : pctVsTarget(entry.actualRevenue, entry.targetRevenue);
   const isPositive = vs?.positive ?? false;
   // For months in a prior year we only show the target line + last-year bar.
   // The "this year" orange bar would incorrectly display last-year actuals for those months.
@@ -354,9 +377,12 @@ export function MonthlyPerformance({
   );
 
   // ── Chart ─────────────────────────────────────────────────────────────────
+  // No overflow wrapper here: overflow-x-auto forces overflow-y to auto, which
+  // clips the hover tooltip that floats above the tallest bars. Columns are
+  // flex-1 / min-w-0, so they shrink to fit any width without horizontal scroll.
   const chart = (
-    <div className="w-full overflow-x-auto">
-      <div className="flex w-full min-w-[280px] gap-1 sm:gap-2">
+    <div className="w-full">
+      <div className="flex w-full gap-1 sm:gap-2">
         {monthlyData.map((entry) => (
           <MonthColumn key={entry.monthKey} entry={entry} chartMax={chartMax} />
         ))}
