@@ -10,12 +10,13 @@ export type PaidDebtOutflowRow = {
 }
 
 /**
- * Date cash left the business. Prefer due_date (payment-list / accountant day)
- * over paid_at (when someone clicked Paid in the app).
+ * Date cash left the business. Prefer paid_at (the tracker's Paid Date —
+ * when the transfer actually happened) over due_date (the submitted/list
+ * date), so cash-out lines up with the accountant's balance movements.
  */
 export function paidDebtOutflowDate(row: PaidDebtOutflowRow): string {
-  if (row.due_date) return row.due_date.slice(0, 10)
   if (row.paid_at) return row.paid_at.slice(0, 10)
+  if (row.due_date) return row.due_date.slice(0, 10)
   if (row.updated_at) return row.updated_at.slice(0, 10)
   return ""
 }

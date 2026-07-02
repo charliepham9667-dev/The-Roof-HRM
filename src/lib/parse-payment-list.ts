@@ -2,6 +2,8 @@ import type { DebtCategory } from "@/lib/finance-headroom"
 
 export type PaymentChannel = "bank" | "cash"
 
+export type ParsedRowStatus = "paid" | "pending"
+
 export type ParsedPaymentListRow = {
   vendorCode: string | null
   vendor: string
@@ -10,6 +12,12 @@ export type ParsedPaymentListRow = {
   remarks: string | null
   bankAccount: string | null
   bankName: string | null
+  /** Tracker sheets: per-row Status column (Paid / Pending Approval). */
+  status: ParsedRowStatus | null
+  /** Tracker sheets: Submitted Date column (when the request entered the list). */
+  submittedDate: string | null
+  /** Tracker sheets: Paid Date column (when cash actually left). */
+  paidDate: string | null
   skip?: boolean
 }
 
@@ -165,6 +173,19 @@ function coerceChannel(raw: unknown): PaymentChannel {
   return s === "cash" ? "cash" : "bank"
 }
 
+function coerceRowStatus(raw: unknown): ParsedRowStatus | null {
+  const s = String(raw ?? "").toLowerCase()
+  if (s.includes("paid")) return "paid"
+  if (s.includes("pending") || s.includes("approval")) return "pending"
+  return null
+}
+
+/** Accept YYYY-MM-DD (model output contract); anything else → null. */
+function coerceIsoDate(raw: unknown): string | null {
+  const s = String(raw ?? "").slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null
+}
+
 export function postProcessParsedPaymentList(raw: unknown): ParsedPaymentList {
   const input = (raw ?? {}) as Record<string, unknown>
   const warnings = Array.isArray(input.warnings)
@@ -193,6 +214,12 @@ export function postProcessParsedPaymentList(raw: unknown): ParsedPaymentList {
     const amountVnd = normalizeVndAmount(row.amountVnd as string | number)
     if (amountVnd <= 0) continue
 
+    const status = coerceRowStatus(row.status)
+    const paidDate = coerceIsoDate(row.paidDate)
+    if (status === "paid" && !paidDate) {
+      warnings.push(`"${vendor}": marked Paid but no Paid Date read — verify before import.`)
+    }
+
     rows.push({
       vendorCode: row.vendorCode != null ? String(row.vendorCode).trim() : null,
       vendor,
@@ -201,6 +228,9 @@ export function postProcessParsedPaymentList(raw: unknown): ParsedPaymentList {
       remarks,
       bankAccount: row.bankAccount != null ? String(row.bankAccount).trim() : null,
       bankName: row.bankName != null ? String(row.bankName).trim() : null,
+      status,
+      submittedDate: coerceIsoDate(row.submittedDate),
+      paidDate,
     })
   }
 

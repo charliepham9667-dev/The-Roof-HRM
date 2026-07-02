@@ -176,6 +176,7 @@ export function SupplierDebtPanel() {
       dueDate,
       status: itemStatus,
       notes: itemNotes,
+      paidAt: editItem?.paid_at ?? undefined,
     })
     setAddOpen(false)
   }
@@ -183,7 +184,7 @@ export function SupplierDebtPanel() {
   const handleRowAction = async (item: FinanceSupplierDebtItem) => {
     const next = nextStatusForAction(item.status)
     if (next === item.status) return
-    await updateStatus.mutateAsync({ id: item.id, status: next, dueDate: item.due_date })
+    await updateStatus.mutateAsync({ id: item.id, status: next })
   }
 
   const handleMarkStopped = async (item: FinanceSupplierDebtItem) => {
@@ -345,7 +346,7 @@ export function SupplierDebtPanel() {
                         <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleRowAction(d)} disabled={updateStatus.isPending}>
                           Resume
                         </Button>
-                        <Button type="button" size="sm" className="h-7 text-xs" onClick={() => updateStatus.mutateAsync({ id: d.id, status: "paid", dueDate: d.due_date })} disabled={updateStatus.isPending}>
+                        <Button type="button" size="sm" className="h-7 text-xs" onClick={() => updateStatus.mutateAsync({ id: d.id, status: "paid" })} disabled={updateStatus.isPending}>
                           Paid
                         </Button>
                       </>
@@ -493,7 +494,6 @@ export function SupplierDebtPanel() {
                                 updateStatus.mutateAsync({
                                   id: d.id,
                                   status: "paid",
-                                  dueDate: d.due_date,
                                 })
                               }
                               disabled={updateStatus.isPending}

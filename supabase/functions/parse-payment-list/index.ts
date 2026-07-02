@@ -14,7 +14,7 @@ function getBearerToken(req: Request): string | null {
   return m?.[1] ?? null
 }
 
-const SYSTEM_PROMPT = `You extract structured data from Vietnamese accountant spreadsheets titled "THE ROOF - LIST OF PAYMENT REQUIRED - BANK|CASH - DD/MM/YYYY".
+const SYSTEM_PROMPT = `You extract structured data from Vietnamese accountant spreadsheets titled "THE ROOF - LIST OF PAYMENT REQUIRED - BANK|CASH - DD/MM/YYYY" or "THE ROOF - PAYMENT TRACKER - BANK|CASH - DD/MM/YYYY".
 
 Return ONLY valid JSON matching this schema (no markdown):
 {
@@ -30,6 +30,9 @@ Return ONLY valid JSON matching this schema (no markdown):
     "remarks": string | null,
     "bankAccount": string | null,
     "bankName": string | null,
+    "status": "paid" | "pending" | null,
+    "submittedDate": "YYYY-MM-DD" | null,
+    "paidDate": "YYYY-MM-DD" | null,
     "skip": boolean
   }],
   "warnings": string[]
@@ -38,6 +41,11 @@ Return ONLY valid JSON matching this schema (no markdown):
 Rules:
 - Parse title for date (e.g. 24/04/2026 -> 2026-04-24) and BANK vs CASH.
 - Amounts use Vietnamese thousands dots (15.219.999 = 15219999).
+- PAYMENT TRACKER sheets have per-row Submitted Date, Status and Paid Date columns:
+  - Status "Paid" -> status "paid". Status "Pending Approval" (or similar) -> status "pending".
+  - paidDate = the Paid Date column, submittedDate = the Submitted Date column. Convert to YYYY-MM-DD. These columns mix D/M/YYYY and M/D/YYYY (e.g. "19/06/2026" and "6/23/2026") — a first number > 12 means it is the day. When ambiguous, both dates belong to the same month as nearby rows and the title date; add a warning if still unsure.
+  - paidDate is CRITICAL: it is the day cash actually left the business. Never guess it — null + warning if unreadable.
+- LIST OF PAYMENT REQUIRED sheets have no per-row status/date columns: set status, submittedDate and paidDate to null.
 - Copy the Remarks column VERBATIM into remarks (this describes what the payment is for). Example remarks values:
   "The Roof thanh toan tien Beer East West tu 01.04 den 15.04.2026 Cty SEA"
   "The Roof thanh toan tien DJ ngay 1+4+11+15 Dang Thanh Nhan"
@@ -160,7 +168,7 @@ serve(async (req) => {
               },
               {
                 type: "text",
-                text: "Extract all payment rows from this LIST OF PAYMENT REQUIRED sheet. Return JSON only.",
+                text: "Extract all payment rows from this payment sheet (LIST OF PAYMENT REQUIRED or PAYMENT TRACKER). Return JSON only.",
               },
             ],
           },

@@ -63,7 +63,6 @@ export function UnifiedHeadroomPanel() {
     await updateStatus.mutateAsync({
       id: item.id,
       status: nextStatusForAction(item.status),
-      dueDate: item.due_date,
     })
   }
 

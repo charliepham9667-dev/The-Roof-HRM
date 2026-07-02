@@ -114,14 +114,20 @@ export function useUpsertDebtItem() {
       dueDate: string
       status?: DebtItemStatus
       notes?: string | null
+      /** Existing paid_at when editing an already-paid item (preserved). */
+      paidAt?: string | null
     }) => {
       if (!profile?.id) throw new Error("Not authenticated")
+      const status = input.status ?? "pending"
       const row = {
         vendor: input.vendor.trim(),
         category: input.category,
         amount_vnd: input.amountVnd,
         due_date: input.dueDate,
-        status: input.status ?? "pending",
+        status,
+        // Keep paid_at consistent with status so cash-out lands on the right day
+        paid_at:
+          status === "paid" ? input.paidAt ?? new Date().toISOString().slice(0, 10) : null,
         notes: input.notes?.trim() || null,
         updated_by: profile.id,
         updated_at: new Date().toISOString(),
@@ -181,7 +187,7 @@ export function useUpdateDebtItemStatus() {
   const qc = useQueryClient()
   const profile = useAuthStore((s) => s.profile)
   return useMutation({
-    mutationFn: async (input: { id: string; status: DebtItemStatus; dueDate?: string }) => {
+    mutationFn: async (input: { id: string; status: DebtItemStatus; paidAt?: string }) => {
       if (!profile?.id) throw new Error("Not authenticated")
       const patch: Record<string, unknown> = {
         status: input.status,
@@ -189,7 +195,8 @@ export function useUpdateDebtItemStatus() {
         updated_at: new Date().toISOString(),
       }
       if (input.status === "paid") {
-        patch.paid_at = input.dueDate ?? new Date().toISOString().slice(0, 10)
+        // paid_at = day cash actually left (defaults to today), NOT the due/submitted date
+        patch.paid_at = input.paidAt ?? new Date().toISOString().slice(0, 10)
       } else {
         patch.paid_at = null
       }
@@ -238,6 +245,8 @@ export type BulkDebtImportRow = {
   notes?: string | null
   sourceImportPath?: string | null
   status?: DebtItemStatus
+  /** Tracker "Paid Date" — day cash actually left. Only used when status is paid. */
+  paidDate?: string | null
 }
 
 export function useUploadDebtImportSource() {
@@ -294,7 +303,7 @@ export function useBulkImportDebtItems() {
           payment_channel: r.paymentChannel,
           source_import_path: r.sourceImportPath ?? null,
           source_weekly_report_id: input.weeklyReportId ?? null,
-          paid_at: status === "paid" ? r.dueDate || today : null,
+          paid_at: status === "paid" ? r.paidDate || r.dueDate || today : null,
           created_by: profile.id,
           updated_by: profile.id,
           updated_at: now,

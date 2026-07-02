@@ -52,6 +52,8 @@ type ReviewRow = {
   amountVnd: number
   category: DebtCategory
   dueDate: string
+  status: DebtItemStatus
+  paidDate: string
   channel: PaymentChannel
   remarks: string
   bankName: string
@@ -68,7 +70,10 @@ function parsedToReviewRows(parsed: ParsedPaymentList): ReviewRow[] {
     vendorCode: r.vendorCode ?? "",
     amountVnd: r.amountVnd,
     category: r.category,
-    dueDate: parsed.listDate,
+    // Tracker sheets carry a per-row Submitted Date; older list sheets only have the title date
+    dueDate: r.submittedDate ?? parsed.listDate,
+    status: r.status ?? "pending",
+    paidDate: r.paidDate ?? "",
     channel: parsed.paymentChannel,
     remarks: r.remarks ?? "",
     bankName: r.bankName ?? "",
@@ -228,7 +233,8 @@ export function DebtImportDialog({
             bankAccount: r.bankAccount,
           }),
           sourceImportPath,
-          status: importStatus,
+          status: r.status,
+          paidDate: r.status === "paid" ? r.paidDate || null : null,
         })),
         replaceForDateChannel: replaceExisting
           ? { dueDate: parsed.listDate, channel: parsed.paymentChannel }
@@ -330,17 +336,19 @@ export function DebtImportDialog({
             )}
 
             <div className="overflow-x-auto rounded border border-border">
-              <table className="w-full min-w-[1100px] text-sm table-fixed">
+              <table className="w-full min-w-[1300px] text-sm table-fixed">
                 <thead className="bg-[#FAF4EF]">
                   <tr className="text-left text-[10.5px] uppercase tracking-wide text-[#6C2B29] font-bold">
                     <th className="px-2 py-2 w-10" />
-                    <th className="px-2 py-2 w-[16%]">Vendor</th>
-                    <th className="px-2 py-2 w-[8%]">Code</th>
-                    <th className="px-2 py-2 w-[11%] text-right">Amount</th>
-                    <th className="px-2 py-2 w-[11%]">Category</th>
-                    <th className="px-2 py-2 w-[10%]">Due</th>
-                    <th className="px-2 py-2 w-[30%]">Remarks</th>
-                    <th className="px-2 py-2 w-[14%]">Bank</th>
+                    <th className="px-2 py-2 w-[14%]">Vendor</th>
+                    <th className="px-2 py-2 w-[6%]">Code</th>
+                    <th className="px-2 py-2 w-[10%] text-right">Amount</th>
+                    <th className="px-2 py-2 w-[9%]">Category</th>
+                    <th className="px-2 py-2 w-[9%]">Submitted</th>
+                    <th className="px-2 py-2 w-[9%]">Status</th>
+                    <th className="px-2 py-2 w-[9%]">Paid date</th>
+                    <th className="px-2 py-2 w-[22%]">Remarks</th>
+                    <th className="px-2 py-2 w-[12%]">Bank</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -396,6 +404,35 @@ export function DebtImportDialog({
                           onChange={(e) => updateRow(r.key, { dueDate: e.target.value })}
                           className="h-8 text-xs w-full"
                         />
+                      </td>
+                      <td className="px-2 py-2">
+                        <Select
+                          value={r.status}
+                          onValueChange={(v) => updateRow(r.key, { status: v as DebtItemStatus })}
+                        >
+                          <SelectTrigger className="h-8 text-xs w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="stopped">Stopped</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-2 py-2">
+                        <Input
+                          type="date"
+                          value={r.paidDate}
+                          onChange={(e) => updateRow(r.key, { paidDate: e.target.value })}
+                          disabled={r.status !== "paid"}
+                          className="h-8 text-xs w-full"
+                        />
+                        {r.status === "paid" && !r.paidDate && (
+                          <p className="text-[10px] text-warning mt-1 leading-snug">
+                            No paid date — will use submitted date
+                          </p>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <textarea
@@ -465,12 +502,18 @@ export function DebtImportDialog({
 
             <div className="flex flex-wrap items-end gap-4">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Import as status</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Set status for all rows (per-row Status above wins on import)
+                </Label>
                 <Select
                   value={importStatus}
-                  onValueChange={(v) => setImportStatus(v as DebtItemStatus)}
+                  onValueChange={(v) => {
+                    const status = v as DebtItemStatus
+                    setImportStatus(status)
+                    setRows((prev) => prev.map((r) => ({ ...r, status })))
+                  }}
                 >
-                  <SelectTrigger className="h-9 w-[200px] text-sm">
+                  <SelectTrigger className="h-9 w-[240px] text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
