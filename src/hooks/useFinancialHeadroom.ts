@@ -10,6 +10,7 @@ import { useLatestCashPosition, useCashPositionHistory } from "@/hooks/useFinanc
 import { useLatestSupplierDebt, useSupplierDebtHistory } from "@/hooks/useFinanceSupplierDebt"
 import { useSupplierDebtItems } from "@/hooks/useFinanceSupplierDebtItems"
 import { useCashFlowSeries } from "@/hooks/useCashFlowSeries"
+import { useLoansReceivableSummary } from "@/hooks/useFinanceLoansReceivable"
 
 export function useFinancialHeadroom() {
   const { data: latestCash, isLoading: cashLoading } = useLatestCashPosition()
@@ -18,6 +19,7 @@ export function useFinancialHeadroom() {
   const { data: latestWeeklyDebt } = useLatestSupplierDebt()
   const { data: debtHistory = [] } = useSupplierDebtHistory(4)
   const cashFlow = useCashFlowSeries()
+  const loans = useLoansReceivableSummary()
 
   const liquidity = Number(latestCash?.total_vnd ?? 0)
   const lineItemDebt = debtItems.reduce((s, i) => s + Number(i.amount_vnd), 0)
@@ -63,8 +65,15 @@ export function useFinancialHeadroom() {
     parts.push(
       `Free cash flow is ${formatCompactVnd(freeCashFlow)}${runwayDays != null ? ` — about ${runwayDays} days of runway` : ""} at current burn.`,
     )
+    if (loans.principalOut > 0) {
+      parts.push(
+        `${formatCompactVnd(loans.principalOut)} is lent out (loans receivable) — ${formatCompactVnd(loans.expectedBack)} expected back${
+          loans.nextDue ? ` by ${format(parseISO(loans.nextDue.maturity_date), "MMM d")}` : ""
+        }.`,
+      )
+    }
     return parts.join(" ")
-  }, [liquidityDelta, debtDelta, freeCashFlow, runwayDays])
+  }, [liquidityDelta, debtDelta, freeCashFlow, runwayDays, loans.principalOut, loans.expectedBack, loans.nextDue])
 
   const topDue = useMemo(() => {
     return [...debtItems]
@@ -96,6 +105,9 @@ export function useFinancialHeadroom() {
     fridayIso,
     vendorCount: debtItems.length,
     cashFlow,
+    loansOutPrincipal: loans.principalOut,
+    loansExpectedBack: loans.expectedBack,
+    nextLoanDueIso: loans.nextDue?.maturity_date ?? null,
     isLoading: cashLoading || itemsLoading,
     isSafeRunway: runwayDays != null && runwayDays >= 30,
   }

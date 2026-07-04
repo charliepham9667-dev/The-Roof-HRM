@@ -5,14 +5,14 @@ import { FinancialHealthHeader } from "@/components/finance/FinancialHealthHeade
 import { FinancePill } from "@/components/finance/finance-ui"
 import { CashPositionPanel } from "@/components/finance/CashPositionPanel"
 import { SupplierDebtPanel } from "@/components/finance/SupplierDebtPanel"
+import { LoansReceivablePanel } from "@/components/finance/LoansReceivablePanel"
 import { UnifiedHeadroomPanel } from "@/components/finance/UnifiedHeadroomPanel"
 import { useFinancialHeadroom } from "@/hooks/useFinancialHeadroom"
 
-type HeadroomTab = "cash" | "debt" | "unified"
+type HeadroomTab = "cash" | "debt" | "loans" | "unified"
 
-function parseTab(raw: string | null): HeadroomTab {
-  if (raw === "debt" || raw === "unified") return raw
-  return "cash"
+function isHeadroomTab(raw: string | null): raw is HeadroomTab {
+  return raw === "cash" || raw === "debt" || raw === "loans" || raw === "unified"
 }
 
 type Props = {
@@ -22,13 +22,15 @@ type Props = {
 export function FinancialHeadroomView({ defaultTab }: Props) {
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTab = searchParams.get("tab")
-  const activeTab = defaultTab ?? parseTab(requestedTab)
+  // URL param wins so tab clicks work even when the page sets a defaultTab
+  const activeTab: HeadroomTab = isHeadroomTab(requestedTab)
+    ? requestedTab
+    : defaultTab ?? "cash"
   const { latestCash, fridayIso } = useFinancialHeadroom()
 
   const handleTabChange = (next: string) => {
     const params = new URLSearchParams(searchParams)
-    if (next === "cash") params.delete("tab")
-    else params.set("tab", next)
+    params.set("tab", next)
     setSearchParams(params, { replace: true })
   }
 
@@ -46,7 +48,7 @@ export function FinancialHeadroomView({ defaultTab }: Props) {
           </p>
           <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-3">
             <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-              Cash position & supplier debt
+              Cash position, debt & loans out
             </h2>
             <p className="text-sm text-muted-foreground">
               Weekly Friday snapshot — track headroom, surface what&apos;s due, decide what to pay.
@@ -63,6 +65,7 @@ export function FinancialHeadroomView({ defaultTab }: Props) {
         <TabsList className="bg-[#FAF4EF] border border-[#6C2B29]/10 p-1">
           <TabsTrigger value="cash">Cash Position</TabsTrigger>
           <TabsTrigger value="debt">Debt Tracker</TabsTrigger>
+          <TabsTrigger value="loans">Loans Out</TabsTrigger>
           <TabsTrigger value="unified">Unified view</TabsTrigger>
         </TabsList>
 
@@ -73,6 +76,9 @@ export function FinancialHeadroomView({ defaultTab }: Props) {
         </TabsContent>
         <TabsContent value="debt" className="mt-0">
           <SupplierDebtPanel />
+        </TabsContent>
+        <TabsContent value="loans" className="mt-0">
+          <LoansReceivablePanel />
         </TabsContent>
         <TabsContent value="unified" className="mt-0">
           <UnifiedHeadroomPanel />

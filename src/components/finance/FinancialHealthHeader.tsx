@@ -21,6 +21,8 @@ export function FinancialHealthHeader() {
     asOfLabel,
     vendorCount,
     cashFlow,
+    loansOutPrincipal,
+    loansExpectedBack,
     isLoading,
   } = useFinancialHeadroom()
 
@@ -64,6 +66,12 @@ export function FinancialHealthHeader() {
         footer={
           <div className="space-y-1.5">
             {liquidityFooter}
+            {loansOutPrincipal > 0 && (
+              <div className="text-muted-foreground">
+                Excludes {formatCompactVnd(loansOutPrincipal)} lent out ·{" "}
+                {formatCompactVnd(loansExpectedBack)} coming back
+              </div>
+            )}
             {liquiditySpark.some((v) => v > 0) && (
               <MiniSparkline data={liquiditySpark} color={FINANCE_FLOW_COLORS.cashOnHand} />
             )}
