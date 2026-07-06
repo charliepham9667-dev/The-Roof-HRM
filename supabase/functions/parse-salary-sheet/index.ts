@@ -47,6 +47,18 @@ Inside the "Lương và các khoản phụ cấp trong lương" group, map these
 - grossIncomeVnd = "Tổng thu nhập" (Total income) grand total. Sanity check: fixedSalary+svc+food+bonuses+overtime+other should ≈ this. If it does not, you mapped a wrong column — re-check.
 - netPaidVnd     = "Thực nhận" net grand total — what staff actually receive after deductions.
 
+WORKED EXAMPLE — for the May 2026 sheet, the correct TỔNG CỘNG mapping is:
+  fixedSalaryVnd 137,667,621 (earned base: 127,053,206 official + 10,614,415 internship — NOT the 142,764,000 contract-rate column)
+  svcVnd 69,758,563 · foodVnd 7,775,000 (the amount — NOT the 350,000/25,000 daily rate)
+  bonusesVnd 96,335,054 (Lễ/Tết 8,716,154 + Thưởng 26,309,671 + Thưởng 61,309,229)
+  overtimeVnd 7,356,655 · otherVnd 19,720,000 (Phụ cấp khác only) · grossIncomeVnd 338,692,894
+  Note fixedSalary+svc+food+bonuses+overtime+other = 338,612,893 ≈ gross. Follow this exact pattern for whatever month you are given.
+
+COMMON MISTAKES TO AVOID:
+- Do NOT use "Phụ cấp cơm ca" (food) and "Phụ cấp khác" (other) interchangeably — they are two different columns. Food ≈ 7-8M, Other ≈ 19M in the example.
+- Do NOT read the small daily meal rate (25,000 or ~350,000 total) as foodVnd — use the millions-sized amount column.
+- Do NOT use the "Chính thức" contract-rate column (142,764,000) for fixedSalaryVnd — use the earned base.
+
 Insurance (the company's cost, on top of gross):
 - insuranceBaseVnd     = grand total of the "Mức đóng" (Payment level) column — the salary base insurance is calculated on. The "Khấu trừ NLĐ (10.5%)" column is the EMPLOYEE deduction; do NOT use it for employer cost.
 - employerInsuranceVnd = the EMPLOYER's social-insurance contribution = 21.5% of insuranceBaseVnd (BHXH 17.5% + BHYT 3% + BHTN 1%). Compute it if the sheet does not print it, and add a warning saying it was computed at 21.5%.
@@ -166,8 +178,10 @@ serve(async (req) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-4-6",
+        // Opus for accurate reading of the dense ~30-column payroll table.
+        model: Deno.env.get("ANTHROPIC_SALARY_MODEL") || "claude-opus-4-8",
         max_tokens: 8192,
+        temperature: 0, // deterministic — same PDF must give the same numbers every time
         system: SYSTEM_PROMPT,
         messages: [
           {
