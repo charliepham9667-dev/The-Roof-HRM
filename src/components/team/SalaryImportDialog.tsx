@@ -17,6 +17,13 @@ import {
   supabaseErrorMessage,
 } from "@/lib/finance-headroom"
 import { SALARY_CATEGORIES, type ParsedSalary, type SalaryCategoryKey } from "@/lib/parse-salary"
+import { defaultTargetVnd } from "@/lib/bonus-check"
+import {
+  BonusCheckFields,
+  bonusFormToPayload,
+  EMPTY_BONUS_FORM,
+  type BonusForm,
+} from "./BonusCheckFields"
 import { useParseSalarySheet } from "@/hooks/useParseSalarySheet"
 import { useUpsertSalaryMonthly, useUploadSalarySource } from "@/hooks/useSalaryMonthly"
 
@@ -64,6 +71,7 @@ export function SalaryImportDialog({
   const [insuranceBase, setInsuranceBase] = useState(0)
   const [gross, setGross] = useState(0)
   const [net, setNet] = useState(0)
+  const [bonus, setBonus] = useState<BonusForm>(EMPTY_BONUS_FORM)
   const [error, setError] = useState<string | null>(null)
 
   const isImage = file?.type.startsWith("image/") ?? false
@@ -87,6 +95,7 @@ export function SalaryImportDialog({
     setInsuranceBase(0)
     setGross(0)
     setNet(0)
+    setBonus(EMPTY_BONUS_FORM)
     setError(null)
     parseSheet.reset()
     upsert.reset()
@@ -122,6 +131,12 @@ export function SalaryImportDialog({
     setInsuranceBase(p.insuranceBaseVnd)
     setGross(p.grossIncomeVnd)
     setNet(p.netPaidVnd)
+    const target = defaultTargetVnd(p.year, p.month)
+    setBonus({
+      ...EMPTY_BONUS_FORM,
+      target: target != null ? formatVndDigits(target) : "",
+      surplusBonusPaid: p.surplusBonusVnd ? formatVndDigits(p.surplusBonusVnd) : "",
+    })
     setWarnings(p.warnings ?? [])
   }
 
@@ -167,6 +182,7 @@ export function SalaryImportDialog({
         grossIncomeVnd: gross,
         netPaidVnd: net,
         headcount: parseNumberInput(headcount),
+        ...bonusFormToPayload(bonus),
         notes: "Salary sheet import",
         sourceFilePath: uploaded?.path ?? null,
         sourceFileName: uploaded?.fileName ?? null,
@@ -334,6 +350,18 @@ export function SalaryImportDialog({
                 <span>Net paid to staff (sheet)</span>
                 <span className="font-mono">{formatVnd(net)}</span>
               </div>
+            </div>
+
+            {/* Bonus check vs the 2026 Surplus Bonus Framework (optional) */}
+            <div className="border-t border-border pt-3 space-y-2">
+              <div>
+                <p className="text-sm font-semibold">Bonus check (optional)</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Compare the surplus bonus paid against policy: (revenue − target) × 7% × review gate.
+                  Leave blank to skip.
+                </p>
+              </div>
+              <BonusCheckFields values={bonus} onChange={setBonus} year={year} month={month} />
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}

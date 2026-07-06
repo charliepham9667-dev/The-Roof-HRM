@@ -14,6 +14,8 @@ export type ParsedSalary = {
   bonusesVnd: number
   overtimeVnd: number
   otherVnd: number
+  /** Surplus bonus specifically (Thưởng vượt doanh thu) — a subset of bonusesVnd, for the policy check. */
+  surplusBonusVnd: number
   insuranceBaseVnd: number
   grossIncomeVnd: number
   netPaidVnd: number
@@ -73,6 +75,7 @@ export function postProcessParsedSalary(raw: unknown): ParsedSalary {
     bonusesVnd: amount(input.bonusesVnd),
     overtimeVnd: amount(input.overtimeVnd),
     otherVnd: amount(input.otherVnd),
+    surplusBonusVnd: amount(input.surplusBonusVnd),
     insuranceBaseVnd,
     grossIncomeVnd: amount(input.grossIncomeVnd),
     netPaidVnd: amount(input.netPaidVnd),

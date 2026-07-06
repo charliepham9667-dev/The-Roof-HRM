@@ -18,6 +18,12 @@ export type SalaryMonthly = {
   gross_income_vnd: number
   net_paid_vnd: number
   headcount: number | null
+  // Bonus reconciliation (optional per month) — see src/lib/bonus-check.ts.
+  monthly_target_vnd: number | null
+  qualifying_revenue_vnd: number | null
+  google_rating: number | null
+  new_reviews: number | null
+  surplus_bonus_paid_vnd: number | null
   notes: string | null
   source_file_path: string | null
   source_file_name: string | null
@@ -28,7 +34,7 @@ export type SalaryMonthly = {
 }
 
 const SELECT_COLS =
-  "id,year,month,fixed_salary_vnd,svc_vnd,insurance_vnd,food_vnd,bonuses_vnd,overtime_vnd,other_vnd,total_vnd,insurance_base_vnd,gross_income_vnd,net_paid_vnd,headcount,notes,source_file_path,source_file_name,source_file_mime_type,source_file_size_bytes,created_at,updated_at"
+  "id,year,month,fixed_salary_vnd,svc_vnd,insurance_vnd,food_vnd,bonuses_vnd,overtime_vnd,other_vnd,total_vnd,insurance_base_vnd,gross_income_vnd,net_paid_vnd,headcount,monthly_target_vnd,qualifying_revenue_vnd,google_rating,new_reviews,surplus_bonus_paid_vnd,notes,source_file_path,source_file_name,source_file_mime_type,source_file_size_bytes,created_at,updated_at"
 
 const SOURCE_BUCKET = "finance-attachments"
 const SOURCE_PREFIX = "salary"
@@ -85,6 +91,11 @@ export type UpsertSalaryInput = {
   grossIncomeVnd?: number
   netPaidVnd?: number
   headcount?: number | null
+  monthlyTargetVnd?: number | null
+  qualifyingRevenueVnd?: number | null
+  googleRating?: number | null
+  newReviews?: number | null
+  surplusBonusPaidVnd?: number | null
   notes?: string | null
   sourceFilePath?: string | null
   sourceFileName?: string | null
@@ -116,6 +127,11 @@ export function useUpsertSalaryMonthly() {
             gross_income_vnd: input.grossIncomeVnd ?? 0,
             net_paid_vnd: input.netPaidVnd ?? 0,
             headcount: input.headcount ?? null,
+            monthly_target_vnd: input.monthlyTargetVnd ?? null,
+            qualifying_revenue_vnd: input.qualifyingRevenueVnd ?? null,
+            google_rating: input.googleRating ?? null,
+            new_reviews: input.newReviews ?? null,
+            surplus_bonus_paid_vnd: input.surplusBonusPaidVnd ?? null,
             notes: input.notes?.trim() || null,
             source_file_path: input.sourceFilePath ?? null,
             source_file_name: input.sourceFileName ?? null,
@@ -127,6 +143,47 @@ export function useUpsertSalaryMonthly() {
           },
           { onConflict: "year,month" },
         )
+        .select(SELECT_COLS)
+        .single()
+      if (error) throw error
+      return data as SalaryMonthly
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["salary-monthly"] })
+    },
+  })
+}
+
+export type BonusFields = {
+  monthlyTargetVnd: number | null
+  qualifyingRevenueVnd: number | null
+  googleRating: number | null
+  newReviews: number | null
+  surplusBonusPaidVnd: number | null
+}
+
+/**
+ * Update ONLY the bonus-check fields on an existing salary row (by id).
+ * A partial UPDATE, not an upsert — so it never clobbers the salary category totals.
+ */
+export function useUpdateSalaryBonus() {
+  const qc = useQueryClient()
+  const profile = useAuthStore((s) => s.profile)
+  return useMutation({
+    mutationFn: async (input: { id: string } & BonusFields) => {
+      if (!profile?.id) throw new Error("Not authenticated")
+      const { data, error } = await supabase
+        .from("salary_monthly")
+        .update({
+          monthly_target_vnd: input.monthlyTargetVnd,
+          qualifying_revenue_vnd: input.qualifyingRevenueVnd,
+          google_rating: input.googleRating,
+          new_reviews: input.newReviews,
+          surplus_bonus_paid_vnd: input.surplusBonusPaidVnd,
+          updated_by: profile.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.id)
         .select(SELECT_COLS)
         .single()
       if (error) throw error

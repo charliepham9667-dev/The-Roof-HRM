@@ -24,6 +24,7 @@ Return ONLY valid JSON (no markdown, no commentary):
   "svcVnd": 0,
   "foodVnd": 0,
   "bonusesVnd": 0,
+  "surplusBonusVnd": 0,
   "overtimeVnd": 0,
   "otherVnd": 0,
   "insuranceBaseVnd": 0,
@@ -48,6 +49,7 @@ Inside the "Lương và các khoản phụ cấp trong lương" group, map these
 - svcVnd         = "Phí Phục Vụ" (Service charge).
 - otherVnd       = "Phụ cấp khác" (Other allowances — e.g. toxic/hazard fee). This is a SINGLE column; do not add any bonus to it.
 - bonusesVnd     = "Lương chính thức › Lễ/Tết" (Holiday/Tet) + the two columns headed "Truy lĩnh / Các khoản khác" with sub-labels "(Thưởng vượt doanh thu)" (revenue-target bonus) and "(Thưởng bonus)". Add all bonus columns together. A column is a bonus if its header/sub-label contains "Thưởng", "Lễ/Tết", or "Lương tháng 13".
+- surplusBonusVnd = ONLY the "(Thưởng vượt doanh thu)" (revenue-target / surplus bonus) column — a SUBSET of bonusesVnd, reported separately for the bonus-policy check. If there is no such column, return 0. It must be ≤ bonusesVnd.
 - grossIncomeVnd = "Tổng thu nhập" (Total income) grand total. Sanity check: fixedSalary+svc+food+bonuses+overtime+other should ≈ this. If it does not, you mapped a wrong column — re-check.
 - netPaidVnd     = "Thực nhận" net grand total — what staff actually receive after deductions.
 
@@ -56,28 +58,28 @@ WORKED EXAMPLES — these three months are verified correct. Follow this exact p
 May 2026 TỔNG CỘNG:
   fixedSalaryVnd 137,667,621 (earned base: 127,053,206 official + 10,614,415 internship — NOT the 142,764,000 contract-rate column)
   svcVnd 69,758,563 · foodVnd 7,775,000 (the amount — NOT the 350,000/25,000 daily rate)
-  bonusesVnd 96,415,054 (Lễ/Tết 8,716,154 + Thưởng vượt doanh thu 26,309,671 + Thưởng bonus 61,389,229)
+  bonusesVnd 96,415,054 (Lễ/Tết 8,716,154 + Thưởng vượt doanh thu 26,309,671 + Thưởng bonus 61,389,229) · surplusBonusVnd 26,309,671 (the Thưởng vượt doanh thu column)
   overtimeVnd 7,356,655 · otherVnd 19,720,000 (Phụ cấp khác only)
   grossIncomeVnd 338,692,894 · insuranceBaseVnd 52,250,000 · employerInsuranceVnd 11,233,750 · netPaidVnd 318,654,943
   Reconcile: 137,667,621+69,758,563+7,775,000+96,415,054+7,356,655+19,720,000 = 338,692,893 ≈ gross ✓
 
 April 2026 TỔNG CỘNG:
   fixedSalaryVnd 126,569,061 · svcVnd 60,204,438 · foodVnd 6,900,000
-  bonusesVnd 75,109,207 (Lễ/Tết 19,427,740 + Thưởng 20,204,441 + Thưởng 35,477,026)
+  bonusesVnd 75,109,207 (Lễ/Tết 19,427,740 + Thưởng vượt doanh thu 20,204,441 + Thưởng bonus 35,477,026) · surplusBonusVnd 20,204,441
   overtimeVnd 5,287,285 · otherVnd 19,295,000
   grossIncomeVnd 293,364,992 · insuranceBaseVnd 42,250,000 · employerInsuranceVnd 9,083,750 · netPaidVnd 274,087,890
   Reconcile: 126,569,061+60,204,438+6,900,000+75,109,207+5,287,285+19,295,000 = 293,364,991 ≈ gross ✓
 
 March 2026 TỔNG CỘNG (no Lễ/Tết column this month — it is omitted when zero):
   fixedSalaryVnd 104,483,779 · svcVnd 56,741,421 · foodVnd 5,850,000
-  bonusesVnd 69,141,142 (no Lễ/Tết + Thưởng 20,742,343 + Thưởng 48,398,799)
+  bonusesVnd 69,141,142 (no Lễ/Tết + Thưởng vượt doanh thu 20,742,343 + Thưởng bonus 48,398,799) · surplusBonusVnd 20,742,343
   overtimeVnd 4,170,194 (Tăng ca internship 460,417 + Tăng ca official 3,709,777) · otherVnd 12,476,000
   grossIncomeVnd 252,862,536 · insuranceBaseVnd 42,250,000 · employerInsuranceVnd 9,083,750 · netPaidVnd 237,854,785
   Reconcile: 104,483,779+56,741,421+5,850,000+69,141,142+4,170,194+12,476,000 = 252,862,536 = gross ✓
 
 June 2026 TỔNG CỘNG (no Lễ/Tết column this month):
   fixedSalaryVnd 141,905,440 (internship 11,449,804 + official 130,455,636) · svcVnd 63,188,932 · foodVnd 8,625,000
-  bonusesVnd 58,610,522 (no Lễ/Tết + Thưởng 17,583,157 + Thưởng 41,027,365)
+  bonusesVnd 58,610,522 (no Lễ/Tết + Thưởng vượt doanh thu 17,583,157 + Thưởng bonus 41,027,365) · surplusBonusVnd 17,583,157
   overtimeVnd 5,280,217 (Tăng ca internship 223,125 + Tăng ca official 5,057,092) · otherVnd 13,410,000
   grossIncomeVnd 291,020,111 · insuranceBaseVnd 62,750,000 · employerInsuranceVnd 13,491,250 · netPaidVnd 277,401,873
   Reconcile: 141,905,440+63,188,932+8,625,000+58,610,522+5,280,217+13,410,000 = 291,020,111 = gross ✓
