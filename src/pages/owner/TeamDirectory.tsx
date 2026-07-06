@@ -13,6 +13,7 @@ import {
   Search,
   Shield,
   Users,
+  Wallet,
   XCircle,
   ZoomIn,
   ZoomOut,
@@ -26,6 +27,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { OrgChartNode, ProfileDetailPanel } from "@/components/org-chart"
 import { AddEmployeeModal } from "@/components/team/AddEmployeeModal"
 import { EditAccessModal } from "@/components/team/EditAccessModal"
+import { SalaryOverviewView } from "@/components/team/SalaryOverviewView"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -216,7 +218,7 @@ export function TeamDirectory() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [shiftFilter, setShiftFilter] = useState<string>("all")
-  const [view, setView] = useState<"list" | "org" | "pending" | "contracts">("list")
+  const [view, setView] = useState<"list" | "org" | "pending" | "contracts" | "salary">("list")
   const [contractsFilter, setContractsFilter] = useState<"all" | "signed" | "unsigned" | "expiring">("all")
   const [addOpen, setAddOpen] = useState(false)
   const [approveTarget, setApproveTarget] = useState<{ id: string; name: string; email: string } | null>(null)
@@ -401,6 +403,20 @@ export function TeamDirectory() {
                   {stats.total - stats.contractsSigned}
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("salary")}
+              className="hidden sm:flex"
+              style={{
+                padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", alignItems: "center", gap: 6, border: "none", transition: "all .15s", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
+                background: view === "salary" ? "#FDFAF5" : "transparent",
+                color: view === "salary" ? "#1A1814" : "#7A7260",
+                boxShadow: view === "salary" ? "0 1px 3px rgba(0,0,0,.07)" : "none",
+              }}
+            >
+              <Wallet size={12} />
+              Salary
             </button>
           </div>
         </div>
@@ -671,6 +687,8 @@ export function TeamDirectory() {
           stats={stats}
         />
       )}
+
+      {view === "salary" && <SalaryOverviewView />}
 
       <AddEmployeeModal isOpen={addOpen} onClose={() => setAddOpen(false)} />
 
