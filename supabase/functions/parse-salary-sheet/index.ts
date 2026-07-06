@@ -33,15 +33,19 @@ Return ONLY valid JSON (no markdown, no commentary):
   "warnings": []
 }
 
-Take the GRAND-TOTAL row (the bottom summary line, or sum each column across all staff) and map columns by their EXACT headers:
-- fixedSalaryVnd = "Lương chính thức" (Official salary) + "Lương thử việc" (Internship/apprentice salary). The base earned pay.
+Read every value from the bottom "TỔNG CỘNG" grand-total row.
+
+CRITICAL — the sheet has several column groups with REPEATED headers. You must read ONLY the money columns inside the group titled "Lương và các khoản phụ cấp trong lương" (Salary & allowances within pay) — the block that ends in "Tổng thu nhập (Total income)". IGNORE these earlier groups entirely: "Lương & khoản phụ cấp (Salary & allowances)" (monthly contract rates), "Lương quy đổi giờ (Hourly wage)" (hourly rates), and "Công / Giờ tính lương thực tế (Actual hours worked)" (day/hour COUNTS like 208.0, 24.0). Those are rates/counts, not what was paid.
+
+Inside the "Lương và các khoản phụ cấp trong lương" group, map these exact columns:
+- fixedSalaryVnd = "Lương chính thức › Cơ bản" (Official salary, base) + "Lương thử việc › Cơ bản" (Internship salary, base). The earned base pay. (Do NOT use the earlier "Chính thức" rate column.)
+- overtimeVnd    = "Lương chính thức › Tăng ca" + "Lương thử việc › Tăng ca" (the money amounts in THIS group, not the hour counts).
+- foodVnd        = "Phụ cấp cơm ca" (Shift meal allowance) — the MILLIONS-sized amount in this group, NOT the small per-day rate (e.g. 25,000) in the earlier group.
 - svcVnd         = "Phí Phục Vụ" (Service charge).
-- foodVnd        = "Phụ cấp cơm ca" / "Cơm ca" (Meal allowance).
-- bonusesVnd     = sum of EVERY bonus column. A column is a bonus if its header (or its sub-label in parentheses) contains "Thưởng", "Lễ/Tết", or "Lương tháng 13". IMPORTANT: the sheet has bonus columns headed "Truy lĩnh / Các khoản khác" with parenthesised sub-labels like "(Thưởng vượt doanh thu)" (revenue-target bonus) and "(Thưởng bonus)" — these ARE bonuses; include them here, NOT in otherVnd. Add together all such columns.
-- overtimeVnd    = "Tăng ca" (Overtime) THÀNH TIỀN (the money amount, NOT the hours/công count).
-- otherVnd       = "Phụ cấp khác" (Other allowances — e.g. toxic/hazard fee) + any "Truy lĩnh" back-pay column that is NOT a bonus. Never put a "Thưởng" column here.
-- grossIncomeVnd = "Tổng thu nhập" (Total income) grand total — the sheet's own gross figure. It should roughly equal fixedSalary+svc+food+bonuses+overtime+other.
-- netPaidVnd     = "Thực nhận" / "TỔNG CỘNG" net grand total — what staff actually receive.
+- otherVnd       = "Phụ cấp khác" (Other allowances — e.g. toxic/hazard fee). This is a SINGLE column; do not add any bonus to it.
+- bonusesVnd     = "Lương chính thức › Lễ/Tết" (Holiday/Tet) + the two columns headed "Truy lĩnh / Các khoản khác" with sub-labels "(Thưởng vượt doanh thu)" (revenue-target bonus) and "(Thưởng bonus)". Add all bonus columns together. A column is a bonus if its header/sub-label contains "Thưởng", "Lễ/Tết", or "Lương tháng 13".
+- grossIncomeVnd = "Tổng thu nhập" (Total income) grand total. Sanity check: fixedSalary+svc+food+bonuses+overtime+other should ≈ this. If it does not, you mapped a wrong column — re-check.
+- netPaidVnd     = "Thực nhận" net grand total — what staff actually receive after deductions.
 
 Insurance (the company's cost, on top of gross):
 - insuranceBaseVnd     = grand total of the "Mức đóng" (Payment level) column — the salary base insurance is calculated on. The "Khấu trừ NLĐ (10.5%)" column is the EMPLOYEE deduction; do NOT use it for employer cost.
