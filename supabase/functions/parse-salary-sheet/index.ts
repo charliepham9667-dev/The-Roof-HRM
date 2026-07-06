@@ -178,8 +178,9 @@ serve(async (req) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        // Opus for accurate reading of the dense ~30-column payroll table.
-        model: Deno.env.get("ANTHROPIC_SALARY_MODEL") || "claude-opus-4-8",
+        // Same model the other parse functions use (known to work on this key).
+        // Override with ANTHROPIC_SALARY_MODEL to a stronger model if the account has access.
+        model: Deno.env.get("ANTHROPIC_SALARY_MODEL") || Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-4-6",
         max_tokens: 8192,
         temperature: 0, // deterministic — same PDF must give the same numbers every time
         system: SYSTEM_PROMPT,

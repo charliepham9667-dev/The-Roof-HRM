@@ -45,11 +45,12 @@ export function useParseSalarySheet() {
       }
 
       const payload = await res.json().catch(() => ({}))
+      const payloadError = (payload as { error?: string }).error
       if (!res.ok) {
-        throw new Error(supabaseErrorMessage(payload, `Parse failed (HTTP ${res.status})`))
+        throw new Error(payloadError || supabaseErrorMessage(payload, `Parse failed (HTTP ${res.status})`))
       }
-      if ((payload as { error?: string }).error) {
-        throw new Error((payload as { error: string }).error)
+      if (payloadError) {
+        throw new Error(payloadError)
       }
 
       return postProcessParsedSalary(payload)
