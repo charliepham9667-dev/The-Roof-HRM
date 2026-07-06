@@ -37,6 +37,10 @@ Read every value from the bottom "TỔNG CỘNG" grand-total row.
 
 CRITICAL — the sheet has several column groups with REPEATED headers. You must read ONLY the money columns inside the group titled "Lương và các khoản phụ cấp trong lương" (Salary & allowances within pay) — the block that ends in "Tổng thu nhập (Total income)". IGNORE these earlier groups entirely: "Lương & khoản phụ cấp (Salary & allowances)" (monthly contract rates), "Lương quy đổi giờ (Hourly wage)" (hourly rates), and "Công / Giờ tính lương thực tế (Actual hours worked)" (day/hour COUNTS like 208.0, 24.0). Those are rates/counts, not what was paid.
 
+HOW TO FIND THE RIGHT GROUP (most important rule): the "Lương và các khoản phụ cấp trong lương" earned block is the set of money columns IMMEDIATELY TO THE LEFT of the "Tổng thu nhập (Total income)" column. Work RIGHT-TO-LEFT from "Tổng thu nhập": every money column between it and the "Actual hours worked" count columns belongs to this block. These earned columns ADD UP EXACTLY to "Tổng thu nhập". The leftmost salary columns on the sheet (84,079,400 / 142,764,000 in May) are CONTRACT RATES in a different group — never use them.
+
+HARD CHECK: fixedSalaryVnd + svcVnd + foodVnd + bonusesVnd + overtimeVnd + otherVnd MUST equal grossIncomeVnd (Tổng thu nhập) to the last digit (allow ±2 for rounding). If your numbers don't sum to it, you read a wrong column — most likely you used a contract-rate column for fixed salary (too big) or a daily-rate column for food (too small). Re-read right-to-left until they reconcile.
+
 Inside the "Lương và các khoản phụ cấp trong lương" group, map these exact columns:
 - fixedSalaryVnd = "Lương chính thức › Cơ bản" (Official salary, base) + "Lương thử việc › Cơ bản" (Internship salary, base). The earned base pay. (Do NOT use the earlier "Chính thức" rate column.)
 - overtimeVnd    = "Lương chính thức › Tăng ca" + "Lương thử việc › Tăng ca" (the money amounts in THIS group, not the hour counts).
@@ -47,12 +51,29 @@ Inside the "Lương và các khoản phụ cấp trong lương" group, map these
 - grossIncomeVnd = "Tổng thu nhập" (Total income) grand total. Sanity check: fixedSalary+svc+food+bonuses+overtime+other should ≈ this. If it does not, you mapped a wrong column — re-check.
 - netPaidVnd     = "Thực nhận" net grand total — what staff actually receive after deductions.
 
-WORKED EXAMPLE — for the May 2026 sheet, the correct TỔNG CỘNG mapping is:
+WORKED EXAMPLES — these three months are verified correct. Follow this exact pattern.
+
+May 2026 TỔNG CỘNG:
   fixedSalaryVnd 137,667,621 (earned base: 127,053,206 official + 10,614,415 internship — NOT the 142,764,000 contract-rate column)
   svcVnd 69,758,563 · foodVnd 7,775,000 (the amount — NOT the 350,000/25,000 daily rate)
-  bonusesVnd 96,335,054 (Lễ/Tết 8,716,154 + Thưởng 26,309,671 + Thưởng 61,309,229)
-  overtimeVnd 7,356,655 · otherVnd 19,720,000 (Phụ cấp khác only) · grossIncomeVnd 338,692,894
-  Note fixedSalary+svc+food+bonuses+overtime+other = 338,612,893 ≈ gross. Follow this exact pattern for whatever month you are given.
+  bonusesVnd 96,415,054 (Lễ/Tết 8,716,154 + Thưởng vượt doanh thu 26,309,671 + Thưởng bonus 61,389,229)
+  overtimeVnd 7,356,655 · otherVnd 19,720,000 (Phụ cấp khác only)
+  grossIncomeVnd 338,692,894 · insuranceBaseVnd 52,250,000 · employerInsuranceVnd 11,233,750 · netPaidVnd 318,654,943
+  Reconcile: 137,667,621+69,758,563+7,775,000+96,415,054+7,356,655+19,720,000 = 338,692,893 ≈ gross ✓
+
+April 2026 TỔNG CỘNG:
+  fixedSalaryVnd 126,569,061 · svcVnd 60,204,438 · foodVnd 6,900,000
+  bonusesVnd 75,109,207 (Lễ/Tết 19,427,740 + Thưởng 20,204,441 + Thưởng 35,477,026)
+  overtimeVnd 5,287,285 · otherVnd 19,295,000
+  grossIncomeVnd 293,364,992 · insuranceBaseVnd 42,250,000 · employerInsuranceVnd 9,083,750 · netPaidVnd 274,087,890
+  Reconcile: 126,569,061+60,204,438+6,900,000+75,109,207+5,287,285+19,295,000 = 293,364,991 ≈ gross ✓
+
+March 2026 TỔNG CỘNG:
+  fixedSalaryVnd 104,483,779 · svcVnd 56,741,421 · foodVnd 5,850,000
+  bonusesVnd 72,850,919 (Lễ/Tết 3,709,777 + Thưởng 20,742,343 + Thưởng 48,398,799)
+  overtimeVnd 460,417 · otherVnd 12,476,000
+  grossIncomeVnd 252,862,536 · insuranceBaseVnd 42,250,000 · employerInsuranceVnd 9,083,750 · netPaidVnd 237,854,785
+  Reconcile: 104,483,779+56,741,421+5,850,000+72,850,919+460,417+12,476,000 = 252,862,536 = gross ✓
 
 COMMON MISTAKES TO AVOID:
 - Do NOT use "Phụ cấp cơm ca" (food) and "Phụ cấp khác" (other) interchangeably — they are two different columns. Food ≈ 7-8M, Other ≈ 19M in the example.
