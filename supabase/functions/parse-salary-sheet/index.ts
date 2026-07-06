@@ -24,6 +24,7 @@ Return ONLY valid JSON (no markdown, no commentary):
   "svcVnd": 0,
   "foodVnd": 0,
   "bonusesVnd": 0,
+  "foundationBonusVnd": 0,
   "surplusBonusVnd": 0,
   "overtimeVnd": 0,
   "otherVnd": 0,
@@ -42,15 +43,28 @@ HOW TO FIND THE RIGHT GROUP (most important rule): the "Lương và các khoản
 
 HARD CHECK: fixedSalaryVnd + svcVnd + foodVnd + bonusesVnd + overtimeVnd + otherVnd MUST equal grossIncomeVnd (Tổng thu nhập) to the last digit (allow ±2 for rounding). If your numbers don't sum to it, you read a wrong column — most likely you used a contract-rate column for fixed salary (too big) or a daily-rate column for food (too small). Re-read right-to-left until they reconcile.
 
-Inside the "Lương và các khoản phụ cấp trong lương" group, map these exact columns:
+COLUMN ORDER (owner-confirmed). Inside the earned block the money columns appear in this exact left-to-right order, then the total, then deductions:
+  1. Fixed salary payment (Cơ bản: official + internship base)   -> fixedSalaryVnd
+  2. Holiday / Lễ, Tết payment                                    -> part of bonusesVnd
+  3. Overtime (Tăng ca money)                                     -> overtimeVnd
+  4. Meal allowance (Phụ cấp cơm ca)                              -> foodVnd
+  5. Service charge (Phí Phục Vụ)                                 -> svcVnd
+  6. Other allowance (Phụ cấp khác — e.g. toxic/hazard fee)       -> otherVnd
+  7. 1% bonus for HITTING target (Thưởng đạt doanh thu, ~1% of the month's revenue target) -> foundationBonusVnd (also part of bonusesVnd)
+  8. 7% SURPLUS bonus (Thưởng vượt doanh thu, ~7% of revenue above target)                  -> surplusBonusVnd     (also part of bonusesVnd)
+  9. Total the company pays in salary (Tổng thu nhập)             -> grossIncomeVnd
+  then Deductions (khấu trừ: insurance 10.5%, tax, advances, union...) -> used only to reach Thực nhận (netPaidVnd), NOT part of gross.
+
+Map these exact fields:
 - fixedSalaryVnd = "Lương chính thức › Cơ bản" (Official salary, base) + "Lương thử việc › Cơ bản" (Internship salary, base). The earned base pay. (Do NOT use the earlier "Chính thức" rate column.)
 - overtimeVnd    = "Lương chính thức › Tăng ca" + "Lương thử việc › Tăng ca" (the money amounts in THIS group, not the hour counts).
 - foodVnd        = "Phụ cấp cơm ca" (Shift meal allowance) — the MILLIONS-sized amount in this group, NOT the small per-day rate (e.g. 25,000) in the earlier group.
 - svcVnd         = "Phí Phục Vụ" (Service charge).
 - otherVnd       = "Phụ cấp khác" (Other allowances — e.g. toxic/hazard fee). This is a SINGLE column; do not add any bonus to it.
-- bonusesVnd     = "Lương chính thức › Lễ/Tết" (Holiday/Tet) + the two columns headed "Truy lĩnh / Các khoản khác" with sub-labels "(Thưởng vượt doanh thu)" (revenue-target bonus) and "(Thưởng bonus)". Add all bonus columns together. A column is a bonus if its header/sub-label contains "Thưởng", "Lễ/Tết", or "Lương tháng 13".
-- surplusBonusVnd = ONLY the "(Thưởng vượt doanh thu)" (revenue-target / surplus bonus) column — a SUBSET of bonusesVnd, reported separately for the bonus-policy check. If there is no such column, return 0. It must be ≤ bonusesVnd.
-- grossIncomeVnd = "Tổng thu nhập" (Total income) grand total. Sanity check: fixedSalary+svc+food+bonuses+overtime+other should ≈ this. If it does not, you mapped a wrong column — re-check.
+- foundationBonusVnd = the "1% for hitting target" bonus column (Thưởng đạt / đạt doanh thu / hoàn thành doanh thu). This is the Phase-1 Foundation bonus, roughly 1% of the month's target. If the sheet has no such column, return 0.
+- surplusBonusVnd    = the "7% surplus" bonus column (Thưởng vượt doanh thu — revenue ABOVE target). This is the Phase-2 Hustle bonus. If none, return 0.
+- bonusesVnd     = Holiday/Lễ,Tết + foundationBonusVnd + surplusBonusVnd (+ any "Thưởng bonus"/"Lương tháng 13" column). ALL bonus money added together. A column is a bonus if its header/sub-label contains "Thưởng", "Lễ/Tết", or "Lương tháng 13". foundationBonusVnd and surplusBonusVnd are SUBSETS of bonusesVnd and must each be ≤ bonusesVnd.
+- grossIncomeVnd = "Tổng thu nhập" (Total income) grand total = the total the company pays in salary. Sanity check: fixedSalary+svc+food+bonuses+overtime+other should ≈ this. If it does not, you mapped a wrong column — re-check.
 - netPaidVnd     = "Thực nhận" net grand total — what staff actually receive after deductions.
 
 WORKED EXAMPLES — these three months are verified correct. Follow this exact pattern.
@@ -83,6 +97,8 @@ June 2026 TỔNG CỘNG (no Lễ/Tết column this month):
   overtimeVnd 5,280,217 (Tăng ca internship 223,125 + Tăng ca official 5,057,092) · otherVnd 13,410,000
   grossIncomeVnd 291,020,111 · insuranceBaseVnd 62,750,000 · employerInsuranceVnd 13,491,250 · netPaidVnd 277,401,873
   Reconcile: 141,905,440+63,188,932+8,625,000+58,610,522+5,280,217+13,410,000 = 291,020,111 = gross ✓
+
+NOTE on the two bonus columns: the CURRENT sheet has two explicit, separate bonus columns — a "1% hit-target" bonus (foundationBonusVnd, ~1% of the month's target) and a "7% surplus" bonus (surplusBonusVnd, ~7% of revenue above target). The four example months above predate that split (they showed a single discretionary "Thưởng bonus"), so for those set foundationBonusVnd = 0 and surplusBonusVnd = the "Thưởng vượt doanh thu" amount listed. Going forward, read the 1% and 7% columns explicitly per the COLUMN ORDER list, and keep bonusesVnd = the sum of all bonus columns (holiday + 1% + 7% + any other).
 
 COMMON MISTAKES TO AVOID:
 - Do NOT use "Phụ cấp cơm ca" (food) and "Phụ cấp khác" (other) interchangeably — they are two different columns. Food ≈ 7-8M, Other ≈ 19M in the example.

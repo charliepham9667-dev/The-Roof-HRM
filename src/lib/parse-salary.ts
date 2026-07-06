@@ -14,7 +14,9 @@ export type ParsedSalary = {
   bonusesVnd: number
   overtimeVnd: number
   otherVnd: number
-  /** Surplus bonus specifically (Thưởng vượt doanh thu) — a subset of bonusesVnd, for the policy check. */
+  /** Phase-1 foundation bonus paid (1% of target, "Thưởng đạt doanh thu") — subset of bonusesVnd. */
+  foundationBonusVnd: number
+  /** Phase-2 surplus bonus paid (7% of surplus, "Thưởng vượt doanh thu") — subset of bonusesVnd. */
   surplusBonusVnd: number
   insuranceBaseVnd: number
   grossIncomeVnd: number
@@ -75,6 +77,7 @@ export function postProcessParsedSalary(raw: unknown): ParsedSalary {
     bonusesVnd: amount(input.bonusesVnd),
     overtimeVnd: amount(input.overtimeVnd),
     otherVnd: amount(input.otherVnd),
+    foundationBonusVnd: amount(input.foundationBonusVnd),
     surplusBonusVnd: amount(input.surplusBonusVnd),
     insuranceBaseVnd,
     grossIncomeVnd: amount(input.grossIncomeVnd),

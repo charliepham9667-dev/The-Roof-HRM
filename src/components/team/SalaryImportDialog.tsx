@@ -132,10 +132,13 @@ export function SalaryImportDialog({
     setGross(p.grossIncomeVnd)
     setNet(p.netPaidVnd)
     const target = defaultTargetVnd(p.year, p.month)
+    // "Bonus paid" reconciles against policy (Phase 1 + Phase 2), so prefill with
+    // the two policy-bonus columns the sheet paid: 1% foundation + 7% surplus.
+    const bonusPaid = (p.foundationBonusVnd ?? 0) + (p.surplusBonusVnd ?? 0)
     setBonus({
       ...EMPTY_BONUS_FORM,
       target: target != null ? formatVndDigits(target) : "",
-      surplusBonusPaid: p.surplusBonusVnd ? formatVndDigits(p.surplusBonusVnd) : "",
+      surplusBonusPaid: bonusPaid ? formatVndDigits(bonusPaid) : "",
     })
     setWarnings(p.warnings ?? [])
   }
