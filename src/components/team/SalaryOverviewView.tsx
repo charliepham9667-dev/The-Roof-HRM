@@ -23,6 +23,7 @@ import {
   bonusStatusMeta,
   computeBonusCheck,
   defaultTargetVnd,
+  FOUNDATION_RATE,
   SURPLUS_BONUS_RATE,
   type BonusCheck,
 } from "@/lib/bonus-check"
@@ -267,7 +268,7 @@ export function SalaryOverviewView() {
                 Bonus vs policy
               </h3>
               <p style={{ fontSize: 12, color: "#7A7260", marginTop: 2 }}>
-                Surplus Bonus Framework: (qualifying revenue − target) × {Math.round(SURPLUS_BONUS_RATE * 100)}% × review gate.
+                Two-phase pool — Phase 1: {Math.round(FOUNDATION_RATE * 100)}% of target when target is hit · Phase 2: {Math.round(SURPLUS_BONUS_RATE * 100)}% of surplus (review-gated).
                 Compare what policy says to what the sheet actually paid. Click <Pencil size={11} style={{ display: "inline", verticalAlign: "-1px" }} /> to fill a month.
               </p>
             </div>

@@ -1,23 +1,29 @@
-// The Roof 2026 Surplus Bonus Framework (7% pool) — reconciliation math.
+// The Roof Bonus Framework — reconciliation math. Two-phase pool.
 // Policy source: The Roof/1-context/sops.md §2.
 //
-//   surplus = qualifying_revenue − monthly_target   (qualifying = after svc, FOC, VAT)
-//   pool    = max(0, surplus) × 7%
-//   payout  = pool × Google-review gate modifier
+//   qualifying = revenue after service charge, FOC, VAT
+//   surplus    = qualifying − monthly_target
 //
-// Google gate (highest tier met wins; nothing met → 0%):
+//   Phase 1 — Foundation: hit 100% of target → 1% of TARGET into the pool.
+//   Phase 2 — Hustle:     every VND above target → 7% of SURPLUS.
+//
+//   policyPool = foundation + hustle
+//     foundation = target_hit ? target × 1% : 0
+//     hustle     = max(0, surplus) × 7% × review-gate
+//
+// The Google review gate applies to Phase 2 only (the surplus pool). Phase 1 is
+// unlocked purely by hitting target. Gate (highest tier met wins; else 0%):
 //   4.8★ + 100 new reviews → 100%
 //   4.7★ +  70 new reviews →  70%
 //   4.6★ +  35 new reviews →  35%
 //   otherwise              →   0%
 //
-// The per-employee rules are NOT applied here — this is a POOL-level check. The pool
-// stays 7% of surplus and the role split (Floor 5% + Supervisor 1% + Bar Mgr 0.5% +
-// Accountant 0.5%) is unchanged. The June 2026 update only added tenure scaling for the
-// guest-facing teams: 50/75/100% by continuous service FROM START DATE (probation
-// included). None of that changes the gated pool total this check reconciles against.
+// The per-employee rules are NOT applied here — this is a POOL-level check. Team-vs-
+// leadership split and the June 2026 tenure scaling (50/75/100% by continuous service
+// from START DATE, probation included) only divide the pool; they don't change its total.
 
-export const SURPLUS_BONUS_RATE = 0.07
+export const FOUNDATION_RATE = 0.01 // Phase 1: of the monthly target, when target is hit
+export const SURPLUS_BONUS_RATE = 0.07 // Phase 2: of the surplus, review-gated
 
 /** AIOS monthly revenue targets (VND). Source: Charlie/quarterly_objectives.md. */
 const TARGET_SCHEDULE: Record<number, number[]> = {
@@ -46,15 +52,19 @@ export function bonusGate(rating: number | null, newReviews: number | null): Bon
   return { pct: 0, label: "Below review gate → 0%" }
 }
 
-export type BonusStatus = "incomplete" | "no-surplus" | "match" | "over" | "under"
+export type BonusStatus = "incomplete" | "below-target" | "match" | "over" | "under"
 
 export type BonusCheck = {
   target: number
   qualifyingRevenue: number
+  targetHit: boolean
   surplus: number
+  foundationPool: number // Phase 1: 1% of target when hit
   gate: BonusGate
-  policyPool: number // what policy says should be paid, after the gate
-  paid: number // what the sheet actually paid (Thưởng vượt doanh thu)
+  hustlePoolGross: number // Phase 2 before the gate: 7% of surplus
+  hustlePool: number // Phase 2 after the gate
+  policyPool: number // foundation + hustlePool — what policy says should be paid
+  paid: number // what the sheet actually paid (bonus total)
   delta: number // paid − policyPool  (positive = overpaid)
   status: BonusStatus
 }
@@ -78,15 +88,20 @@ export function computeBonusCheck(input: BonusCheckInput): BonusCheck {
   const paid = input.paid ?? 0
   const gate = bonusGate(input.rating, input.newReviews)
 
+  const targetHit = target > 0 && qualifyingRevenue >= target
   const surplus = qualifyingRevenue - target
-  const policyPool = surplus > 0 ? Math.round(surplus * SURPLUS_BONUS_RATE * gate.pct) : 0
+
+  const foundationPool = targetHit ? Math.round(target * FOUNDATION_RATE) : 0
+  const hustlePoolGross = surplus > 0 ? Math.round(surplus * SURPLUS_BONUS_RATE) : 0
+  const hustlePool = Math.round(hustlePoolGross * gate.pct)
+  const policyPool = foundationPool + hustlePool
 
   const hasInputs = (input.qualifyingRevenue ?? 0) > 0 && (input.target ?? 0) > 0
   let status: BonusStatus
   if (!hasInputs) {
     status = "incomplete"
-  } else if (surplus <= 0) {
-    status = "no-surplus"
+  } else if (!targetHit) {
+    status = "below-target"
   } else {
     const delta = paid - policyPool
     const tol = matchTolerance(policyPool)
@@ -96,8 +111,12 @@ export function computeBonusCheck(input: BonusCheckInput): BonusCheck {
   return {
     target,
     qualifyingRevenue,
+    targetHit,
     surplus,
+    foundationPool,
     gate,
+    hustlePoolGross,
+    hustlePool,
     policyPool,
     paid,
     delta: paid - policyPool,
@@ -114,8 +133,8 @@ export function bonusStatusMeta(status: BonusStatus): { label: string; color: st
       return { label: "Overpaid vs policy", color: "#8B3030", bg: "#F7E9E4" }
     case "under":
       return { label: "Underpaid vs policy", color: "#B8922A", bg: "#F7F0DC" }
-    case "no-surplus":
-      return { label: "No surplus — no bonus due", color: "#6B7280", bg: "#F0EEE9" }
+    case "below-target":
+      return { label: "Target not hit — no bonus due", color: "#6B7280", bg: "#F0EEE9" }
     default:
       return { label: "Add revenue + target", color: "#A89E8C", bg: "#F5F2EC" }
   }

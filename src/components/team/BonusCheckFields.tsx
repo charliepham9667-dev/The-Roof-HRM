@@ -6,6 +6,7 @@ import {
   bonusStatusMeta,
   computeBonusCheck,
   defaultTargetVnd,
+  FOUNDATION_RATE,
   SURPLUS_BONUS_RATE,
 } from "@/lib/bonus-check"
 
@@ -136,7 +137,7 @@ export function BonusCheckFields({
           />
         </div>
         <div className="col-span-2 space-y-1">
-          <Label className="text-xs">Surplus bonus paid (Thưởng vượt doanh thu)</Label>
+          <Label className="text-xs">Bonus paid (total — Phase 1 + Phase 2)</Label>
           <Input
             className="h-9 font-mono text-right"
             value={values.surplusBonusPaid}
@@ -148,24 +149,43 @@ export function BonusCheckFields({
 
       {/* Live policy result */}
       <div className="rounded-lg border p-3 space-y-1.5" style={{ borderColor: "#E0D8C8", background: "#FBF8F2" }}>
+        {/* Phase 1 — Foundation */}
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold" style={{ color: "#7A7260" }}>
-            Surplus over target
+            Phase 1 · Foundation ({Math.round(FOUNDATION_RATE * 100)}% of target)
+            <span className="ml-1 font-normal" style={{ color: "#A89E8C" }}>
+              {check.targetHit ? "target hit" : "target not hit"}
+            </span>
           </span>
-          <span className="font-mono text-sm" style={{ color: check.surplus > 0 ? "#2E7D52" : "#8B3030" }}>
+          <span className="font-mono text-sm" style={{ color: "#1A1814" }}>
+            {formatVnd(check.foundationPool)}
+          </span>
+        </div>
+        {/* Phase 2 — Hustle */}
+        <div className="flex items-center justify-between text-xs" style={{ color: "#7A7260" }}>
+          <span>Surplus over target</span>
+          <span className="font-mono" style={{ color: check.surplus > 0 ? "#2E7D52" : "#8B3030" }}>
             {check.surplus >= 0 ? "" : "−"}
             {formatVnd(Math.abs(check.surplus))}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs" style={{ color: "#7A7260" }}>
-          <span>Gate</span>
+          <span>Review gate (Phase 2 only)</span>
           <span>{check.gate.label}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold" style={{ color: "#7A7260" }}>
-            Policy bonus (surplus × {Math.round(SURPLUS_BONUS_RATE * 100)}% × gate)
+            Phase 2 · Hustle ({Math.round(SURPLUS_BONUS_RATE * 100)}% of surplus × gate)
           </span>
-          <span className="font-mono text-sm font-semibold" style={{ color: "#1A1814" }}>
+          <span className="font-mono text-sm" style={{ color: "#1A1814" }}>
+            {formatVnd(check.hustlePool)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between border-t pt-1.5" style={{ borderColor: "#E0D8C8" }}>
+          <span className="text-xs font-bold" style={{ color: "#1A1814" }}>
+            Policy bonus (Phase 1 + Phase 2)
+          </span>
+          <span className="font-mono text-sm font-bold" style={{ color: "#1A1814" }}>
             {formatVnd(check.policyPool)}
           </span>
         </div>
