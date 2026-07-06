@@ -37,9 +37,9 @@ Take the GRAND-TOTAL row (the bottom summary line, or sum each column across all
 - fixedSalaryVnd = "Lương chính thức" (Official salary) + "Lương thử việc" (Internship/apprentice salary). The base earned pay.
 - svcVnd         = "Phí Phục Vụ" (Service charge).
 - foodVnd        = "Phụ cấp cơm ca" / "Cơm ca" (Meal allowance).
-- bonusesVnd     = "Lễ/Tết" (Holiday/Tet pay) + any "Thưởng" / "Lương tháng 13" columns.
+- bonusesVnd     = sum of EVERY bonus column. A column is a bonus if its header (or its sub-label in parentheses) contains "Thưởng", "Lễ/Tết", or "Lương tháng 13". IMPORTANT: the sheet has bonus columns headed "Truy lĩnh / Các khoản khác" with parenthesised sub-labels like "(Thưởng vượt doanh thu)" (revenue-target bonus) and "(Thưởng bonus)" — these ARE bonuses; include them here, NOT in otherVnd. Add together all such columns.
 - overtimeVnd    = "Tăng ca" (Overtime) THÀNH TIỀN (the money amount, NOT the hours/công count).
-- otherVnd       = "Phụ cấp khác" (Other allowances) + "Truy lĩnh" + "Các khoản khác".
+- otherVnd       = "Phụ cấp khác" (Other allowances — e.g. toxic/hazard fee) + any "Truy lĩnh" back-pay column that is NOT a bonus. Never put a "Thưởng" column here.
 - grossIncomeVnd = "Tổng thu nhập" (Total income) grand total — the sheet's own gross figure. It should roughly equal fixedSalary+svc+food+bonuses+overtime+other.
 - netPaidVnd     = "Thực nhận" / "TỔNG CỘNG" net grand total — what staff actually receive.
 
