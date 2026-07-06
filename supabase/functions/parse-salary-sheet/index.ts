@@ -68,12 +68,19 @@ April 2026 TỔNG CỘNG:
   grossIncomeVnd 293,364,992 · insuranceBaseVnd 42,250,000 · employerInsuranceVnd 9,083,750 · netPaidVnd 274,087,890
   Reconcile: 126,569,061+60,204,438+6,900,000+75,109,207+5,287,285+19,295,000 = 293,364,991 ≈ gross ✓
 
-March 2026 TỔNG CỘNG:
+March 2026 TỔNG CỘNG (no Lễ/Tết column this month — it is omitted when zero):
   fixedSalaryVnd 104,483,779 · svcVnd 56,741,421 · foodVnd 5,850,000
-  bonusesVnd 72,850,919 (Lễ/Tết 3,709,777 + Thưởng 20,742,343 + Thưởng 48,398,799)
-  overtimeVnd 460,417 · otherVnd 12,476,000
+  bonusesVnd 69,141,142 (no Lễ/Tết + Thưởng 20,742,343 + Thưởng 48,398,799)
+  overtimeVnd 4,170,194 (Tăng ca internship 460,417 + Tăng ca official 3,709,777) · otherVnd 12,476,000
   grossIncomeVnd 252,862,536 · insuranceBaseVnd 42,250,000 · employerInsuranceVnd 9,083,750 · netPaidVnd 237,854,785
-  Reconcile: 104,483,779+56,741,421+5,850,000+72,850,919+460,417+12,476,000 = 252,862,536 = gross ✓
+  Reconcile: 104,483,779+56,741,421+5,850,000+69,141,142+4,170,194+12,476,000 = 252,862,536 = gross ✓
+
+June 2026 TỔNG CỘNG (no Lễ/Tết column this month):
+  fixedSalaryVnd 141,905,440 (internship 11,449,804 + official 130,455,636) · svcVnd 63,188,932 · foodVnd 8,625,000
+  bonusesVnd 58,610,522 (no Lễ/Tết + Thưởng 17,583,157 + Thưởng 41,027,365)
+  overtimeVnd 5,280,217 (Tăng ca internship 223,125 + Tăng ca official 5,057,092) · otherVnd 13,410,000
+  grossIncomeVnd 291,020,111 · insuranceBaseVnd 62,750,000 · employerInsuranceVnd 13,491,250 · netPaidVnd 277,401,873
+  Reconcile: 141,905,440+63,188,932+8,625,000+58,610,522+5,280,217+13,410,000 = 291,020,111 = gross ✓
 
 COMMON MISTAKES TO AVOID:
 - Do NOT use "Phụ cấp cơm ca" (food) and "Phụ cấp khác" (other) interchangeably — they are two different columns. Food ≈ 7-8M, Other ≈ 19M in the example.
