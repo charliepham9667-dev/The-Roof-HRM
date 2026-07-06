@@ -203,7 +203,7 @@ export function SalaryImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[min(92dvh,720px)] overflow-y-auto p-4 sm:p-6">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[min(94dvh,860px)] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -313,7 +313,7 @@ export function SalaryImportDialog({
               </div>
             </div>
 
-            <div className="grid gap-2">
+            <div className="grid gap-2 sm:grid-cols-2 sm:gap-x-6">
               {SALARY_CATEGORIES.map((c) => (
                 <div key={c.key} className="grid grid-cols-[1fr_auto] items-center gap-3">
                   <Label className="flex items-center gap-2 text-sm font-normal">
@@ -324,7 +324,7 @@ export function SalaryImportDialog({
                     {c.label}
                   </Label>
                   <Input
-                    className="h-9 w-[170px] font-mono text-right"
+                    className="h-9 w-[180px] font-mono text-right"
                     value={amounts[c.key]}
                     onChange={(e) => updateAmount(c.key, e.target.value)}
                     placeholder="0"
