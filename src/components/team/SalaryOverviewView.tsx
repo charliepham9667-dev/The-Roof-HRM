@@ -28,6 +28,7 @@ import {
   type BonusCheck,
 } from "@/lib/bonus-check"
 import {
+  useGoogleMonthly,
   usePnlNetSales,
   useSalaryMonthly,
   useUpdateSalaryBonus,
@@ -106,6 +107,18 @@ export function SalaryOverviewView() {
       )
     }
   }, [editPnl.data])
+
+  // Pull rating + new reviews from Google metrics for the row being edited.
+  const editGoogle = useGoogleMonthly(editRow?.year ?? 0, editRow?.month ?? 0, editRow != null)
+  useEffect(() => {
+    const g = editGoogle.data
+    if (!g) return
+    setBonusForm((prev) => ({
+      ...prev,
+      rating: prev.rating || (g.rating != null ? String(g.rating) : prev.rating),
+      newReviews: prev.newReviews || (g.newReviews != null ? String(g.newReviews) : prev.newReviews),
+    }))
+  }, [editGoogle.data])
 
   const openEdit = (r: SalaryMonthly) => {
     const form = bonusFormFromRow(r)
@@ -398,6 +411,8 @@ export function SalaryOverviewView() {
                 year={editRow.year}
                 month={editRow.month}
                 pnlNetSales={editPnl.data}
+                googleRating={editGoogle.data?.rating}
+                googleNewReviews={editGoogle.data?.newReviews}
               />
             )}
           </div>

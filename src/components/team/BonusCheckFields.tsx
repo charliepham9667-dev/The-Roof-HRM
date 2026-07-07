@@ -62,6 +62,8 @@ export function BonusCheckFields({
   year,
   month,
   pnlNetSales,
+  googleRating,
+  googleNewReviews,
 }: {
   values: BonusForm
   onChange: (next: BonusForm) => void
@@ -69,6 +71,10 @@ export function BonusCheckFields({
   month: number
   /** Qualifying revenue pulled from P&L Net Sales, or null if the month isn't synced. */
   pnlNetSales?: number | null
+  /** Google rating pulled from daily_metrics, or null if no data that month. */
+  googleRating?: number | null
+  /** New Google reviews that month pulled from daily_metrics, or null if no data. */
+  googleNewReviews?: number | null
 }) {
   const check = useMemo(() => {
     const p = bonusFormToPayload(values)
@@ -143,6 +149,15 @@ export function BonusCheckFields({
             onChange={(e) => onChange({ ...values, rating: e.target.value.replace(/[^\d.]/g, "") })}
             placeholder="4.8"
           />
+          {googleRating != null && String(googleRating) !== values.rating.trim() && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...values, rating: String(googleRating) })}
+              className="text-[10.5px] text-primary hover:underline"
+            >
+              Use {googleRating}★ from Google
+            </button>
+          )}
         </div>
         <div className="space-y-1">
           <Label className="text-xs">New reviews</Label>
@@ -153,6 +168,15 @@ export function BonusCheckFields({
             onChange={(e) => onChange({ ...values, newReviews: e.target.value.replace(/[^\d]/g, "") })}
             placeholder="100"
           />
+          {googleNewReviews != null && String(googleNewReviews) !== values.newReviews.trim() && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...values, newReviews: String(googleNewReviews) })}
+              className="text-[10.5px] text-primary hover:underline"
+            >
+              Use {googleNewReviews} from Google
+            </button>
+          )}
         </div>
         <div className="col-span-2 space-y-1">
           <Label className="text-xs">Bonus paid (total — Phase 1 + Phase 2)</Label>

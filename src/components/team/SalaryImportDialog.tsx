@@ -26,6 +26,7 @@ import {
 } from "./BonusCheckFields"
 import { useParseSalarySheet } from "@/hooks/useParseSalarySheet"
 import {
+  useGoogleMonthly,
   usePnlNetSales,
   useUpsertSalaryMonthly,
   useUploadSalarySource,
@@ -89,6 +90,18 @@ export function SalaryImportDialog({
       )
     }
   }, [pnl.data])
+
+  // Pull rating + new reviews from Google metrics (daily_metrics).
+  const google = useGoogleMonthly(year, month, step === "review")
+  useEffect(() => {
+    const g = google.data
+    if (!g) return
+    setBonus((prev) => ({
+      ...prev,
+      rating: prev.rating || (g.rating != null ? String(g.rating) : prev.rating),
+      newReviews: prev.newReviews || (g.newReviews != null ? String(g.newReviews) : prev.newReviews),
+    }))
+  }, [google.data])
 
   const total = useMemo(
     () =>
@@ -384,6 +397,8 @@ export function SalaryImportDialog({
                 year={year}
                 month={month}
                 pnlNetSales={pnl.data}
+                googleRating={google.data?.rating}
+                googleNewReviews={google.data?.newReviews}
               />
             </div>
 

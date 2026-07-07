@@ -80,6 +80,60 @@ export function usePnlNetSales(year: number, month: number, enabled = true) {
   })
 }
 
+/**
+ * Google gate inputs for the bonus check, from daily_metrics:
+ *  - rating     = most recent non-null google_rating as of month end.
+ *  - newReviews = cumulative google_review_count at month end − at prior month end
+ *    (google_review_count is a running TOTAL snapshot per day, per useDashboardData).
+ * Either is null when there's no data for that month (owner enters it manually).
+ * Uses UTC-built date bounds so ICT (UTC+7) doesn't shift a day.
+ */
+export function useGoogleMonthly(year: number, month: number, enabled = true) {
+  return useQuery({
+    queryKey: ["google-monthly", year, month],
+    enabled: enabled && year > 0 && month >= 1 && month <= 12,
+    queryFn: async (): Promise<{ rating: number | null; newReviews: number | null }> => {
+      const iso = (d: Date) => d.toISOString().slice(0, 10)
+      const startIso = iso(new Date(Date.UTC(year, month - 1, 1)))
+      const nextIso = iso(new Date(Date.UTC(year, month, 1)))
+      const since = new Date(Date.UTC(year, month - 1, 1))
+      since.setUTCDate(since.getUTCDate() - 400)
+
+      const { data, error } = await supabase
+        .from("daily_metrics")
+        .select("date, google_rating, google_review_count")
+        .gte("date", iso(since))
+        .lt("date", nextIso)
+        .order("date", { ascending: true })
+      if (error) throw error
+      const rows = (data ?? []) as {
+        date: string
+        google_rating: number | null
+        google_review_count: number | null
+      }[]
+
+      let rating: number | null = null
+      for (let i = rows.length - 1; i >= 0; i--) {
+        if (rows[i].google_rating != null) {
+          rating = rows[i].google_rating
+          break
+        }
+      }
+
+      let before = 0
+      let inMonth: number | null = null
+      for (const r of rows) {
+        if (r.google_review_count == null) continue
+        if (r.date < startIso) before = r.google_review_count
+        else inMonth = r.google_review_count
+      }
+      const newReviews = inMonth != null ? Math.max(0, inMonth - before) : null
+
+      return { rating, newReviews }
+    },
+  })
+}
+
 export function useUploadSalarySource() {
   return useMutation({
     mutationFn: async (input: { year: number; month: number; file: File }) => {
