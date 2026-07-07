@@ -61,11 +61,14 @@ export function BonusCheckFields({
   onChange,
   year,
   month,
+  pnlNetSales,
 }: {
   values: BonusForm
   onChange: (next: BonusForm) => void
   year: number
   month: number
+  /** Qualifying revenue pulled from P&L Net Sales, or null if the month isn't synced. */
+  pnlNetSales?: number | null
 }) {
   const check = useMemo(() => {
     const p = bonusFormToPayload(values)
@@ -115,6 +118,21 @@ export function BonusCheckFields({
             onChange={(e) => setVnd("qualifyingRevenue", e.target.value)}
             placeholder="after svc, FOC, VAT"
           />
+          {pnlNetSales != null ? (
+            parseNumberInput(values.qualifyingRevenue) !== pnlNetSales && (
+              <button
+                type="button"
+                onClick={() => onChange({ ...values, qualifyingRevenue: formatVndDigits(pnlNetSales) })}
+                className="text-[10.5px] text-primary hover:underline"
+              >
+                Use P&L Net Sales {formatVnd(pnlNetSales)}
+              </button>
+            )
+          ) : (
+            <span className="text-[10.5px]" style={{ color: "#A89E8C" }}>
+              P&L not synced — enter manually
+            </span>
+          )}
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Google rating</Label>

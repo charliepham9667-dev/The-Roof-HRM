@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertTriangle, FileText, Loader2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,7 +25,11 @@ import {
   type BonusForm,
 } from "./BonusCheckFields"
 import { useParseSalarySheet } from "@/hooks/useParseSalarySheet"
-import { useUpsertSalaryMonthly, useUploadSalarySource } from "@/hooks/useSalaryMonthly"
+import {
+  usePnlNetSales,
+  useUpsertSalaryMonthly,
+  useUploadSalarySource,
+} from "@/hooks/useSalaryMonthly"
 
 type Step = "upload" | "parsing" | "review"
 
@@ -75,6 +79,16 @@ export function SalaryImportDialog({
   const [error, setError] = useState<string | null>(null)
 
   const isImage = file?.type.startsWith("image/") ?? false
+
+  // Pull qualifying revenue from P&L (Net Sales) once we're reviewing a known month.
+  const pnl = usePnlNetSales(year, month, step === "review")
+  useEffect(() => {
+    if (pnl.data != null) {
+      setBonus((prev) =>
+        prev.qualifyingRevenue ? prev : { ...prev, qualifyingRevenue: formatVndDigits(pnl.data!) },
+      )
+    }
+  }, [pnl.data])
 
   const total = useMemo(
     () =>
@@ -364,7 +378,13 @@ export function SalaryImportDialog({
                   Leave blank to skip.
                 </p>
               </div>
-              <BonusCheckFields values={bonus} onChange={setBonus} year={year} month={month} />
+              <BonusCheckFields
+                values={bonus}
+                onChange={setBonus}
+                year={year}
+                month={month}
+                pnlNetSales={pnl.data}
+              />
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}

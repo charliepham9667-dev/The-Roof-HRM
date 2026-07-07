@@ -56,6 +56,30 @@ export function useSalaryMonthly(limit = 24) {
   })
 }
 
+/**
+ * Qualifying revenue for the bonus check = pnl_monthly.net_sales (the P&L "1.1 Net
+ * Sales" line = revenue after VAT, service charge, and FOC). Returns null when the P&L
+ * month isn't synced yet (owner enters it manually then). Owner-only RLS on pnl_monthly.
+ */
+export function usePnlNetSales(year: number, month: number, enabled = true) {
+  return useQuery({
+    queryKey: ["pnl-net-sales", year, month],
+    enabled: enabled && year > 0 && month >= 1 && month <= 12,
+    queryFn: async (): Promise<number | null> => {
+      const { data, error } = await supabase
+        .from("pnl_monthly")
+        .select("net_sales")
+        .eq("year", year)
+        .eq("month", month)
+        .eq("data_type", "actual")
+        .maybeSingle()
+      if (error) throw error
+      const v = (data as { net_sales?: number } | null)?.net_sales ?? null
+      return v && v > 0 ? v : null
+    },
+  })
+}
+
 export function useUploadSalarySource() {
   return useMutation({
     mutationFn: async (input: { year: number; month: number; file: File }) => {

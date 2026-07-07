@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Bar,
   BarChart,
@@ -28,6 +28,7 @@ import {
   type BonusCheck,
 } from "@/lib/bonus-check"
 import {
+  usePnlNetSales,
   useSalaryMonthly,
   useUpdateSalaryBonus,
   type SalaryMonthly,
@@ -95,6 +96,16 @@ export function SalaryOverviewView() {
   const updateBonus = useUpdateSalaryBonus()
   const [editRow, setEditRow] = useState<SalaryMonthly | null>(null)
   const [bonusForm, setBonusForm] = useState<BonusForm>(EMPTY_BONUS_FORM)
+
+  // Pull qualifying revenue from P&L (Net Sales) for the row being edited.
+  const editPnl = usePnlNetSales(editRow?.year ?? 0, editRow?.month ?? 0, editRow != null)
+  useEffect(() => {
+    if (editPnl.data != null) {
+      setBonusForm((prev) =>
+        prev.qualifyingRevenue ? prev : { ...prev, qualifyingRevenue: formatVndDigits(editPnl.data!) },
+      )
+    }
+  }, [editPnl.data])
 
   const openEdit = (r: SalaryMonthly) => {
     const form = bonusFormFromRow(r)
@@ -386,6 +397,7 @@ export function SalaryOverviewView() {
                 onChange={setBonusForm}
                 year={editRow.year}
                 month={editRow.month}
+                pnlNetSales={editPnl.data}
               />
             )}
           </div>
