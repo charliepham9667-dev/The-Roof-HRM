@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { reservationClient } from '@/lib/reservationClient'
+import { gatewayFetch } from '@/lib/reservationClient'
 
 const ICT_TZ = 'Asia/Ho_Chi_Minh'
 
@@ -30,31 +30,25 @@ export function useCapacityData() {
   return useQuery({
     queryKey: ['capacity-data'],
     queryFn: async (): Promise<CapacityData> => {
-      if (!reservationClient) {
+      const today = getTodayIso()
+
+      // One gateway call returns all three (see hrm-gateway, action=capacity)
+      const payload = await gatewayFetch<{
+        slot_caps: { slot_hour: number; max_pax: number }[]
+        settings: { key: string; value: string }[]
+        reservations: { requested_time: string | null; party_size: number | null; status: string }[]
+      }>('capacity', { date: today })
+
+      if (!payload) {
         return { slots: [], config: { warningThreshold: 35, hardLimit: 45 } }
       }
 
-      const today = getTodayIso()
-
-      // Fetch all three in parallel
-      const [slotCapsRes, settingsRes, reservationsRes] = await Promise.all([
-        reservationClient
-          .from('time_slot_caps')
-          .select('slot_hour, max_pax')
-          .order('slot_hour', { ascending: true }),
-        reservationClient
-          .from('reservation_settings')
-          .select('key, value'),
-        reservationClient
-          .from('reservations')
-          .select('requested_time, party_size, status')
-          .eq('requested_date', today)
-          .in('status', ['accepted', 'pending']),
-      ])
+      const slotCapsRes = { data: payload.slot_caps }
+      const reservationsRes = { data: payload.reservations }
 
       // Parse config
       const settingsMap: Record<string, string> = {}
-      for (const row of settingsRes.data || []) {
+      for (const row of payload.settings || []) {
         settingsMap[row.key] = row.value
       }
       const config: CapacityConfig = {

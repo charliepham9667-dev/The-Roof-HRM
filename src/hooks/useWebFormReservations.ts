@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { reservationClient, RESERVATION_FUNC_URL } from '@/lib/reservationClient'
+import { reservationClient, RESERVATION_FUNC_URL, gatewayFetch } from '@/lib/reservationClient'
 import { supabase } from '@/lib/supabase'
 import { insertNotifications } from './useNotifications'
 import { useAuthStore } from '@/stores/authStore'
@@ -46,8 +46,10 @@ function stripTableTag(specialRequests: string | null): string | null {
 // and declined queries — wiping Pending Approvals and Declined & Lost. Web form
 // entries are website bookings by definition; phone/CSV entries are detected
 // client-side via getBookingSource(). Do not add `source` here.
-const FULL_SELECT =
-  'id, name, phone, email, requested_date, requested_time, party_size, special_requests, package, package_paid, status, token, created_at, response_type, response_message, response_channels, responded_at'
+// The column list now lives in the hrm-gateway edge function
+// (reservation-system/supabase/functions/hrm-gateway, action=web-reservations),
+// because these rows are fetched with service_role there rather than read
+// directly from this client. Change it in both places if the shape changes.
 
 function mapRow(row: any): CsvReservation {
   const dateIso = row.requested_date ?? ''
@@ -91,17 +93,10 @@ export function useWebFormReservations() {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const pastCutoff = thirtyDaysAgo.toISOString().slice(0, 10)
 
-      const { data, error } = await reservationClient
-        .from('reservations')
-        .select(FULL_SELECT)
-        .gte('requested_date', pastCutoff)
-        .order('requested_date', { ascending: true })
-        .order('requested_time', { ascending: true })
-
-      if (error) {
-        console.error('[useWebFormReservations]', error)
-        return []
-      }
+      const data = await gatewayFetch<any[]>('web-reservations', {
+        scope: 'upcoming',
+        since: pastCutoff,
+      })
 
       return (data || []).map(mapRow)
     },
@@ -118,16 +113,7 @@ export function useDeclinedReservations() {
     queryFn: async (): Promise<CsvReservation[]> => {
       if (!reservationClient) return []
 
-      const { data, error } = await reservationClient
-        .from('reservations')
-        .select(FULL_SELECT)
-        .in('status', ['declined', 'cancelled', 'noshow'])
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('[useDeclinedReservations]', error)
-        return []
-      }
+      const data = await gatewayFetch<any[]>('web-reservations', { scope: 'declined' })
 
       return (data || []).map(mapRow)
     },

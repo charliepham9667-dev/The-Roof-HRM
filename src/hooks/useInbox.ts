@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { reservationClient } from '@/lib/reservationClient'
+import { reservationClient, gatewayFetch } from '@/lib/reservationClient'
 
 export interface Conversation {
   id: string
@@ -30,13 +30,7 @@ export function useConversations() {
   return useQuery({
     queryKey: ['inbox-conversations'],
     queryFn: async (): Promise<Conversation[]> => {
-      if (!reservationClient) return []
-      const { data, error } = await reservationClient
-        .from('conversations')
-        .select('*')
-        .order('last_message_at', { ascending: false })
-      if (error) { console.error('[useConversations]', error); return [] }
-      return data ?? []
+      return (await gatewayFetch<Conversation[]>('conversations')) ?? []
     },
     refetchInterval: 15000,
     staleTime: 10000,
@@ -47,14 +41,8 @@ export function useMessages(conversationId: string | null) {
   return useQuery({
     queryKey: ['inbox-messages', conversationId],
     queryFn: async (): Promise<Message[]> => {
-      if (!reservationClient || !conversationId) return []
-      const { data, error } = await reservationClient
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
-      if (error) { console.error('[useMessages]', error); return [] }
-      return data ?? []
+      if (!conversationId) return []
+      return (await gatewayFetch<Message[]>('messages', { conversation_id: conversationId })) ?? []
     },
     enabled: !!conversationId,
     refetchInterval: 8000,
@@ -66,22 +54,8 @@ export function useGuestReservations(phone: string | null, email: string | null 
   return useQuery({
     queryKey: ['guest-reservations', phone, email],
     queryFn: async () => {
-      if (!reservationClient || (!phone && !email)) return []
-      let query = reservationClient
-        .from('reservations')
-        .select('id, name, requested_date, requested_time, party_size, status, package')
-        .order('requested_date', { ascending: false })
-        .limit(10)
-      if (phone && email) {
-        query = query.or(`phone.eq.${phone},email.eq.${email}`)
-      } else if (phone) {
-        query = query.eq('phone', phone)
-      } else {
-        query = query.eq('email', email!)
-      }
-      const { data, error } = await query
-      if (error) { console.error('[useGuestReservations]', error); return [] }
-      return data ?? []
+      if (!phone && !email) return []
+      return (await gatewayFetch<any[]>('guest-reservations', { phone, email })) ?? []
     },
     enabled: !!(phone || email),
     staleTime: 60000,
@@ -109,12 +83,10 @@ export function useResolveConversation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      if (!reservationClient) throw new Error('No client')
-      const { error } = await reservationClient
-        .from('conversations')
-        .update({ status: 'resolved', unread_count: 0 })
-        .eq('id', id)
-      if (error) throw error
+      const res = await gatewayFetch<{ ok: boolean }>(
+        'resolve-conversation', {}, { method: 'POST', body: { id } },
+      )
+      if (!res?.ok) throw new Error('Failed to resolve conversation')
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['inbox-conversations'] }),
   })
