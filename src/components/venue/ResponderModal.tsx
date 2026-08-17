@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils"
 import type { CsvReservation } from "@/hooks/useReservationsCsv"
 import { useRespondToGuest, type RespondType } from "@/hooks/useWebFormReservations"
 import {
-  X, Check, MessageCircle, Ban, ArrowRight, RefreshCw,
-  Calendar, Clock, Users, Mail, CheckCircle, MessageSquare, DoorOpen,
+  X, Check, MessageCircle, ArrowRight, RefreshCw,
+  Calendar, Clock, Users, Mail, CheckCircle, DoorOpen,
 } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -14,16 +14,14 @@ export type Lang = "en" | "vi"
 interface ReplyOption {
   id: string
   respondType: RespondType
-  table?: string            // optional seating assignment, e.g. "Seaview" | "Bar Area"
+  table?: string            // optional seating assignment, e.g. "Seaview"
   label: string
   color: string
   blurb: string
   icon: React.ReactNode
-  /** When false the reason input is hidden and `logReason` is stored instead. */
-  requiresReason?: boolean
-  /** Reason written to the activity log when the staff isn't asked to type one. */
+  /** Reason written to the activity log. No option asks staff to type one. */
   logReason?: string
-  template: Record<Lang, (r: CsvReservation, reason?: string) => string>
+  template: Record<Lang, (r: CsvReservation) => string>
 }
 
 // Guest-facing contact. Matches the number already printed in the reservation
@@ -45,7 +43,7 @@ const guestLabel = (n: number) => `${n} ${n === 1 ? "guest" : "guests"}`
 const guestLabelVi = (n: number) => `${n} khách`
 
 const formatDateLong = (iso: string | null) => {
-  if (!iso) return "—"
+  if (!iso) return "TBC"
   const [y, m, d] = iso.split("-").map(Number)
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
     month: "short",
@@ -55,120 +53,72 @@ const formatDateLong = (iso: string | null) => {
 }
 
 const formatDateLongVi = (iso: string | null) => {
-  if (!iso) return "—"
+  if (!iso) return "chưa xác định"
   const [y, m, d] = iso.split("-").map(Number)
   return `ngày ${d} tháng ${m}, ${y}`
 }
 
 const OPT: Record<string, ReplyOption> = {
-  confirm: {
-    id: "confirm",
-    respondType: "confirm",
-    label: "Confirm",
-    color: "#2e7a52",
-    blurb: "Approve the booking and let the guest know.",
-    icon: <Check className="h-3.5 w-3.5" />,
-    template: {
-      en: (r) =>
-        `Hi ${firstName(r.name)},\n\nGreat news! Your reservation at The Roof for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"} is confirmed. We look forward to hosting you.\n\nWith Love,\nThe Roof Da Nang`,
-      vi: (r) =>
-        `Chào ${firstNameVi(r.name)},\n\nTin vui! Đặt bàn của bạn tại The Roof cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "—"} đã được xác nhận. Chúng mình rất mong được đón tiếp bạn.\n\nThân mến,\nThe Roof Đà Nẵng`,
-    },
-  },
   confirm_seaview: {
     id: "confirm_seaview",
     respondType: "confirm",
     table: "Seaview",
-    label: "Confirm · Seaview",
+    label: "Accept · Seaview",
     color: "#2e7a52",
-    blurb: "Confirm with a seaview table — best seat in the house.",
+    blurb: "Confirm with a seaview table, the best seat in the house.",
     icon: <Check className="h-3.5 w-3.5" />,
     template: {
       en: (r) =>
-        `Hi ${firstName(r.name)},\n\nWonderful news — your table at The Roof is confirmed for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}, and we've saved you one of our seaview tables. The best seat in the house will be waiting for you.\n\nWe hold your table for 15 minutes from your reservation time. See you soon!\n\nWith Love,\nThe Roof Da Nang`,
+        `Hi ${firstName(r.name)},\n\nYour table at The Roof is confirmed for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "TBC"}. We've saved you a seaview table.\n\nWe hold your table for 15 minutes from your reservation time. See you soon!\n\nWith Love,\nThe Roof Da Nang`,
       vi: (r) =>
-        `Chào ${firstNameVi(r.name)},\n\nTin tuyệt vời — bàn của bạn tại The Roof đã được xác nhận cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "—"}, và chúng mình đã giữ cho bạn một bàn view biển. Vị trí đẹp nhất quán sẽ luôn chờ bạn.\n\nChúng mình giữ bàn trong 15 phút kể từ giờ đặt. Hẹn gặp bạn!\n\nThân mến,\nThe Roof Đà Nẵng`,
+        `Chào ${firstNameVi(r.name)},\n\nBàn của bạn tại The Roof đã được xác nhận cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "chưa xác định"}. Chúng mình đã giữ cho bạn một bàn view biển.\n\nChúng mình giữ bàn trong 15 phút kể từ giờ đặt. Hẹn gặp bạn!\n\nThân mến,\nThe Roof Đà Nẵng`,
     },
   },
-  confirm_bar: {
-    id: "confirm_bar",
+  confirm_sofa: {
+    id: "confirm_sofa",
     respondType: "confirm",
-    table: "Bar Area",
-    label: "Confirm · Bar Area",
+    label: "Accept · Sofa/No Note",
     color: "#2c7a86",
-    blurb: "Seaview full — confirm a bar-area table instead.",
+    blurb: "Confirm without promising a specific seat.",
     icon: <Check className="h-3.5 w-3.5" />,
     template: {
       en: (r) =>
-        `Hi ${firstName(r.name)},\n\nGreat news — your table at The Roof is confirmed for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}.\n\nOur seaview tables are fully booked for that time, so we've reserved you a spot in our bar area instead — high tables, a warm buzz, and lovely views of their own. We think you'll love it.\n\nWe hold your table for 15 minutes from your reservation time. See you soon!\n\nWith Love,\nThe Roof Da Nang`,
+        `Hi ${firstName(r.name)},\n\nYour table at The Roof is confirmed for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "TBC"}.\n\nWe hold your table for 15 minutes from your reservation time. See you soon!\n\nWith Love,\nThe Roof Da Nang`,
       vi: (r) =>
-        `Chào ${firstNameVi(r.name)},\n\nTin vui — bàn của bạn tại The Roof đã được xác nhận cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "—"}.\n\nCác bàn view biển đã kín chỗ vào khung giờ này, nên chúng mình đã giữ cho bạn một chỗ ở khu quầy bar — bàn cao, không khí sôi động và view rất riêng. Chúng mình tin là bạn sẽ thích.\n\nChúng mình giữ bàn trong 15 phút kể từ giờ đặt. Hẹn gặp bạn!\n\nThân mến,\nThe Roof Đà Nẵng`,
+        `Chào ${firstNameVi(r.name)},\n\nBàn của bạn tại The Roof đã được xác nhận cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "chưa xác định"}.\n\nChúng mình giữ bàn trong 15 phút kể từ giờ đặt. Hẹn gặp bạn!\n\nThân mến,\nThe Roof Đà Nẵng`,
     },
   },
-  followup: {
-    id: "followup",
-    respondType: "followup",
-    label: "Follow up",
-    color: "#2c5f9e",
-    blurb: "Ask a question — e.g. a request you can't confirm yet.",
-    icon: <MessageSquare className="h-3.5 w-3.5" />,
-    template: {
-      en: (r) =>
-        `Hi ${firstName(r.name)},\n\nThank you for your reservation request for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}.${r.specialRequests ? ` Regarding your request: "${r.specialRequests}" — we can't guarantee it for that time slot.` : ""} Could we offer you an alternative? Reply here and we'll hold your table.\n\nWith Love,\nThe Roof Da Nang`,
-      vi: (r) =>
-        `Chào ${firstNameVi(r.name)},\n\nCảm ơn bạn đã gửi yêu cầu đặt bàn cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "—"}.${r.specialRequests ? ` Về yêu cầu của bạn: "${r.specialRequests}" — chúng mình chưa thể đảm bảo cho khung giờ này.` : ""} Chúng mình có thể đề xuất một phương án khác được không? Bạn phản hồi lại tin này nhé, chúng mình sẽ giữ bàn cho bạn.\n\nThân mến,\nThe Roof Đà Nẵng`,
-    },
-  },
-  // The everyday decline: seaview (or the whole floor) is booked out, but the
-  // guest still has two real ways in — walking in, or asking us on WhatsApp.
-  decline_walkin: {
-    id: "decline_walkin",
-    respondType: "decline",
-    label: "Decline · Walk-in",
-    color: "#b8752e",
-    blurb: "Fully booked — but invite them to walk in or check other tables on WhatsApp.",
-    icon: <DoorOpen className="h-3.5 w-3.5" />,
-    requiresReason: false,
-    logReason: "Fully booked — walk-in and WhatsApp options offered",
-    template: {
-      en: (r) =>
-        `Hi ${firstName(r.name)},\n\nThank you for your reservation request for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}.\n\n${
-          isSeaviewEligible(r)
-            ? "Our seaview tables are fully booked for that time, so we're not able to hold one for you — they get reserved every day, often well in advance."
-            : "We're fully booked for reservations at that time, so we're not able to hold a table for you."
-        }\n\nThat doesn't mean you can't join us though — you still have two options:\n\n1. Walk in at that time. We always keep tables aside for walk-in guests, and our team will seat you as soon as one frees up.\n\n2. Message us on WhatsApp at ${WHATSAPP}. We'll check what's still open in our bar area and indoor sections and hold something for you.\n\nWe'd genuinely love to see you — please don't let this put you off.\n\nWith Love,\nThe Roof Da Nang`,
-      vi: (r) =>
-        `Chào ${firstNameVi(r.name)},\n\nCảm ơn bạn đã gửi yêu cầu đặt bàn cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "—"}.\n\n${
-          isSeaviewEligible(r)
-            ? "Các bàn view biển đã kín chỗ vào khung giờ này nên chúng mình chưa thể giữ bàn trước cho bạn — bàn view biển gần như kín mỗi ngày và thường được đặt từ khá sớm."
-            : "Chúng mình đã kín chỗ đặt bàn trước vào khung giờ này nên chưa thể giữ bàn cho bạn."
-        }\n\nNhưng bạn vẫn có thể ghé chơi cùng chúng mình theo hai cách:\n\n1. Đến trực tiếp vào giờ đó. Chúng mình luôn dành sẵn một số bàn cho khách đến trực tiếp, và đội ngũ sẽ sắp xếp chỗ cho bạn ngay khi có bàn trống.\n\n2. Nhắn WhatsApp cho chúng mình qua số ${WHATSAPP}. Chúng mình sẽ kiểm tra các bàn còn trống ở khu quầy bar và khu trong nhà rồi giữ chỗ giúp bạn.\n\nChúng mình rất mong được gặp bạn nhé!\n\nThân mến,\nThe Roof Đà Nẵng`,
-    },
-  },
+  // Always offers the two ways back in: walk in, or ask us on WhatsApp.
   decline: {
     id: "decline",
     respondType: "decline",
     label: "Decline",
-    color: "#b83232",
-    blurb: "Closed or a private event — no walk-in to offer. Needs a reason.",
-    icon: <Ban className="h-3.5 w-3.5" />,
-    requiresReason: true,
+    color: "#b8752e",
+    blurb: "Fully booked. Tells them to walk in or check other tables on WhatsApp.",
+    icon: <DoorOpen className="h-3.5 w-3.5" />,
+    logReason: "Fully booked, walk-in and WhatsApp options offered",
     template: {
-      en: (r, reason) =>
-        `Hi ${firstName(r.name)},\n\nThank you for thinking of The Roof. Unfortunately we're unable to accommodate your reservation for ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "—"}. ${reason ? `${reason}. ` : ""}\n\nIf you'd like to try another date or time, message us on WhatsApp at ${WHATSAPP} and we'll help you find a spot.\n\nWe're sorry to miss you this time and hope to welcome you soon.\n\nWith Love,\nThe Roof Da Nang`,
-      vi: (r, reason) =>
-        `Chào ${firstNameVi(r.name)},\n\nCảm ơn bạn đã nghĩ đến The Roof. Rất tiếc chúng mình chưa thể phục vụ yêu cầu đặt bàn của bạn vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "—"}. ${reason ? `${reason}. ` : ""}\n\nNếu bạn muốn thử một ngày hoặc khung giờ khác, hãy nhắn WhatsApp cho chúng mình qua số ${WHATSAPP}, chúng mình sẽ hỗ trợ bạn tìm chỗ.\n\nChúng mình rất tiếc vì lần này chưa được đón tiếp bạn và mong sớm gặp bạn.\n\nThân mến,\nThe Roof Đà Nẵng`,
+      en: (r) =>
+        `Hi ${firstName(r.name)},\n\nThank you for your request for ${guestLabel(r.numberOfGuests)} on ${formatDateLong(r.dateOfReservation)} at ${r.time ?? "TBC"}. ${
+          isSeaviewEligible(r)
+            ? "Our seaview tables are fully booked for that time, so we can't hold one for you."
+            : "We're fully booked for reservations at that time, so we can't hold a table for you."
+        }\n\nYou can still join us two ways:\n\n1. Walk in at that time. We keep tables for walk-in guests and will seat you as soon as one frees up.\n\n2. Text us on WhatsApp at ${WHATSAPP} and we'll check what's open in our bar and indoor areas.\n\nHope to see you!\n\nWith Love,\nThe Roof Da Nang`,
+      vi: (r) =>
+        `Chào ${firstNameVi(r.name)},\n\nCảm ơn bạn đã gửi yêu cầu đặt bàn cho ${guestLabelVi(r.numberOfGuests)} vào ${formatDateLongVi(r.dateOfReservation)} lúc ${r.time ?? "chưa xác định"}. ${
+          isSeaviewEligible(r)
+            ? "Các bàn view biển đã kín chỗ vào khung giờ này nên chúng mình chưa thể giữ bàn cho bạn."
+            : "Chúng mình đã kín chỗ đặt bàn trước vào khung giờ này nên chưa thể giữ bàn cho bạn."
+        }\n\nBạn vẫn có thể ghé chơi theo hai cách:\n\n1. Đến trực tiếp vào giờ đó. Chúng mình luôn dành bàn cho khách đến trực tiếp và sẽ sắp xếp chỗ ngay khi có bàn trống.\n\n2. Nhắn WhatsApp cho chúng mình qua số ${WHATSAPP}, chúng mình sẽ kiểm tra các bàn còn trống ở khu quầy bar và khu trong nhà.\n\nHẹn gặp bạn!\n\nThân mến,\nThe Roof Đà Nẵng`,
     },
   },
 }
 
-// Small parties are seaview-eligible → offer Seaview / Bar Area confirm.
-// Larger parties get the generic confirm. Both get the walk-in decline first,
-// since "seaview is booked out" is the everyday case and a hard no is rare.
+// Seaview is only offered to parties we can actually seat there.
 function optionsFor(r: CsvReservation): ReplyOption[] {
   return isSeaviewEligible(r)
-    ? [OPT.confirm_seaview, OPT.confirm_bar, OPT.followup, OPT.decline_walkin, OPT.decline]
-    : [OPT.confirm, OPT.followup, OPT.decline_walkin, OPT.decline]
+    ? [OPT.confirm_seaview, OPT.confirm_sofa, OPT.decline]
+    : [OPT.confirm_sofa, OPT.decline]
 }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
@@ -294,7 +244,6 @@ interface ResponderModalProps {
 export function ResponderModal({ reservation: r, onClose }: ResponderModalProps) {
   const [selectedId, setSelectedId] = useState<string>("confirm")
   const [lang, setLang] = useState<Lang>("en")
-  const [reason, setReason] = useState("")
   const [msg, setMsg] = useState("")
   const [waOn, setWaOn] = useState(true)
   const [emailOn, setEmailOn] = useState(true)
@@ -311,7 +260,6 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
     if (r) {
       setSelectedId(optionsFor(r)[0].id)
       setLang("en")
-      setReason("")
       setSent(false)
       setWaOn(hasPhone)
       setEmailOn(hasEmail)
@@ -321,13 +269,13 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
     }
   }, [r?.reservationSystemId])
 
-  // Regenerate template on option/language/reason change
+  // Regenerate template on option/language change
   useEffect(() => {
     if (!r) return
     const opts = optionsFor(r)
     const o = opts.find((x) => x.id === selectedId) ?? opts[0]
-    setMsg(o.template[lang](r, reason))
-  }, [selectedId, lang, reason, r?.reservationSystemId])
+    setMsg(o.template[lang](r))
+  }, [selectedId, lang, r?.reservationSystemId])
 
   // Esc to close
   useEffect(() => {
@@ -342,11 +290,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
   const opt = options.find((o) => o.id === selectedId) ?? options[0]
 
   const selectedChannels = [waOn && "WhatsApp", emailOn && "Email"].filter(Boolean) as string[]
-  const needsReason = opt.requiresReason === true
-  const canSend =
-    selectedChannels.length > 0 &&
-    msg.trim().length > 0 &&
-    (!needsReason || reason.trim().length > 0)
+  const canSend = selectedChannels.length > 0 && msg.trim().length > 0
 
   const handleSend = async () => {
     if (!r.reservationSystemId || !r.reservationSystemToken) return
@@ -356,7 +300,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
       type: opt.respondType,
       table: opt.table,
       message: msg.trim(),
-      reason: needsReason ? reason.trim() : opt.logReason,
+      reason: opt.logReason,
       channels: selectedChannels,
       language: lang,
     })
@@ -450,20 +394,15 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   How do you want to reply?
                 </p>
-                <div className={cn("grid gap-2", options.length >= 4 ? "grid-cols-2" : "grid-cols-3")}>
-                  {options.map((t, i) => {
+                <div className={cn("grid gap-2", options.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
+                  {options.map((t) => {
                     const active = opt.id === t.id
-                    // Odd count in a 2-col grid → let the last tile span the row.
-                    const spans = options.length >= 4 && options.length % 2 === 1 && i === options.length - 1
                     return (
                       <button
                         key={t.id}
                         type="button"
                         onClick={() => setSelectedId(t.id)}
-                        className={cn(
-                          "flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-colors",
-                          spans && "col-span-2",
-                        )}
+                        className="flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-colors"
                         style={{
                           border: `1.5px solid ${active ? t.color : "var(--border)"}`,
                           background: active ? t.color + "12" : "var(--card)",
@@ -491,27 +430,6 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
                 <p className="mt-2 text-xs text-muted-foreground">{rt.blurb}</p>
               </div>
 
-              {/* Decline reason */}
-              {needsReason && (
-                <div>
-                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Reason for declining <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="e.g. fully booked for that time slot"
-                    className={cn(
-                      "w-full rounded-lg border bg-background px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-ring",
-                      reason.trim() ? "border-border" : "border-red-200",
-                    )}
-                  />
-                  <p className="mt-1.5 text-[11.5px] text-muted-foreground">
-                    Included in the guest message and saved to the activity log.
-                  </p>
-                </div>
-              )}
-
               {/* Message textarea */}
               <div>
                 <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -522,7 +440,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
                     <LangToggle value={lang} onChange={setLang} />
                     <button
                       type="button"
-                      onClick={() => setMsg(rt.template[lang](r, reason))}
+                      onClick={() => setMsg(rt.template[lang](r))}
                       className="flex items-center gap-1 rounded px-2 py-0.5 text-[11.5px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       <RefreshCw className="h-3 w-3" />
