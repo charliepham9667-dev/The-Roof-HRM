@@ -28,9 +28,10 @@ interface ReplyOption {
 // confirmation emails (reservation-system/supabase/functions/_shared/email.ts).
 const WHATSAPP = "+84 097 35 35 334"
 
-// Parties under this size are the ones we can seat on a seaview table.
+// Seaview tables seat a maximum of 3. Must stay in step with the booking form
+// (reservation-system/framer/ReservationForm.jsx), which tells guests the same.
 const SEAVIEW_MAX_PAX = 3
-const isSeaviewEligible = (r: CsvReservation) => r.numberOfGuests < SEAVIEW_MAX_PAX
+const isSeaviewEligible = (r: CsvReservation) => r.numberOfGuests <= SEAVIEW_MAX_PAX
 
 const firstName = (name: string | null) =>
   (name ?? "there").trim().split(/\s+/)[0]
