@@ -277,6 +277,26 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
     setMsg(o.template[lang](r))
   }, [selectedId, lang, r?.reservationSystemId])
 
+  // Grow the box to the full message so nothing is hidden behind a scrollbar.
+  // The modal body scrolls instead if the message is very long.
+  // Measured in a rAF and re-run on `shown`/resize: measuring before the modal
+  // has been laid out reads a near-zero width, which wraps the text into
+  // hundreds of lines and locks in a wildly too-tall box.
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    const fit = () => {
+      el.style.height = "auto"
+      el.style.height = `${el.scrollHeight}px`
+    }
+    const raf = requestAnimationFrame(fit)
+    window.addEventListener("resize", fit)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", fit)
+    }
+  }, [msg, sent, shown])
+
   // Esc to close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && r) onClose() }
@@ -402,24 +422,27 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
                         key={t.id}
                         type="button"
                         onClick={() => setSelectedId(t.id)}
-                        className="flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-colors"
-                        style={{
-                          border: `1.5px solid ${active ? t.color : "var(--border)"}`,
-                          background: active ? t.color + "12" : "var(--card)",
-                        }}
+                        // Colours come from Tailwind classes, not raw var(--x): the theme
+                        // vars are bare RGB triplets, so `solid var(--border)` is invalid
+                        // CSS and renders no border at all.
+                        className={cn(
+                          "flex flex-col items-start gap-1.5 rounded-xl border-[1.5px] p-3 text-left transition-colors",
+                          active ? "border-transparent" : "border-border bg-card hover:bg-muted/40",
+                        )}
+                        style={active ? { borderColor: t.color, background: t.color + "14" } : undefined}
                       >
                         <div
-                          className="flex h-7 w-7 items-center justify-center rounded-lg"
-                          style={{
-                            background: active ? t.color : "var(--muted)",
-                            color: active ? "#fff" : "var(--muted-foreground)",
-                          }}
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-lg",
+                            !active && "bg-muted text-muted-foreground",
+                          )}
+                          style={active ? { background: t.color, color: "#fff" } : undefined}
                         >
                           {t.icon}
                         </div>
                         <span
-                          className="text-[13px] font-bold"
-                          style={{ color: active ? t.color : "var(--foreground)" }}
+                          className={cn("text-[13px] font-bold", !active && "text-foreground")}
+                          style={active ? { color: t.color } : undefined}
                         >
                           {t.label}
                         </span>
@@ -452,8 +475,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
                   ref={textareaRef}
                   value={msg}
                   onChange={(e) => setMsg(e.target.value)}
-                  rows={5}
-                  className="w-full resize-y rounded-xl border border-border bg-background p-3 text-[13px] leading-relaxed outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full resize-none overflow-hidden rounded-xl border border-border bg-background p-3 text-[13px] leading-relaxed outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
 
