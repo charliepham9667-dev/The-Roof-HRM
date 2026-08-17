@@ -361,6 +361,7 @@ export function useRespondToGuest() {
       reason,
       channels,
       table,
+      language,
     }: {
       id: string
       token: string
@@ -369,10 +370,18 @@ export function useRespondToGuest() {
       reason?: string
       channels: string[]
       table?: string
+      /** Language the staff wrote the reply in — localises the email subject. */
+      language?: 'en' | 'vi'
     }) => {
       if (!reservationClient) throw new Error('Reservation client not configured')
       const { error } = await reservationClient.functions.invoke('respond-to-guest', {
-        body: { id, token, type, message, reason: reason ?? '', channels, table: table ?? null },
+        body: {
+          id, token, type, message,
+          reason: reason ?? '',
+          channels,
+          table: table ?? null,
+          language: language ?? 'en',
+        },
       })
       if (error) throw error
     },
