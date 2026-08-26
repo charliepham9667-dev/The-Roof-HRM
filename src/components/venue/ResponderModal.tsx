@@ -249,6 +249,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
   const [waOn, setWaOn] = useState(true)
   const [emailOn, setEmailOn] = useState(true)
   const [sent, setSent] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
   const [shown, setShown] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const respondTo = useRespondToGuest()
@@ -262,6 +263,7 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
       setSelectedId(optionsFor(r)[0].id)
       setLang("en")
       setSent(false)
+      setSendError(null)
       setWaOn(hasPhone)
       setEmailOn(hasEmail)
       requestAnimationFrame(() => setShown(true))
@@ -313,18 +315,30 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
   const selectedChannels = [waOn && "WhatsApp", emailOn && "Email"].filter(Boolean) as string[]
   const canSend = selectedChannels.length > 0 && msg.trim().length > 0
 
+  // Never fail silently. Both paths below used to return/throw with no UI change,
+  // which read to staff as a dead Send button while the guest got nothing.
   const handleSend = async () => {
-    if (!r.reservationSystemId || !r.reservationSystemToken) return
-    await respondTo.mutateAsync({
-      id: r.reservationSystemId,
-      token: r.reservationSystemToken,
-      type: opt.respondType,
-      table: opt.table,
-      message: msg.trim(),
-      reason: opt.logReason,
-      channels: selectedChannels,
-      language: lang,
-    })
+    setSendError(null)
+    if (!r.reservationSystemId || !r.reservationSystemToken) {
+      setSendError("This booking has no reservation-system reference, so it can't be replied to here.")
+      return
+    }
+    try {
+      await respondTo.mutateAsync({
+        id: r.reservationSystemId,
+        token: r.reservationSystemToken,
+        type: opt.respondType,
+        table: opt.table,
+        message: msg.trim(),
+        reason: opt.logReason,
+        channels: selectedChannels,
+        language: lang,
+      })
+    } catch (err: any) {
+      console.error("[ResponderModal] respond-to-guest failed:", err)
+      setSendError(err?.message || "Could not send the reply. Nothing was sent to the guest.")
+      return
+    }
     setSent(true)
     setTimeout(() => onClose(), 1300)
   }
@@ -508,10 +522,17 @@ export function ResponderModal({ reservation: r, onClose }: ResponderModalProps)
 
             {/* ── Footer ── */}
             <div className="flex items-center gap-3 border-t border-border/60 px-5 py-3.5">
-              <p className="flex-1 text-[11.5px] text-muted-foreground">
-                {selectedChannels.length > 0
-                  ? `Will mark as "responded · awaiting reply".`
-                  : "Pick at least one channel."}
+              <p
+                className={cn(
+                  "flex-1 text-[11.5px]",
+                  sendError ? "font-semibold text-red-600" : "text-muted-foreground",
+                )}
+              >
+                {sendError
+                  ? sendError
+                  : selectedChannels.length > 0
+                    ? `Will mark as "responded · awaiting reply".`
+                    : "Pick at least one channel."}
               </p>
               <button
                 type="button"
